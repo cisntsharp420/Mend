@@ -99,6 +99,9 @@ class LLMAgent(Agent):
                 raise RuntimeError("replay exhausted: the live run diverged from the recording")
             resp = self.replay[self.usage["calls"]]
         else:
+            # Server-side refusal fallback; Haiku 5.5 has none and must not be sent `fallbacks`.
+            fallback = {} if self.model.startswith("claude-haiku") else {
+                "betas": ["server-side-fallback-2026-07-01"], "fallbacks": "default"}
             r = self.client.beta.messages.create(
                 model=self.model,
                 max_tokens=16000,
@@ -108,8 +111,7 @@ class LLMAgent(Agent):
                 thinking={"type": "adaptive", "display": "summarized"},
                 output_config={"effort": self.effort},
                 cache_control={"type": "ephemeral"},     # caches the growing conversation prefix
-                betas=["server-side-fallback-2026-07-01"],
-                fallbacks="default",                     # retry on a fallback model if declined
+                **fallback,
             )
             u = r.usage
             self.usage["input"] += u.input_tokens or 0
