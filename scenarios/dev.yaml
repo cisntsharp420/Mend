@@ -1,0 +1,23 @@
+# Development scenarios: agents and rules may be tuned against these.
+- id: dev-01-api-down
+  faults: [{kind: service_stopped, target: api}]
+- id: dev-02-postgres-down
+  faults: [{kind: service_stopped, target: postgres}]
+- id: dev-03-redis-down
+  faults: [{kind: service_stopped, target: redis}]
+- id: dev-04-db-password
+  faults: [{kind: bad_db_password}]
+- id: dev-05-gateway-upstream
+  faults: [{kind: gateway_bad_upstream}]
+  noise: [benign_api_deploy]          # red herring: an unrelated api deploy just before
+- id: dev-06-disk-full
+  faults: [{kind: disk_full}]
+- id: dev-07-cpu-hog
+  faults: [{kind: cpu_hog}]
+- id: dev-08-postgres-partition
+  faults: [{kind: network_partition, target: postgres}]
+- id: dev-09-multi-disk-password
+  faults: [{kind: disk_full}, {kind: bad_db_password}]
+- id: dev-10-multi-redis-gateway
+  faults: [{kind: service_stopped, target: redis}, {kind: gateway_bad_upstream}]
+  noise: [worker_warnings]

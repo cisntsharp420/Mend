@@ -1,0 +1,31 @@
+# Held-out scenarios: never used while developing agents, prompts or rules.
+# They contain fault types absent from dev, variants of dev faults, traps and harder combinations.
+- id: ho-01-db-host-dns
+  faults: [{kind: bad_db_host}]
+- id: ho-02-crashloop
+  faults: [{kind: crashloop_config}]
+- id: ho-03-partial-tax-rate
+  faults: [{kind: bad_tax_rate}]
+- id: ho-04-memory-leak
+  faults: [{kind: memory_leak}]
+- id: ho-05-db-lock
+  faults: [{kind: db_lock}]
+- id: ho-06-conn-exhaustion
+  faults: [{kind: conn_exhaustion}]
+- id: ho-07-redis-partition
+  faults: [{kind: network_partition, target: redis}]
+- id: ho-08-rollback-trap
+  # bad deploy followed by a benign deploy: "roll back one version" is not enough
+  faults: [{kind: bad_db_password}]
+  noise: [benign_api_deploy]
+  noise_after: true
+- id: ho-09-lock-behind-gateway
+  # the gateway fault masks the db lock until it is fixed
+  faults: [{kind: db_lock}, {kind: gateway_bad_upstream}]
+- id: ho-10-cpu-and-redis-partition
+  faults: [{kind: cpu_hog}, {kind: network_partition, target: redis}]
+  noise: [benign_gateway_deploy]
+- id: ho-11-conn-leak-and-dns
+  faults: [{kind: conn_exhaustion}, {kind: bad_db_host}]
+- id: ho-12-triple
+  faults: [{kind: service_stopped, target: redis}, {kind: disk_full}, {kind: bad_tax_rate}]
