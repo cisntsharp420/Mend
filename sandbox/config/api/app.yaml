@@ -1,0 +1,25 @@
+# ShopStack API configuration (known-good baseline, version 1)
+server:
+  port: 8000
+  threads: 16
+database:
+  host: postgres
+  port: 5432
+  name: shop
+  user: shop_app
+  password: shop-secret
+  connect_timeout_s: 2
+  statement_timeout_ms: 2000
+cache:
+  host: redis
+  port: 6379
+  enabled: true
+  ttl_s: 30
+pricing:
+  tax_rate: 0.15
+audit:
+  path: /data/audit/audit.log
+features:
+  local_response_cache: false
+logging:
+  level: INFO

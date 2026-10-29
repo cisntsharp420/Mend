@@ -1,0 +1,78 @@
+# ShopStack: the target system the agent must keep healthy.
+#   loadgen -> gateway (nginx) -> api (Flask) -> postgres / redis ; worker -> postgres
+# Live (mutable) configs are mounted from .runtime/, seeded from config/ by the harness.
+name: shopstack
+
+services:
+  gateway:
+    image: ${IMAGE_REGISTRY:-mirror.gcr.io/library}/nginx:1.27-alpine
+    command: ["nginx", "-c", "/etc/nginx/live/nginx.conf", "-g", "daemon off;"]
+    volumes:
+      - ./.runtime/config/gateway:/etc/nginx/live:ro
+    ports:
+      - "${GATEWAY_PORT:-8080}:80"
+    networks: [frontend]
+    restart: unless-stopped
+    depends_on: [api]
+
+  api:
+    build:
+      context: ./api
+      args: ["IMAGE_REGISTRY=${IMAGE_REGISTRY:-mirror.gcr.io/library}"]
+    image: shopstack-app:latest
+    volumes:
+      - ./.runtime/config/api:/config:ro
+    tmpfs:
+      - /data:size=48m
+    networks: [frontend, backend]
+    mem_limit: 256m
+    cpus: 0.5
+    restart: unless-stopped
+    depends_on:
+      postgres: {condition: service_healthy}
+      redis: {condition: service_started}
+
+  worker:
+    image: shopstack-app:latest
+    command: ["python", "worker.py"]
+    environment: [PYTHONPATH=/app]
+    volumes:
+      - ./.runtime/config/api:/config:ro
+    networks: [backend]
+    restart: unless-stopped
+    depends_on:
+      postgres: {condition: service_healthy}
+
+  postgres:
+    image: ${IMAGE_REGISTRY:-mirror.gcr.io/library}/postgres:16-alpine
+    command: ["postgres", "-c", "max_connections=40"]
+    environment:
+      POSTGRES_DB: shop
+      POSTGRES_USER: shop
+      POSTGRES_PASSWORD: shop-secret
+    volumes:
+      - ./postgres/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    networks: [backend]
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "shop", "-d", "shop"]
+      interval: 2s
+      timeout: 2s
+      retries: 30
+
+  redis:
+    image: ${IMAGE_REGISTRY:-mirror.gcr.io/library}/redis:7-alpine
+    networks: [backend]
+    restart: unless-stopped
+
+  loadgen:
+    image: shopstack-app:latest
+    command: ["python", "loadgen.py"]
+    environment: [TARGET=http://gateway, RPS=8]
+    networks: [frontend]
+    restart: unless-stopped
+    depends_on: [gateway]
+
+networks:
+  frontend: {}
+  backend: {}
