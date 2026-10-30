@@ -1,4 +1,4 @@
-"""Agent registry. The LLM agent is imported lazily so baselines run without an API key."""
+"""Agent registry. Every agent runs offline: no model API, no key."""
 
 
 def make_agent(name: str, **kwargs):
@@ -11,10 +11,10 @@ def make_agent(name: str, **kwargs):
     if name == "rules":
         from .rules import RuleBasedAgent
         return RuleBasedAgent()
-    if name == "llm":
-        from .llm import LLMAgent
-        return LLMAgent(**kwargs)
-    raise ValueError(f"unknown agent '{name}'; choose from noop, restart_all, rules, llm")
+    if name == "reasoner":
+        from .reasoner import ReasonerAgent
+        return ReasonerAgent(**kwargs)
+    raise ValueError(f"unknown agent '{name}'; choose from {', '.join(AGENTS)}")
 
 
-AGENTS = ["noop", "restart_all", "rules", "llm"]
+AGENTS = ["noop", "restart_all", "rules", "reasoner"]

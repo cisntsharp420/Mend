@@ -1,6 +1,6 @@
 """The agent's hands and eyes: a typed tool registry with guardrails and a full audit trail.
 
-Every agent (rule-based, naive, LLM) acts on the system only through Toolbox.call(), so
+Every agent (naive, rule-based, reasoner) acts on the system only through Toolbox.call(), so
 guardrails, budgets and the audit log apply uniformly and runs are directly comparable.
 """
 from __future__ import annotations

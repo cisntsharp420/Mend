@@ -1,9 +1,5 @@
 PY ?= python3
-# Load .env if present (for ANTHROPIC_API_KEY).
--include .env
-export
-
-.PHONY: install wheels up down status test baselines llm-dev llm-heldout ablations report clean
+.PHONY: install wheels up down status test baselines reasoner-dev reasoner-heldout ablations diagnose report clean
 
 install:            ## install python dependencies
 	$(PY) -m pip install -e '.[dev]'
@@ -27,15 +23,18 @@ test:               ## unit tests (no docker, no API key)
 baselines:          ## noop / restart_all / rules on all 22 scenarios
 	for a in noop restart_all rules; do $(PY) -m recovery run --agent $$a --scenarios all --tag baseline-$$a; done
 
-llm-dev:            ## LLM agent on the dev split
-	$(PY) -m recovery run --agent llm --scenarios dev --tag llm-dev
+reasoner-dev:       ## reasoner agent on the dev split
+	$(PY) -m recovery run --agent reasoner --scenarios dev --tag reasoner-dev
 
-llm-heldout:        ## LLM agent on the held-out split, 2 repeats
-	$(PY) -m recovery run --agent llm --scenarios heldout --repeats 2 --tag llm-heldout
+reasoner-heldout:   ## reasoner agent on the held-out split, 2 repeats
+	$(PY) -m recovery run --agent reasoner --scenarios heldout --repeats 2 --tag reasoner-heldout
 
-ablations:          ## LLM ablations on the held-out split
-	for v in no_verify no_changes no_diagnostics minimal_prompt; do \
-	  $(PY) -m recovery run --agent llm --variant $$v --scenarios heldout --tag ablation-$$v; done
+ablations:          ## reasoner ablations on the held-out split (one evidence source switched off each)
+	for v in no_logs no_metrics no_diagnostics no_changes single_pass; do \
+	  $(PY) -m recovery run --agent reasoner --variant $$v --scenarios heldout --tag ablation-$$v; done
+
+diagnose:           ## read-only: print the recommended solution for the live system
+	$(PY) -m recovery diagnose
 
 report:             ## regenerate docs/results.md from the runs in runs/
 	$(PY) -m recovery report $(TAGS) --out docs/results.md

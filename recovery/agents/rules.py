@@ -1,4 +1,4 @@
-"""Rule-based runbook agent: the strongest non-LLM baseline we could write from the DEV scenarios.
+"""Rule-based runbook agent: a hand-written runbook baseline tuned from the DEV scenarios.
 
 It encodes what an SRE runbook would say for the failures seen during development. Its
 held-out performance shows how far hand-written rules generalize to unseen failures.
