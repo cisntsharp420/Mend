@@ -20,6 +20,11 @@ decides whether the system actually recovered and whether the root cause is real
 
 Full per-scenario table: [`docs/results.md`](docs/results.md). Raw episode records: `runs/`.
 
+**See it without installing anything:** open [`docs/replay.html`](docs/replay.html) in any browser.
+It replays every recorded run step by step: the pager alert, each tool call and its output, the
+agent's report, and the verifier's verdict. Rebuild it from new runs with
+`python scripts/build_replay.py <tag> ...`.
+
 **What this shows**
 
 - **The benchmark cannot be gamed by restarting things.** `restart_all` fixes half the dev
