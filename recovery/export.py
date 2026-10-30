@@ -12,13 +12,14 @@ from datetime import datetime, timezone
 from pathlib import Path
 from xml.sax.saxutils import escape
 
+from .agents import DESCRIPTIONS, display_name
 from .faults import FAULTS
 from .playbook import recommendations
 from .sandbox import ROOT
 from .scoring import WEIGHTS
 
 COLUMNS = [
-    "run", "agent", "repeat", "scenario", "split", "recovered", "score", "recovery_points", "diagnosis_points",
+    "run", "agent", "agent_name", "repeat", "scenario", "split", "recovered", "score", "recovery_points", "diagnosis_points",
     "safety_points", "diagnosis_precision", "diagnosis_recall", "diagnosis_f1", "collateral_actions",
     "blocked_calls", "actions", "tool_calls", "agent_seconds", "traffic_success_rate", "p95_ms",
     "injected_faults", "red_herrings", "true_root_causes", "reported_root_causes", "evidence", "agent_summary",
@@ -63,7 +64,7 @@ def row(rec: dict) -> dict:
     m, fv, rep = rec["metrics"], rec.get("final_verification") or {}, rec.get("report") or {}
     rc = rep.get("root_causes", [])
     return {
-        "run": rec.get("_run", ""), "agent": rec["agent"], "repeat": rec.get("_repeat", 0),
+        "run": rec.get("_run", ""), "agent": rec["agent"], "agent_name": display_name(rec["agent"]), "repeat": rec.get("_repeat", 0),
         "scenario": rec["scenario"], "split": rec["split"], "recovered": "yes" if m["recovered"] else "no",
         "score": m["score"], "recovery_points": WEIGHTS["recovered"] if m["recovered"] else 0,
         "diagnosis_points": round(WEIGHTS["diagnosis"] * m["diagnosis"]["f1"], 1),
@@ -107,153 +108,263 @@ def _split_stats(rows: list[dict]) -> list[list[str]]:
     return out
 
 
+FONTS = Path(__file__).parent / "assets" / "fonts"
+# Mend palette (matches the web app): deep teal night, glass panels, lime accent.
+PALETTE = {"bg": "#04110f", "panel": "#0c2321", "panel2": "#112e2b", "line": "#1f3d3a", "ink": "#e9f3f0",
+           "muted": "#8aa6a1", "dim": "#5f7c77", "lime": "#c6f24e", "teal": "#3fc1b0", "sky": "#7cc7d9",
+           "ok": "#86e39a", "bad": "#ff8a78", "alert": "#d5e4e0"}
+SLABS = [("#0e4a4a", .55), ("#13605b", .7), ("#1b7a6f", .8), ("#2b9a82", .88), ("#5fbf6e", .92),
+         ("#a6e05a", .95), ("#c6f24e", .9), ("#bfe9d8", .75), ("#8fd0dc", .6)]
+
+
+def _register_fonts() -> tuple[str, str, str, str]:
+    """Mend's typefaces (bundled, SIL OFL); falls back to Helvetica/Courier if they are missing."""
+    from reportlab.lib.fonts import addMapping
+    from reportlab.pdfbase import pdfmetrics
+    from reportlab.pdfbase.ttfonts import TTFont
+    files = {"Mend-Display": "Unbounded-Bold.ttf", "Mend-Body": "Manrope-Regular.ttf",
+             "Mend-Body-Bold": "Manrope-Bold.ttf", "Mend-Mono": "JetBrainsMono-Regular.ttf"}
+    if not all((FONTS / f).exists() for f in files.values()):
+        return "Helvetica-Bold", "Helvetica", "Helvetica-Bold", "Courier"
+    for name, f in files.items():
+        if name not in pdfmetrics.getRegisteredFontNames():
+            pdfmetrics.registerFont(TTFont(name, str(FONTS / f)))
+    for bold, italic, face in [(0, 0, "Mend-Body"), (1, 0, "Mend-Body-Bold"), (0, 1, "Mend-Body"), (1, 1, "Mend-Body-Bold")]:
+        addMapping("Mend-Body", bold, italic, face)
+    return "Mend-Display", "Mend-Body", "Mend-Body-Bold", "Mend-Mono"
+
+
 def write_pdf(recs: list[dict], path: Path, title: str) -> None:
     try:
         from reportlab.lib import colors
         from reportlab.lib.pagesizes import A4
-        from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
+        from reportlab.lib.styles import ParagraphStyle
         from reportlab.lib.units import mm
         from reportlab.platypus import (KeepTogether, PageBreak, Paragraph, Preformatted, SimpleDocTemplate,
                                         Spacer, Table, TableStyle)
     except ImportError:
         raise SystemExit("PDF export needs reportlab: pip install -e '.[export]'") from None
 
-    ink, muted, line = colors.HexColor("#18212b"), colors.HexColor("#5a6573"), colors.HexColor("#d8dee5")
-    ss = getSampleStyleSheet()
-    st = {
-        "title": ParagraphStyle("t", parent=ss["Title"], fontName="Helvetica-Bold", fontSize=20, leading=24,
-                                alignment=0, textColor=ink, spaceAfter=4),
-        "sub": ParagraphStyle("s", parent=ss["Normal"], fontSize=9.5, leading=13, textColor=muted),
-        "h1": ParagraphStyle("h1", parent=ss["Heading2"], fontName="Helvetica-Bold", fontSize=14, leading=17,
-                             textColor=ink, spaceBefore=2, spaceAfter=2),
-        "h2": ParagraphStyle("h2", parent=ss["Normal"], fontName="Helvetica-Bold", fontSize=8, leading=10,
-                             textColor=muted, spaceBefore=9, spaceAfter=3),
-        "body": ParagraphStyle("b", parent=ss["Normal"], fontSize=9.5, leading=13, textColor=ink),
-        "cell": ParagraphStyle("c", parent=ss["Normal"], fontSize=8, leading=10, textColor=ink),
-        "mono": ParagraphStyle("m", parent=ss["Code"], fontName="Courier", fontSize=7.4, leading=9.2,
-                               textColor=ink, backColor=colors.HexColor("#f6f8fa"), borderPadding=5,
-                               leftIndent=5, rightIndent=5, spaceBefore=2, spaceAfter=4),
-    }
-    P = lambda text, style="body": Paragraph(text, st[style])  # noqa: E731
+    DISPLAY, BODY, BOLD, MONO = _register_fonts()
+    C = {k: colors.HexColor(v) for k, v in PALETTE.items()}
+    W, H = A4
+    margin = 18 * mm
+    width = W - 2 * margin
 
-    def table(data, widths, header=True, align_right_from=1):
+    def style(name, **kw):
+        base = dict(fontName=BODY, fontSize=9.4, leading=13.5, textColor=C["ink"])
+        return ParagraphStyle(name, **{**base, **kw})
+    st = {
+        "eyebrow": style("eyebrow", fontName=DISPLAY, fontSize=7.5, leading=10, textColor=C["teal"]),
+        "cover": style("cover", fontName=DISPLAY, fontSize=34, leading=38, textColor=C["ink"]),
+        "lede": style("lede", fontSize=11, leading=16, textColor=C["alert"]),
+        "sub": style("sub", fontSize=8.5, leading=12, textColor=C["muted"]),
+        "subr": style("subr", fontSize=8.5, leading=12, textColor=C["muted"], alignment=2),
+        "h1": style("h1", fontName=MONO, fontSize=15, leading=19),
+        "h2": style("h2", fontName=DISPLAY, fontSize=7, leading=9, textColor=C["muted"], spaceBefore=12, spaceAfter=5),
+        "body": style("body"),
+        "cell": style("cell", fontSize=8.2, leading=10.5),
+        "cellmono": style("cellmono", fontName=MONO, fontSize=7.6, leading=10),
+        "stat": style("stat", fontName=DISPLAY, fontSize=17, leading=20, textColor=C["lime"]),
+        "statl": style("statl", fontSize=7.6, leading=10, textColor=C["muted"]),
+        "score": style("score", fontName=DISPLAY, fontSize=26, leading=30, alignment=2),
+        "mono": ParagraphStyle("mono", fontName=MONO, fontSize=6.9, leading=9.4, textColor=C["alert"]),
+    }
+    P = lambda text, s="body": Paragraph(text, st[s])  # noqa: E731
+    up = lambda s: escape(s.upper())  # noqa: E731
+
+    def h2(text):
+        return P(up(text), "h2")
+
+    def table(data, widths, header=True, right_from=1, zebra=False):
         t = Table(data, colWidths=widths, repeatRows=1 if header else 0)
-        style = [("FONT", (0, 0), (-1, -1), "Helvetica", 8.5), ("TEXTCOLOR", (0, 0), (-1, -1), ink),
-                 ("LINEBELOW", (0, 0), (-1, -1), 0.4, line), ("VALIGN", (0, 0), (-1, -1), "TOP"),
-                 ("TOPPADDING", (0, 0), (-1, -1), 4), ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
-                 ("ALIGN", (align_right_from, 0), (-1, -1), "RIGHT")]
+        s = [("FONT", (0, 0), (-1, -1), BODY, 8.4), ("TEXTCOLOR", (0, 0), (-1, -1), C["ink"]),
+             ("BACKGROUND", (0, 0), (-1, -1), C["panel"]), ("LINEBELOW", (0, 0), (-1, -1), .5, C["line"]),
+             ("VALIGN", (0, 0), (-1, -1), "MIDDLE"), ("TOPPADDING", (0, 0), (-1, -1), 5),
+             ("BOTTOMPADDING", (0, 0), (-1, -1), 5), ("LEFTPADDING", (0, 0), (-1, -1), 7),
+             ("RIGHTPADDING", (0, 0), (-1, -1), 7), ("ALIGN", (right_from, 0), (-1, -1), "RIGHT"),
+             ("BOX", (0, 0), (-1, -1), .6, C["line"])]
         if header:
-            style += [("FONT", (0, 0), (-1, 0), "Helvetica-Bold", 7.5), ("TEXTCOLOR", (0, 0), (-1, 0), muted),
-                      ("LINEBELOW", (0, 0), (-1, 0), 0.8, ink)]
-        t.setStyle(TableStyle(style))
+            s += [("FONT", (0, 0), (-1, 0), DISPLAY, 6), ("TEXTCOLOR", (0, 0), (-1, 0), C["muted"]),
+                  ("BACKGROUND", (0, 0), (-1, 0), C["panel2"]), ("TOPPADDING", (0, 0), (-1, 0), 7),
+                  ("BOTTOMPADDING", (0, 0), (-1, 0), 7)]
+        t.setStyle(TableStyle(s))
         return t
+
+    def box(flowables, rule=None, pad=9):
+        t = Table([[flowables]], colWidths=[width])
+        s = [("BACKGROUND", (0, 0), (-1, -1), C["panel"]), ("BOX", (0, 0), (-1, -1), .6, C["line"]),
+             ("LEFTPADDING", (0, 0), (-1, -1), pad + 2), ("RIGHTPADDING", (0, 0), (-1, -1), pad),
+             ("TOPPADDING", (0, 0), (-1, -1), pad), ("BOTTOMPADDING", (0, 0), (-1, -1), pad)]
+        if rule:
+            s.append(("LINEBEFORE", (0, 0), (0, -1), 2.5, rule))
+        t.setStyle(TableStyle(s))
+        return t
+
+    def tiles(items, n=None):
+        n = n or len(items)
+        cells = [[P(v, "stat"), P(escape(label), "statl")] for v, label in items]
+        t = Table([cells], colWidths=[width / n] * n)
+        t.setStyle(TableStyle([("BACKGROUND", (0, 0), (-1, -1), C["panel"]), ("BOX", (0, 0), (-1, -1), .6, C["line"]),
+                               ("LINEAFTER", (0, 0), (-2, -1), .6, C["line"]), ("VALIGN", (0, 0), (-1, -1), "TOP"),
+                               ("LEFTPADDING", (0, 0), (-1, -1), 10), ("TOPPADDING", (0, 0), (-1, -1), 9),
+                               ("BOTTOMPADDING", (0, 0), (-1, -1), 9)]))
+        return t
+
+    def pill(text, color):
+        return f'<font name="{DISPLAY}" size="6.5" color="{color}">{up(text)}</font>'
 
     rows = [row(r) for r in recs]
     agents = sorted({r["agent"] for r in rows})
+    names = ", ".join(display_name(a) for a in agents)
     made = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
-    story = [P(escape(title), "title"),
-             P(f"Agent: <b>{escape(', '.join(agents))}</b> &nbsp;·&nbsp; {len(rows)} incidents &nbsp;·&nbsp; "
-               f"generated {made}", "sub"),
+    lime, ok, bad = PALETTE["lime"], PALETTE["ok"], PALETTE["bad"]
+
+    # ---------------------------------------------------------------- cover + summary
+    by = {sp: [r for r in rows if r["split"] == sp] for sp in ("dev", "heldout")}
+    pct = lambda rs: f"{sum(r['recovered'] == 'yes' for r in rs) / len(rs):.0%}" if rs else "–"  # noqa: E731
+    avg = lambda rs: f"{sum(r['score'] for r in rs) / len(rs):.0f}" if rs else "–"  # noqa: E731
+    story = [Spacer(1, 30 * mm),
+             P(up("Incident recovery report"), "eyebrow"), Spacer(1, 3 * mm),
+             P(up(names), "cover"), Spacer(1, 3 * mm),
+             P(escape(DESCRIPTIONS.get(agents[0], "")[:1].upper() + DESCRIPTIONS.get(agents[0], "")[1:]) + "."
+               if len(agents) == 1 else "", "lede"),
+             Spacer(1, 2 * mm),
+             P(f"{len(rows)} incidents &nbsp;·&nbsp; run <font name=\"{MONO}\">{escape(rows[0]['run'])}</font>"
+               f" &nbsp;·&nbsp; generated {made}", "sub"),
+             Spacer(1, 26 * mm),
+             tiles([(pct(by["dev"]), "recovered, dev incidents"), (pct(by["heldout"]), "recovered, never-seen incidents"),
+                    (avg(by["dev"]), "mean score, dev"), (avg(by["heldout"]), "mean score, never-seen")]),
              Spacer(1, 6 * mm),
-             P("How to read this report", "h2"),
-             P("Each incident was injected into a live five-service system. The agent investigated and acted only "
+             h2("How to read this report"),
+             P("Each incident was injected into a live five-service shop. The agent investigated and acted only "
                "through a guarded toolbox, then filed a root-cause report. An independent verifier sent real user "
                "traffic over a soak window and checked that each fault's root cause was actually gone. Score: "
-               f"{WEIGHTS['recovered']} points for a verified recovery, {WEIGHTS['diagnosis']} for naming the right "
-               f"root cause (F1), {WEIGHTS['safety']} for touching nothing that was not broken."),
-             P("Summary", "h2"),
-             table([["SPLIT", "INCIDENTS", "RECOVERED", "DIAGNOSIS F1", "MEAN SCORE", "COLLATERAL"]]
-                   + _split_stats(rows), [32 * mm, 26 * mm, 26 * mm, 28 * mm, 28 * mm, 26 * mm]),
-             P("Incidents", "h2")]
+               f"<b>{WEIGHTS['recovered']}</b> points for a verified recovery, <b>{WEIGHTS['diagnosis']}</b> for naming "
+               f"the right root cause, <b>{WEIGHTS['safety']}</b> for touching nothing that was not broken. Each incident "
+               "page ends with recommendations: the immediate fix and how to prevent a repeat."),
+             h2("Summary"),
+             table([["SPLIT", "INCIDENTS", "RECOVERED", "DIAGNOSIS F1", "MEAN SCORE", "COLLATERAL"]] + _split_stats(rows),
+                   [width * f for f in (.2, .15, .16, .17, .17, .15)]),
+             PageBreak(),
+             P(up("Incidents"), "eyebrow"), Spacer(1, 4 * mm)]
     overview = [["INCIDENT", "SPLIT", "RESULT", "SCORE", "REPORTED ROOT CAUSE"]]
     for r in rows:
-        res = ('<font color="#1d7a4c">recovered</font>' if r["recovered"] == "yes"
-               else '<font color="#be3329">not recovered</font>')
-        overview.append([P(escape(r["scenario"]), "cell"), "dev" if r["split"] == "dev" else "held-out",
-                         P(res, "cell"), f"{r['score']:.0f}",
-                         P(escape(r["reported_root_causes"] or "none"), "cell")])
-    ov = table(overview, [52 * mm, 18 * mm, 24 * mm, 14 * mm, 58 * mm], align_right_from=3)
+        res = pill("recovered", ok) if r["recovered"] == "yes" else pill("not recovered", bad)
+        overview.append([P(escape(r["scenario"]), "cellmono"), "dev" if r["split"] == "dev" else "held-out",
+                         P(res, "cell"), f"{r['score']:.0f}", P(escape(r["reported_root_causes"] or "none"), "cellmono")])
+    ov = table(overview, [width * f for f in (.33, .1, .2, .07, .3)], right_from=3)
     ov.setStyle(TableStyle([("ALIGN", (4, 0), (4, -1), "LEFT")]))
-    story += [ov]
+    story.append(ov)
 
+    # ---------------------------------------------------------------- one page per incident
     for rec, r in zip(recs, rows):
         good = r["recovered"] == "yes"
-        verdict = (f'<font color="{"#1d7a4c" if good else "#be3329"}"><b>{"RECOVERED" if good else "NOT RECOVERED"}'
-                   f'</b></font> &nbsp; score <b>{r["score"]:.0f}/100</b> &nbsp;=&nbsp; recovery {r["recovery_points"]:.0f}'
-                   f' + diagnosis {r["diagnosis_points"]:.0f} + safety {r["safety_points"]:.0f}')
-        story += [PageBreak(),
-                  P(f'{escape(r["scenario"])} <font size="9" color="#b45a0c">'
-                    f'{"DEV" if r["split"] == "dev" else "HELD-OUT"}</font>', "h1"),
-                  P(verdict),
-                  P("Pager alert", "h2"), Preformatted(rec["alert"].strip(), st["mono"], maxLineLength=118),
-                  P("What was actually broken", "h2")]
-        for f in rec["faults"]:
-            story.append(P(f"• <b>{escape(f['kind'])}</b> on {escape(f.get('target', ''))}: "
-                           f"{escape(FAULTS[f['kind']].description)}"))
-        if rec.get("noise"):
-            story.append(P(f"• Red herrings planted: {escape(', '.join(rec['noise']))}"))
-        story.append(P(f"Root causes to name: <b>{escape(r['true_root_causes'])}</b>"))
-
         rep = rec.get("report") or {}
-        story.append(P("Agent's incident report", "h2"))
-        if rep.get("root_causes"):
-            for c in rep["root_causes"]:
-                story.append(P(f"• <b>{escape(c['component'])}/{escape(c['category'])}</b>"
-                               + (f": {escape(c['evidence'])}" if c.get("evidence") else "")))
-        else:
-            story.append(P("No root cause reported."))
+        head = Table([[[P(pill("dev" if r["split"] == "dev" else "held-out", lime if r["split"] != "dev" else PALETTE["muted"]), "cell"),
+                        Spacer(1, 1.5 * mm), P(escape(r["scenario"]), "h1"), Spacer(1, 1.5 * mm),
+                        P(pill("system recovered", ok) if good else pill("still broken", bad), "cell")],
+                       [P(f'<font color="{lime if good else PALETTE["ink"]}">{r["score"]:.0f}</font>'
+                          f'<font name="{BODY}" size="9" color="{PALETTE["muted"]}"> / 100</font>', "score"),
+                        Spacer(1, 2 * mm),
+                        P(f'recovery {r["recovery_points"]:.0f} · diagnosis {r["diagnosis_points"]:.0f} · '
+                          f'safety {r["safety_points"]:.0f}', "subr")]]],
+                     colWidths=[width * .62, width * .38])
+        head.setStyle(TableStyle([("VALIGN", (0, 0), (-1, -1), "BOTTOM"), ("ALIGN", (1, 0), (1, 0), "RIGHT"),
+                                  ("LEFTPADDING", (0, 0), (-1, -1), 0), ("RIGHTPADDING", (0, 0), (-1, -1), 0),
+                                  ("LINEBELOW", (0, 0), (-1, 0), .6, C["line"]), ("BOTTOMPADDING", (0, 0), (-1, -1), 8)]))
+        story += [PageBreak(), head,
+                  h2("Pager alert the agent received"),
+                  box(Preformatted(rec["alert"].strip(), st["mono"], maxLineLength=104), rule=C["bad"])]
+
+        broken = [P(f'<font color="{PALETTE["sky"]}" name="{MONO}">{escape(f["kind"])}</font> on '
+                    f'<font color="{PALETTE["sky"]}" name="{MONO}">{escape(f.get("target", ""))}</font>: '
+                    f'{escape(FAULTS[f["kind"]].description)}') for f in rec["faults"]]
+        if rec.get("noise"):
+            broken.append(P(f'Red herrings planted: <font name="{MONO}">{escape(", ".join(rec["noise"]))}</font>', "sub"))
+        broken.append(P(f'Root causes to name: <font name="{MONO}" color="{lime}">{escape(r["true_root_causes"])}</font>'))
+        story += [h2("What was actually broken (hidden from the agent)"), box(broken)]
+
+        said = [P(f'<font name="{MONO}" color="{lime}">{escape(c["component"])}/{escape(c["category"])}</font>'
+                  + (f': {escape(c["evidence"])}' if c.get("evidence") else "")) for c in rep.get("root_causes", [])]
+        said = said or [P("No root cause reported.", "sub")]
         if rep.get("summary"):
-            story.append(P(f"Summary: {escape(rep['summary'])}"))
+            said.append(P(f"Summary: {escape(rep['summary'])}", "sub"))
         if r["agent_error"]:
-            story.append(P(f'<font color="#be3329">Agent error: {escape(r["agent_error"])}</font>'))
+            said.append(P(f'<font color="{bad}">Agent error: {escape(r["agent_error"])}</font>'))
+        story += [h2(f"{display_name(r['agent'])}'s incident report"), box(said)]
 
         steps = [["#", "TIME", "TYPE", "TOOL CALL"]]
-        for e in rec.get("audit", []):
+        acts = []
+        for i, e in enumerate(rec.get("audit", []), start=1):
             args = ", ".join(f"{k}={v}" for k, v in e["args"].items())
             kind = "blocked" if e.get("blocked") else e["kind"]
-            color = "#b45a0c" if kind == "act" else "#be3329" if kind == "blocked" else "#5a6573"
-            steps.append([str(e["step"]), f"{e['t']:.1f}s", P(f'<font color="{color}">{kind}</font>', "cell"),
-                          P(f"<b>{escape(e['tool'])}</b>({escape(args)})", "cell")])
-        story += [P(f"Investigation and actions ({r['tool_calls']} tool calls, {r['actions']} state changes, "
-                    f"{r['agent_seconds'] or 0:.1f} s)", "h2"),
-                  table(steps, [9 * mm, 14 * mm, 18 * mm, 125 * mm], align_right_from=9)]
+            color = {"act": lime, "blocked": bad, "final": PALETTE["teal"]}.get(kind, PALETTE["dim"])
+            if kind == "act":
+                acts.append(i)
+            steps.append([str(e["step"]), f"{e['t']:.1f}s", P(pill(kind, color), "cell"),
+                          P(f'<b>{escape(e["tool"])}</b><font color="{PALETTE["muted"]}">({escape(args)})</font>', "cellmono")])
+        tl = table(steps, [width * f for f in (.06, .1, .13, .71)], right_from=9)
+        tl.setStyle(TableStyle([("BACKGROUND", (0, i), (-1, i), colors.HexColor("#1a3220")) for i in acts]))
+        story += [h2(f"Investigation and actions · {r['tool_calls']} tool calls · {r['actions']} state changes · "
+                     f"{r['agent_seconds'] or 0:.1f} s"), tl]
 
         sr = r["traffic_success_rate"]
-        facts = [["USER TRAFFIC SUCCESS", "P95 LATENCY", "COLLATERAL ACTIONS", "DIAGNOSIS F1"],
-                 [f"{sr:.0%}" if sr is not None else "–",
-                  f"{r['p95_ms']:.0f} ms" if r["p95_ms"] is not None else "–",
-                  str(r["collateral_actions"]), f"{r['diagnosis_f1']:.2f}"]]
-        verif = [P("Independent verification", "h2"),
-                 table(facts, [42 * mm, 42 * mm, 42 * mm, 40 * mm], align_right_from=9)]
+        verif = [h2("Independent verification"),
+                 tiles([(f"{sr:.0%}" if sr is not None else "–", "user traffic success"),
+                        (f"{r['p95_ms']:.0f} ms" if r["p95_ms"] is not None else "–", "p95 latency"),
+                        (str(r["collateral_actions"]), "collateral actions"),
+                        (f"{r['diagnosis_f1']:.2f}", "diagnosis F1")])]
         if r["verifier_findings"]:
-            verif.append(P(f"Findings: {escape(r['verifier_findings'])}"))
+            verif.append(P(f"Findings: {escape(r['verifier_findings'])}", "sub"))
         story.append(KeepTogether(verif))
 
-        recs = recommendations(rec["faults"])
-        status = ('<font color="#1d7a4c">done by the agent</font>' if good
-                  else '<font color="#be3329"><b>still needed</b></font>')
-        advice = [P("Recommendations", "h2"), P(f"<b>Immediate fix</b> ({status})")]
-        advice += [P(f"• {escape(x['fix'])}") for x in recs]
-        advice.append(P("<b>Prevent a repeat</b>"))
-        advice += [P(f"• {escape(t)}") for x in recs for t in x["prevent"]]
+        advice = recommendations(rec["faults"])
+        body = [P("<b>Immediate fix</b> &nbsp;" + (pill("done by the agent", ok) if good else pill("still needed", bad)))]
+        body += [P(f"•&nbsp; {escape(x['fix'])}") for x in advice]
+        body += [Spacer(1, 2 * mm), P("<b>Prevent a repeat</b>")]
+        body += [P(f"•&nbsp; {escape(t)}") for x in advice for t in x["prevent"]]
         if rep.get("recommendations"):
-            advice.append(P("<b>The agent's own recommendations</b>"))
-            advice += [P(f"• {escape(t)}") for t in rep["recommendations"]]
-        advice.append(P("Fix and prevention advice come from the remediation playbook for the injected fault "
-                        "types, not from the agent.", "sub"))
-        story.append(KeepTogether(advice))
+            body += [Spacer(1, 2 * mm), P(f"<b>{escape(display_name(r['agent']))}'s own recommendations</b>")]
+            body += [P(f"•&nbsp; {escape(t)}") for t in rep["recommendations"]]
+        body += [Spacer(1, 1.5 * mm), P("Fix and prevention advice come from the remediation playbook for the injected "
+                                        "fault types, not from the agent.", "sub")]
+        story.append(KeepTogether([h2("Recommendations"), box(body, rule=C["lime"])]))
 
-    def footer(canvas, doc):
+    # ---------------------------------------------------------------- page furniture
+    def background(canvas, cover: bool):
         canvas.saveState()
-        canvas.setFont("Helvetica", 7.5)
-        canvas.setFillColor(muted)
-        canvas.drawString(18 * mm, 10 * mm, f"{title} · {made}")
-        canvas.drawRightString(A4[0] - 18 * mm, 10 * mm, f"page {doc.page}")
+        canvas.setFillColor(C["bg"])
+        canvas.rect(0, 0, W, H, stroke=0, fill=1)
+        canvas.setFillColor(colors.HexColor("#0b3a37"))     # soft glow, top left
+        for r_, a in ((150 * mm, .10), (105 * mm, .10), (60 * mm, .08)):
+            canvas.setFillAlpha(a)
+            canvas.circle(-10 * mm, H + 10 * mm, r_, stroke=0, fill=1)
+        if cover:                                           # the glowing slabs, as in the web app hero
+            for i, (col, alpha) in enumerate(SLABS):
+                canvas.saveState()
+                canvas.translate(W - 64 * mm + i * 9 * mm, H - 22 * mm - i * 11 * mm)
+                canvas.rotate(-38)
+                canvas.setFillColor(colors.HexColor(col))
+                canvas.setFillAlpha(alpha * .8)
+                canvas.roundRect(-27 * mm, -27 * mm, 54 * mm, 54 * mm, 7 * mm, stroke=0, fill=1)
+                canvas.restoreState()
+        canvas.setFillAlpha(1)
+        canvas.setFont(DISPLAY, 10)
+        canvas.setFillColor(C["ink"])
+        canvas.drawString(margin, H - 13 * mm, "MEND")
+        canvas.setFont(BODY, 7.5)
+        canvas.setFillColor(C["muted"])
+        canvas.drawString(margin, 10 * mm, f"{title} · {made}")
+        canvas.drawRightString(W - margin, 10 * mm, f"page {canvas.getPageNumber()}")
+        canvas.setStrokeColor(C["line"])
+        canvas.setLineWidth(.5)
+        canvas.line(margin, 14 * mm, W - margin, 14 * mm)
         canvas.restoreState()
 
-    doc = SimpleDocTemplate(str(path), pagesize=A4, title=title, author="Agentic Recovery benchmark",
-                            leftMargin=18 * mm, rightMargin=18 * mm, topMargin=16 * mm, bottomMargin=18 * mm)
-    doc.build(story, onFirstPage=footer, onLaterPages=footer)
+    doc = SimpleDocTemplate(str(path), pagesize=A4, title=title, author="Mend · Agentic Recovery benchmark",
+                            leftMargin=margin, rightMargin=margin, topMargin=20 * mm, bottomMargin=19 * mm)
+    doc.build(story, onFirstPage=lambda c, d: background(c, True), onLaterPages=lambda c, d: background(c, False))
 
 
 def export(tags: list[str], out: Path, pdf: bool = True) -> list[Path]:
@@ -265,7 +376,7 @@ def export(tags: list[str], out: Path, pdf: bool = True) -> list[Path]:
         write_csv(recs, out / f"{tag}.csv")
         written.append(out / f"{tag}.csv")
         if pdf:
-            write_pdf(recs, out / f"{tag}.pdf", f"Incident Recovery Report: {tag}")
+            write_pdf(recs, out / f"{tag}.pdf", f"Mend incident report: {display_name(recs[0]['agent'])}")
             written.append(out / f"{tag}.pdf")
     if len(tags) > 1:
         write_csv(every, out / "all_episodes.csv")

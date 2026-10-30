@@ -19,6 +19,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 from recovery import export  # noqa: E402
+from recovery.agents import DESCRIPTIONS, display_name  # noqa: E402
 from recovery.faults import FAULTS  # noqa: E402
 from recovery.playbook import recommendations  # noqa: E402
 from recovery.scoring import WEIGHTS  # noqa: E402
@@ -63,7 +64,8 @@ def build(tags: list[str]) -> dict:
                 "truth": rec["truth"], "advice": recommendations(rec["faults"]), "runs": {}})
             sc["runs"][agent] = episode(rec)
     order = sorted(scenarios.values(), key=lambda s: (s["split"] != "dev", s["id"]))
-    return {"agents": agents, "weights": WEIGHTS, "scenarios": order, "reports": reports(tags)}
+    return {"agents": agents, "weights": WEIGHTS, "scenarios": order, "reports": reports(tags),
+            "names": {a: display_name(a) for a in agents}, "notes": {a: DESCRIPTIONS.get(a, "") for a in agents}}
 
 
 def reports(tags: list[str]) -> dict:
@@ -78,7 +80,7 @@ def reports(tags: list[str]) -> dict:
             export.write_csv(recs, csv_path)
             entry = {"tag": tag, "csv": csv_path.read_text(encoding="utf-8-sig")}
             try:
-                export.write_pdf(recs, pdf_path, f"Incident Recovery Report: {tag}")
+                export.write_pdf(recs, pdf_path, f"Mend incident report: {display_name(recs[0]['agent'])}")
                 entry["pdf"] = base64.b64encode(pdf_path.read_bytes()).decode()
             except SystemExit:   # reportlab not installed: ship the CSV only
                 pass
