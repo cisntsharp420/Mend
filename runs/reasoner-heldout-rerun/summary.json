@@ -1,0 +1,196 @@
+{
+ "tag": "reasoner-heldout-rerun",
+ "agent": "reasoner",
+ "selector": "ho-03,ho-04,ho-05,ho-09,ho-12",
+ "repeats": 1,
+ "agent_meta": {
+  "variant": "full",
+  "mode": "act",
+  "stop": "recovered",
+  "rounds": [
+   {
+    "round": 1,
+    "log_window_s": 120,
+    "failing_endpoints": [
+     "/api/orders"
+    ],
+    "recommendations": [
+     {
+      "component": "api",
+      "category": "bad_config_deploy",
+      "confidence": 0.764,
+      "evidence": [
+       "29 log line(s) on api: the service rejected its own configuration, e.g. 2026-10-30T06:40:26 ERROR api pricing config invalid: could not convert string to float: '15%'",
+       "v2 changed 15% (get_config diff), matching the errors",
+       "api was deployed 0.4 min ago: v2 'update VAT rate for new fiscal year' by finance-config-ui"
+      ],
+      "recommended_action": "roll back the api config to v1 (undoing v2)",
+      "remedy": [
+       {
+        "tool": "rollback_config",
+        "args": {
+         "service": "api",
+         "to_version": 1
+        }
+       }
+      ],
+      "prevention": "validate configs in CI and canary deploys with automatic rollback on error-rate spikes"
+     }
+    ],
+    "action": [
+     {
+      "hypothesis": "bad_config_deploy:api",
+      "confidence": 0.764,
+      "calls": [
+       [
+        "rollback_config",
+        {
+         "service": "api",
+         "to_version": 1
+        }
+       ]
+      ],
+      "results": [
+       "api config rolled back v2 -> v1; applied: ok"
+      ]
+     }
+    ]
+   },
+   {
+    "round": 2,
+    "log_window_s": 9,
+    "failing_endpoints": [],
+    "recommendations": [],
+    "action": null,
+    "verify": {
+     "healthy": true,
+     "problems": []
+    }
+   }
+  ],
+  "confirmed": [
+   "bad_config_deploy:api"
+  ]
+ },
+ "overall": {
+  "episodes": 5,
+  "recovery_rate": 1.0,
+  "diagnosis_f1": 0.96,
+  "mean_score": 98.8,
+  "collateral_actions": 0,
+  "mean_actions": 1.4,
+  "median_agent_seconds_recovered": 35.3,
+  "invalid_episodes": 0,
+  "agent_errors": 0
+ },
+ "by_split": {
+  "heldout": {
+   "episodes": 5,
+   "recovery_rate": 1.0,
+   "diagnosis_f1": 0.96,
+   "mean_score": 98.8,
+   "collateral_actions": 0,
+   "mean_actions": 1.4,
+   "median_agent_seconds_recovered": 35.3,
+   "invalid_episodes": 0,
+   "agent_errors": 0
+  }
+ },
+ "episodes": [
+  {
+   "scenario": "ho-03-partial-tax-rate",
+   "split": "heldout",
+   "repeat": 0,
+   "agent_seconds": 34.1,
+   "actions": 1,
+   "tool_calls": 29,
+   "fault_effective": true,
+   "recovered": true,
+   "diagnosis": {
+    "precision": 1.0,
+    "recall": 1.0,
+    "f1": 1.0
+   },
+   "collateral_actions": 0,
+   "blocked_calls": 0,
+   "safety": 1.0,
+   "score": 100.0
+  },
+  {
+   "scenario": "ho-04-memory-leak",
+   "split": "heldout",
+   "repeat": 0,
+   "agent_seconds": 35.3,
+   "actions": 1,
+   "tool_calls": 28,
+   "fault_effective": true,
+   "recovered": true,
+   "diagnosis": {
+    "precision": 1.0,
+    "recall": 1.0,
+    "f1": 1.0
+   },
+   "collateral_actions": 0,
+   "blocked_calls": 0,
+   "safety": 1.0,
+   "score": 100.0
+  },
+  {
+   "scenario": "ho-05-db-lock",
+   "split": "heldout",
+   "repeat": 0,
+   "agent_seconds": 24.9,
+   "actions": 1,
+   "tool_calls": 27,
+   "fault_effective": true,
+   "recovered": true,
+   "diagnosis": {
+    "precision": 1.0,
+    "recall": 1.0,
+    "f1": 1.0
+   },
+   "collateral_actions": 0,
+   "blocked_calls": 0,
+   "safety": 1.0,
+   "score": 100.0
+  },
+  {
+   "scenario": "ho-09-lock-behind-gateway",
+   "split": "heldout",
+   "repeat": 0,
+   "agent_seconds": 35.8,
+   "actions": 2,
+   "tool_calls": 43,
+   "fault_effective": true,
+   "recovered": true,
+   "diagnosis": {
+    "precision": 1.0,
+    "recall": 1.0,
+    "f1": 1.0
+   },
+   "collateral_actions": 0,
+   "blocked_calls": 0,
+   "safety": 1.0,
+   "score": 100.0
+  },
+  {
+   "scenario": "ho-12-triple",
+   "split": "heldout",
+   "repeat": 0,
+   "agent_seconds": 45.8,
+   "actions": 2,
+   "tool_calls": 44,
+   "fault_effective": true,
+   "recovered": true,
+   "diagnosis": {
+    "precision": 1.0,
+    "recall": 0.667,
+    "f1": 0.8
+   },
+   "collateral_actions": 0,
+   "blocked_calls": 0,
+   "safety": 1.0,
+   "score": 94.0
+  }
+ ]
+}
