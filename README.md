@@ -77,7 +77,7 @@ Example `diagnose` output (bad credentials deploy):
 ```bash
 make test                         # offline unit tests (no docker)
 make reasoner-dev reasoner-heldout baselines ablations
-python -m recovery report reasoner-dev reasoner-heldout baseline-rules baseline-restart_all baseline-noop --out docs/results.md
+python -m recovery report reasoner-dev reasoner-heldout baseline-rules baseline-restart_all baseline-noop ablation-no_logs ablation-no_metrics ablation-no_diagnostics ablation-no_changes ablation-single_pass --out docs/results.md
 ```
 
 Results: see [`docs/results.md`](docs/results.md). Every episode's full audit trail, evidence and per-round

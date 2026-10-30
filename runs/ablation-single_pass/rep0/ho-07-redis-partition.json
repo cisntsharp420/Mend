@@ -1,0 +1,386 @@
+{
+ "scenario": "ho-07-redis-partition",
+ "split": "heldout",
+ "agent": "reasoner",
+ "faults": [
+  {
+   "kind": "network_partition",
+   "target": "redis"
+  }
+ ],
+ "noise": [],
+ "truth": [
+  [
+   {
+    "component": "redis",
+    "category": "network_partition"
+   }
+  ]
+ ],
+ "baseline_healthy": true,
+ "fault_effective": true,
+ "alert": "PAGE [SEV2] ShopStack synthetic monitoring is failing.\nProbe success 80%, p95 28ms over the last few seconds.\n  - GET /api/health: 5/5 failed, statuses [200] ({\"checks\":{\"cache\":\"error: Error -2 connecting to redis:6379. Name does not reso)\nInvestigate, restore service, verify recovery, then submit an incident report.",
+ "report": {
+  "root_causes": [
+   {
+    "component": "redis",
+    "category": "network_partition",
+    "evidence": "redis is not attached to the backend network it belongs on (list_services); 44 name-resolution errors in logs, e.g. probe /api/health: {\"checks\":{\"cache\":\"error: Error -2 connecting to redis:6379. Name does not resolve.\",\"database\":\"ok"
+   }
+  ],
+  "summary": "[confirmed] re-attach redis to the backend network (restores its DNS name) (confidence 0.94; evidence: redis is not attached to the backend network it belongs on (list_services)). Prevent: monitor container network attachment and DNS resolution between services.",
+  "recovered": true
+ },
+ "agent_error": null,
+ "agent_seconds": 19.9,
+ "tool_calls": 15,
+ "actions": 1,
+ "final_verification": {
+  "passed": true,
+  "success_rate": 1.0,
+  "p95_ms": 24.2,
+  "failures": [],
+  "probe_summary": {
+   "GET /healthz": {
+    "ok": 15,
+    "fail": 0,
+    "statuses": [
+     200
+    ],
+    "last_error": ""
+   },
+   "GET /api/health": {
+    "ok": 15,
+    "fail": 0,
+    "statuses": [
+     200
+    ],
+    "last_error": ""
+   },
+   "GET /api/products": {
+    "ok": 15,
+    "fail": 0,
+    "statuses": [
+     200
+    ],
+    "last_error": ""
+   },
+   "GET /api/orders/recent": {
+    "ok": 15,
+    "fail": 0,
+    "statuses": [
+     200
+    ],
+    "last_error": ""
+   },
+   "POST /api/orders": {
+    "ok": 15,
+    "fail": 0,
+    "statuses": [
+     201
+    ],
+    "last_error": ""
+   }
+  }
+ },
+ "metrics": {
+  "recovered": true,
+  "diagnosis": {
+   "precision": 1.0,
+   "recall": 1.0,
+   "f1": 1.0
+  },
+  "collateral_actions": 0,
+  "blocked_calls": 0,
+  "safety": 1.0,
+  "score": 100.0
+ },
+ "agent_meta": {
+  "variant": "single_pass",
+  "mode": "act",
+  "stop": "single_pass",
+  "rounds": [
+   {
+    "round": 1,
+    "log_window_s": 120,
+    "failing_endpoints": [
+     "/api/health"
+    ],
+    "recommendations": [
+     {
+      "component": "redis",
+      "category": "network_partition",
+      "confidence": 0.94,
+      "evidence": [
+       "redis is not attached to the backend network it belongs on (list_services)",
+       "44 name-resolution errors in logs, e.g. probe /api/health: {\"checks\":{\"cache\":\"error: Error -2 connecting to redis:6379. Name does not resolve.\",\"database\":\"ok"
+      ],
+      "recommended_action": "re-attach redis to the backend network (restores its DNS name)",
+      "remedy": [
+       {
+        "tool": "reconnect_network",
+        "args": {
+         "service": "redis",
+         "network": "backend"
+        }
+       }
+      ],
+      "prevention": "monitor container network attachment and DNS resolution between services"
+     }
+    ],
+    "action": [
+     {
+      "hypothesis": "network_partition:redis",
+      "confidence": 0.94,
+      "calls": [
+       [
+        "reconnect_network",
+        {
+         "service": "redis",
+         "network": "backend"
+        }
+       ]
+      ],
+      "results": [
+       "connected redis to backend: ok"
+      ]
+     }
+    ],
+    "verify": {
+     "healthy": true,
+     "problems": []
+    }
+   }
+  ],
+  "confirmed": [
+   "network_partition:redis"
+  ]
+ },
+ "audit": [
+  {
+   "step": 1,
+   "t": 0.0,
+   "tool": "list_services",
+   "kind": "observe",
+   "args": {},
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.13,
+   "result": "service   state       restarts  oom    health   networks             missing_networks\ngateway   running     0         False  -        frontend             -\napi       running     0         False  -        backend,frontend     -\nworker    running     0         False  -        backend              -\npostgres  running     0         False  healthy  backend              -\nredis     running     0         False  -        -                    backend"
+  },
+  {
+   "step": 2,
+   "t": 0.13,
+   "tool": "check_endpoints",
+   "kind": "observe",
+   "args": {},
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.08,
+   "result": "GET  /healthz             status=200     1.7ms OK\nGET  /api/health          status=200    17.6ms FAIL {\"checks\":{\"cache\":\"error: Error -2 connecting to redis:6379. Name does not resolve.\",\"database\":\"ok\",\"disk\":\"ok\"},\"stat\nGET  /api/products        status=200    19.5ms OK\nGET  /api/orders/recent   status=200    18.5ms OK\nPOST /api/orders          status=201    17.4ms OK"
+  },
+  {
+   "step": 3,
+   "t": 0.21,
+   "tool": "get_recent_changes",
+   "kind": "observe",
+   "args": {
+    "limit": 20
+   },
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.0,
+   "result": "no changes recorded"
+  },
+  {
+   "step": 4,
+   "t": 0.21,
+   "tool": "get_metrics",
+   "kind": "observe",
+   "args": {},
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 2.32,
+   "result": "{\n \"containers\": {\n  \"gateway\": {\n   \"cpu_pct\": \"0.34%\",\n   \"mem\": \"2.359MiB / 15.71GiB\",\n   \"mem_pct\": \"0.01%\"\n  },\n  \"api\": {\n   \"cpu_pct\": \"8.02%\",\n   \"mem\": \"35.88MiB / 256MiB\",\n   \"mem_pct\": \"14.02%\"\n  },\n  \"worker\": {\n   \"cpu_pct\": \"0.00%\",\n   \"mem\": \"25.2MiB / 15.71GiB\",\n   \"mem_pct\": \"0.16%\"\n  },\n  \"postgres\": {\n   \"cpu_pct\": \"6.39%\",\n   \"mem\": \"31.53MiB / 15.71GiB\",\n   \"mem_pct\": \"0.20%\"\n  },\n  \"redis\": {\n   \"cpu_pct\": \"0.56%\",\n   \"mem\": \"3.648MiB / 15.71GiB\",\n   \"mem_pct\": \"0.02%\"\n  }\n },\n \"api_app_metrics\": {\n  \"cache_errors_total\": 142,\n  \"db_errors_total\": 0,\n  \"endpoints\": {\n   \"/api/health\": {\n    \"errors_5xx\": 0,\n    \"p50_ms\": 14.9,\n    \"p95_ms\": 27.2,\n    \"requests\": 11\n   },\n   \"/api/orders\": {\n    \"errors_5xx\": 0,\n    \"p50_ms\": 21.0,\n    \"p95_ms\": 26.3,\n    \"requests\": 42\n   },\n   \"/api/orders/recent\": {\n    \"errors_5xx\": 0,\n    \"p50_ms\": 16.9,\n    \"p95_ms\": 21.3,\n    \"requests\": 42\n   },\n   \"/api/products\": {\n    \"errors_5xx\": 0,\n    \"p50_ms\": 20.1,\n    \"p95_ms\": 29.7,\n    \"requests\": 92\n   },\n   \"unmatched\": {\n    \"errors_5xx\": 0,\n    \"p50_ms\": 0.4,\n    \"p95_ms\": 0.5,\n    \"requests\": 3\n   }\n  },\n  \"process_rss_mb\": 49.0,\n  \"uptime_s\": 22.5,\n  \"window_s\": 60\n },\n \"postgres_connections\": \"1 | 40\"\n}"
+  },
+  {
+   "step": 5,
+   "t": 2.53,
+   "tool": "get_logs",
+   "kind": "observe",
+   "args": {
+    "service": "gateway",
+    "since_seconds": 120,
+    "tail": 400
+   },
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.03,
+   "result": "225 lines in last 120s.\nTop message patterns:\n     94x gateway # GET /api/products upstream=# rt=#\n     45x gateway # GET /api/orders/recent upstream=# rt=#\n     44x gateway # POST /api/orders upstream=# rt=#\n     12x gateway # GET /api/health upstream=# rt=#\n     10x gateway # GET /healthz upstream=- rt=#\n      4x gateway # GET /api/legacy/cart upstream=# rt=#\n      3x #/#/# # [error] ###: *# connect() failed (#: Connection refused) while connecting to upstream, client: #, server: , request: \"GET /api/orders/recent HTTP/#\", upstream: \"http://#/ap\n      2x #/#/# # [error] ###: *# connect() failed (#: Connection refused) while connecting to upstream, client: #, server: , request: \"POST /api/orders HTTP/#\", upstream: \"http://#/api/orde\n--- last 225 lines ---\n/docker-entrypoint.sh: /docker-entrypoint.d/ is not empty, will attempt to perform configuration\n/docker-entrypoint.sh: Looking for shell scripts in /docker-entrypoint.d/\n/docker-entrypoint.sh: Launching /docker-entrypoint.d/10-listen-on-ipv6-by-default.sh\n10-listen-on-ipv6-by-default.sh: info: ipv6 not available\n/docker-entrypoint.sh: Sourcing /docker-entrypoint.d/15-local-resolvers.envsh\n/docker-entrypoint.sh: Launching /docker-entrypoint.d/20-envsubst-on-templates.sh\n/docker-entrypoint.sh: Launching /docker-entrypoint.d/30-tune-worker-processes.sh\n/docker-entrypoint.sh: Configuration complete; ready for start up\n2026-10-30T07:52:29+00:00 gateway 502 GET /api/legacy/cart upstream=172.19.0.2:8000 rt=0.000\n2026-10-30T07:52:29+00:00 gateway 502 POST /api/orders upstream=172.19.0.2:8000 rt=0.001\n2026-10-30T07:52:29+00:00 gateway 502 GET /api/orders/recent upstream=172.19.0.2:8000 rt=0.000\n2026-10-30T07:52:29+00:00 gateway 502 POST /api/orders upstream=172.19.0.2:8000 rt=0.001\n2026-10-30T07:52:29+00:00 gateway 502 GET /api/health upstream=172.19.0.2:8000 rt=0.000\n2026-10-30T07:52:29+00:00 gateway 502 GET /api/products upstream=172.19.0.2:8000 rt=0.000\n2026-10-30T07:52:30+00:00 gateway 502 GET /api/orders/recent upstream=172.19.0.2:8000 rt=0.000\n2026-10-30T07:52:30+00:00 gateway 502 GET /api/orders/recent upstream=172.19.0.2:8000 rt=0.000\n2026-10-30T07:52:30+00:00 gateway 200 GET /api/orders/recent upstream=172.19.0.2:8000 rt=0.021\n2026-10-30T07:52:30+00:00 gateway 201 POST /api/orders upstream=172.19.0.2:8000 rt=0.025\n2026-10-30T07:52:30+00:00 gateway 200 GET /api/orders/recent upstream=172.19.0.2:8000 rt=0.017\n2026-10-30T07:52:30+00:00 gateway 201 POST /api/orders upstream=172.19.0.2:8000 rt=0.020\n2026-10-30T07:52:30+00:00 gateway 200 GET /api/health upstream=172.19.0.2:8000 rt=0.015\n2026-10-30T07:52:30+00:00 gateway 200 GET /api/products upstream=172.19.0.2:8000 rt=0.021\n2026-10-30T07:52:30+00:00 gateway 200 GET /healthz upstream=- rt=0.000\n2026-10-30T07:52:30+00:00 gateway 200 GET /api/health upstream=172.19.0.2:8000 rt=0.014\n2026-10-30T07:52:30+00:00 gateway 200 GET /api/products upstream=172.19.0.2:8000 rt=0.003\n2026-10-30T07:52:30+00:00 gateway 200 GET /api/orders/recent upstream=172.19.0.2:\n... [16174 chars truncated] ...\n9\n2026-10-30T07:52:51+00:00 gateway 200 GET /api/products upstream=172.19.0.2:8000 rt=0.020\n2026-10-30T07:52:51+00:00 gateway 200 GET /api/products upstream=172.19.0.2:8000 rt=0.027\n2026-10-30T07:52:51+00:00 gateway 200 GET /api/products upstream=172.19.0.2:8000 rt=0.024\n2026-10-30T07:52:51+00:00 gateway 201 POST /api/orders upstream=172.19.0.2:8000 rt=0.022\n2026-10-30T07:52:51+00:00 gateway 200 GET /api/orders/recent upstream=172.19.0.2:8000 rt=0.022\n2026-10-30T07:52:52+00:00 gateway 200 GET /api/products upstream=172.19.0.2:8000 rt=0.019\n2026-10-30T07:52:52+00:00 gateway 200 GET /api/orders/recent upstream=172.19.0.2:8000 rt=0.016\n2026-10-30T07:52:52+00:00 gateway 200 GET /api/orders/recent upstream=172.19.0.2:8000 rt=0.017\n2026-10-30T07:52:52+00:00 gateway 201 POST /api/orders upstream=172.19.0.2:8000 rt=0.023\n2026-10-30T07:52:52+00:00 gateway 200 GET /api/products upstream=172.19.0.2:8000 rt=0.023\n2026-10-30T07:52:52+00:00 gateway 200 GET /api/products upstream=172.19.0.2:8000 rt=0.019\n2026/10/30 07:52:29 [error] 20#20: *1 connect() failed (111: Connection refused) while connecting to upstream, client: 172.19.0.4, server: , request: \"GET /api/legacy/cart HTTP/1.1\", upstream: \"http://172.19.0.2:8000/api/legacy/cart\", host: \"gateway\"\n2026/10/30 07:52:29 [error] 20#20: *3 connect() failed (111: Connection refused) while connecting to upstream, client: 172.19.0.4, server: , request: \"POST /api/orders HTTP/1.1\", upstream: \"http://172.19.0.2:8000/api/orders\", host: \"gateway\"\n2026/10/30 07:52:29 [error] 20#20: *5 connect() failed (111: Connection refused) while connecting to upstream, client: 172.19.0.4, server: , request: \"GET /api/orders/recent HTTP/1.1\", upstream: \"http://172.19.0.2:8000/api/orders/recent\", host: \"gateway\"\n2026/10/30 07:52:29 [error] 20#20: *7 connect() failed (111: Connection refused) while connecting to upstream, client: 172.19.0.4, server: , request: \"POST /api/orders HTTP/1.1\", upstream: \"http://172.19.0.2:8000/api/orders\", host: \"gateway\"\n2026/10/30 07:52:29 [error] 20#20: *9 connect() failed (111: Connection refused) while connecting to upstream, client: 172.19.0.1, server: , request: \"GET /api/health HTTP/1.1\", upstream: \"http://172.19.0.2:8000/api/health\", host: \"localhost:8080\"\n2026/10/30 07:52:29 [error] 20#20: *11 connect() failed (111: Connection refused) while connecting to upstream, client: 172.19.0.4, server: , request: \"GET /api/products HTTP/1.1\", upstream: \"http://172.19.0.2:8000/api/products\", host: \"gateway\"\n2026/10/30 07:52:30 [error] 20#20: *13 connect() failed (111: Connection refused) while connecting to upstream, client: 172.19.0.4, server: , request: \"GET /api/orders/recent HTTP/1.1\", upstream: \"http://172.19.0.2:8000/api/orders/recent\", host: \"gateway\"\n2026/10/30 07:52:30 [error] 20#20: *15 connect() failed (111: Connection refused) while connecting to upstream, client: 172.19.0.4, server: , request: \"GET /api/orders/recent HTTP/1.1\", upstream: \"http://172.19.0.2:8000/api/orders/recent\", host: \"gateway\""
+  },
+  {
+   "step": 6,
+   "t": 2.56,
+   "tool": "get_logs",
+   "kind": "observe",
+   "args": {
+    "service": "api",
+    "since_seconds": 120,
+    "tail": 400
+   },
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.03,
+   "result": "146 lines in last 120s.\nTop message patterns:\n     72x WARNING api cache write failed: Error -# connecting to redis:#. Name does not resolve.\n     71x WARNING api cache unavailable, falling back to database: Error -# connecting to redis:#. Name does not resolve.\n      1x INFO api starting shop-api on :# (db=postgres:# cache=redis:#)\n      1x INFO api Serving on http://#\n      1x WARNING api cache unavailable, falling back to database: Timeout reading from socket\n--- last 146 lines ---\n2026-10-30T07:52:30 INFO api starting shop-api on :8000 (db=postgres:5432 cache=redis:6379)\n2026-10-30T07:52:30 INFO api Serving on http://0.0.0.0:8000\n2026-10-30T07:52:35 WARNING api cache unavailable, falling back to database: Timeout reading from socket\n2026-10-30T07:52:36 WARNING api cache write failed: Error -2 connecting to redis:6379. Name does not resolve.\n2026-10-30T07:52:36 WARNING api cache unavailable, falling back to database: Error -2 connecting to redis:6379. Name does not resolve.\n2026-10-30T07:52:36 WARNING api cache write failed: Error -2 connecting to redis:6379. Name does not resolve.\n2026-10-30T07:52:36 WARNING api cache unavailable, falling back to database: Error -2 connecting to redis:6379. Name does not resolve.\n2026-10-30T07:52:36 WARNING api cache write failed: Error -2 connecting to redis:6379. Name does not resolve.\n2026-10-30T07:52:36 WARNING api cache unavailable, falling back to database: Error -2 connecting to redis:6379. Name does not resolve.\n2026-10-30T07:52:36 WARNING api cache write failed: Error -2 connecting to redis:6379. Name does not resolve.\n2026-10-30T07:52:37 WARNING api cache unavailable, falling back to database: Error -2 connecting to redis:6379. Name does not resolve.\n2026-10-30T07:52:37 WARNING api cache write failed: Error -2 connecting to redis:6379. Name does not resolve.\n2026-10-30T07:52:37 WARNING api cache unavailable, falling back to database: Error -2 connecting to redis:6379. Name does not resolve.\n2026-10-30T07:52:37 WARNING api cache write failed: Error -2 connecting to redis:6379. Name does not resolve.\n2026-10-30T07:52:37 WARNING api cache unavailable, falling back to database: Error -2 connecting to redis:6379. Name does not resolve.\n2026-10-30T07:52:37 WARNING api cache write failed: Error -2 connecting to redis:6379. Name does not resolve.\n2026-10-30T07:52:38 WARNING api cache unavailable, falling back to database: Error -2 connecting to redis:6379. Name does not resolve.\n2026-10-30T07:52:38 WARNING api cache write failed: Error -2 connecting to redis:6379. Name does not resolve.\n2026-10-30T07:52:38 WARNING api cache unavailable, falling back to database: Error -2 connecting to redis:6379. Name does not resolve.\n2026-10-30T07:52:38 WARNING api cache write failed: Error -2 connecting to redis:6379. Name does not resolve.\n2026-10-30T07:52:38 WARNING api cache unavailable, falling back to database: Error -2 connecting to redis:6379. Name does not resolve.\n2026-10-30T07:52:38 WARNING api cache write fail\n... [12251 chars truncated] ...\nd: Error -2 connecting to redis:6379. Name does not resolve.\n2026-10-30T07:52:49 WARNING api cache unavailable, falling back to database: Error -2 connecting to redis:6379. Name does not resolve.\n2026-10-30T07:52:49 WARNING api cache write failed: Error -2 connecting to redis:6379. Name does not resolve.\n2026-10-30T07:52:49 WARNING api cache unavailable, falling back to database: Error -2 connecting to redis:6379. Name does not resolve.\n2026-10-30T07:52:49 WARNING api cache write failed: Error -2 connecting to redis:6379. Name does not resolve.\n2026-10-30T07:52:50 WARNING api cache unavailable, falling back to database: Error -2 connecting to redis:6379. Name does not resolve.\n2026-10-30T07:52:50 WARNING api cache write failed: Error -2 connecting to redis:6379. Name does not resolve.\n2026-10-30T07:52:50 WARNING api cache unavailable, falling back to database: Error -2 connecting to redis:6379. Name does not resolve.\n2026-10-30T07:52:50 WARNING api cache write failed: Error -2 connecting to redis:6379. Name does not resolve.\n2026-10-30T07:52:50 WARNING api cache unavailable, falling back to database: Error -2 connecting to redis:6379. Name does not resolve.\n2026-10-30T07:52:50 WARNING api cache write failed: Error -2 connecting to redis:6379. Name does not resolve.\n2026-10-30T07:52:51 WARNING api cache unavailable, falling back to database: Error -2 connecting to redis:6379. Name does not resolve.\n2026-10-30T07:52:51 WARNING api cache write failed: Error -2 connecting to redis:6379. Name does not resolve.\n2026-10-30T07:52:51 WARNING api cache unavailable, falling back to database: Error -2 connecting to redis:6379. Name does not resolve.\n2026-10-30T07:52:51 WARNING api cache write failed: Error -2 connecting to redis:6379. Name does not resolve.\n2026-10-30T07:52:51 WARNING api cache unavailable, falling back to database: Error -2 connecting to redis:6379. Name does not resolve.\n2026-10-30T07:52:51 WARNING api cache write failed: Error -2 connecting to redis:6379. Name does not resolve.\n2026-10-30T07:52:51 WARNING api cache unavailable, falling back to database: Error -2 connecting to redis:6379. Name does not resolve.\n2026-10-30T07:52:51 WARNING api cache write failed: Error -2 connecting to redis:6379. Name does not resolve.\n2026-10-30T07:52:52 WARNING api cache unavailable, falling back to database: Error -2 connecting to redis:6379. Name does not resolve.\n2026-10-30T07:52:52 WARNING api cache write failed: Error -2 connecting to redis:6379. Name does not resolve.\n2026-10-30T07:52:52 WARNING api cache unavailable, falling back to database: Error -2 connecting to redis:6379. Name does not resolve.\n2026-10-30T07:52:52 WARNING api cache write failed: Error -2 connecting to redis:6379. Name does not resolve.\n2026-10-30T07:52:52 WARNING api cache unavailable, falling back to database: Error -2 connecting to redis:6379. Name does not resolve.\n2026-10-30T07:52:52 WARNING api cache write failed: Error -2 connecting to redis:6379. Name does not resolve."
+  },
+  {
+   "step": 7,
+   "t": 2.59,
+   "tool": "get_logs",
+   "kind": "observe",
+   "args": {
+    "service": "worker",
+    "since_seconds": 120,
+    "tail": 400
+   },
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.03,
+   "result": "3 lines in last 120s.\nTop message patterns:\n      3x INFO worker sales summary refreshed: orders=# revenue=#\n--- last 3 lines ---\n2026-10-30T07:52:29 INFO worker sales summary refreshed: orders=1000 revenue=246173.29\n2026-10-30T07:52:39 INFO worker sales summary refreshed: orders=1020 revenue=250055.60\n2026-10-30T07:52:49 INFO worker sales summary refreshed: orders=1038 revenue=252791.43"
+  },
+  {
+   "step": 8,
+   "t": 2.62,
+   "tool": "get_logs",
+   "kind": "observe",
+   "args": {
+    "service": "postgres",
+    "since_seconds": 120,
+    "tail": 400
+   },
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.04,
+   "result": "66 lines in last 120s.\nTop message patterns:\n     13x \n      2x # # UTC [#] LOG:  listening on Unix socket \"/var/run/postgresql/.s.PGSQL.#\"\n      2x # # UTC [#] LOG:  database system was shut down at # # UTC\n      2x # # UTC [#] LOG:  database system is ready to accept connections\n      2x done\n      2x CREATE TABLE\n      2x INSERT # #\n      2x GRANT\n--- last 66 lines ---\nThe files belonging to this database system will be owned by user \"postgres\".\nThis user must also own the server process.\n\nThe database cluster will be initialized with locale \"en_US.utf8\".\nThe default database encoding has accordingly been set to \"UTF8\".\nThe default text search configuration will be set to \"english\".\n\nData page checksums are disabled.\n\nfixing permissions on existing directory /var/lib/postgresql/data ... ok\ncreating subdirectories ... ok\nselecting dynamic shared memory implementation ... posix\nselecting default max_connections ... 100\nselecting default shared_buffers ... 128MB\nselecting default time zone ... UTC\ncreating configuration files ... ok\nrunning bootstrap script ... ok\nperforming post-bootstrap initialization ... ok\nsyncing data to disk ... ok\n\n\nSuccess. You can now start the database server using:\n\n    pg_ctl -D /var/lib/postgresql/data -l logfile start\n\nwaiting for server to start....2026-10-30 07:52:27.149 UTC [41] LOG:  starting PostgreSQL 16.15 on x86_64-pc-linux-musl, compiled by gcc (Alpine 15.2.0) 15.2.0, 64-bit\n2026-10-30 07:52:27.151 UTC [41] LOG:  listening on Unix socket \"/var/run/postgresql/.s.PGSQL.5432\"\n2026-10-30 07:52:27.156 UTC [44] LOG:  database system was shut down at 2026-10-30 07:52:26 UTC\n2026-10-30 07:52:27.163 UTC [41] LOG:  database system is ready to accept connections\n done\nserver started\nCREATE DATABASE\n\n\n/usr/local/bin/docker-entrypoint.sh: running /docker-entrypoint-initdb.d/init.sql\nCREATE TABLE\nCREATE TABLE\nINSERT 0 50\nINSERT 0 1000\nCREATE ROLE\nGRANT\nGRANT\n\n\nwaiting for server to shut down....2026-10-30 07:52:27.377 UTC [41] LOG:  received fast shutdown request\n2026-10-30 07:52:27.377 UTC [41] LOG:  aborting any active transactions\n2026-10-30 07:52:27.379 UTC [41] LOG:  background worker \"logical replication launcher\" (PID 47) exited with exit code 1\n2026-10-30 07:52:27.383 UTC [42] LOG:  shutting down\n2026-10-30 07:52:27.383 UTC [42] LOG:  checkpoint starting: shutdown immediate\n2026-10-30 07:52:27.429 UTC [42] LOG:  checkpoint complete: wrote 964 buffers (5.9%); 0 WAL file(s) added, 0 removed, 0 recycled; write=0.015 s, sync=0.029 s, total=0.046 s; sync files=317, longest=0.008 s, average=0.001 s; distance=4493 kB, estimate=4493 kB; lsn=0/195A8A8, redo lsn=0/195A8A8\n2026-10-30 07:52:27.439 UTC [41] LOG:  database system is shut down\n done\nserver stopped\n\nPostgreSQL init process complete; ready for start up.\n\nsh: locale: not found\n2026-10-30 07:52:26.474 UTC [35] WARNING:  no usable system locales were found\ninitdb: warning: enabling \"trust\" authentication for local connections\ninitdb: hint: You can change this by editing pg_hba.conf or using the option -A, or --auth-local and --auth-host, the next time you run initdb.\n2026-10-30 07:52:27.505 UTC [1] LOG:  starting PostgreSQL 16.15 on x86_64-pc-linux-musl, compiled by gcc (Alpine 15.2.0) 15.2.0, 64-bit\n2026-10-30 07:52:27.505 UTC [1] LOG:  listening on IPv4 address \"0.0.0.0\", port 5432\n2026-10-30 07:52:27.505 UTC [1] LOG:  could not create IPv6 socket for address \"::\": Address family not supported by protocol\n2026-10-30 07:52:27.506 UTC [1] LOG:  listening on Unix socket \"/var/run/postgresql/.s.PGSQL.5432\"\n2026-10-30 07:52:27.513 UTC [59] LOG:  database system was shut down at 2026-10-30 07:52:27 UTC\n2026-10-30 07:52:27.520 UTC [1] LOG:  database system is ready to accept connections"
+  },
+  {
+   "step": 9,
+   "t": 2.66,
+   "tool": "get_logs",
+   "kind": "observe",
+   "args": {
+    "service": "redis",
+    "since_seconds": 120,
+    "tail": 400
+   },
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.03,
+   "result": "9 lines in last 120s.\nTop message patterns:\n      1x #C # Oct # # # WARNING Memory overcommit must be enabled! Without it, a background save or replication may fail under low memory condition. Being disabled, it can also cause failur\n      1x #C # Oct # # * oO0OoO0OoO0Oo Redis is starting oO0OoO0OoO0Oo\n      1x #C # Oct # # * Redis version=#, bits=#, commit=#, modified=#, pid=#, just started\n      1x #C # Oct # # # Warning: no config file specified, using the default config. In order to specify a config file use redis-server /path/to/redis.conf\n      1x #M # Oct # # * monotonic clock: POSIX clock_gettime\n      1x #M # Oct # # * Running mode=standalone, port=#.\n      1x #M # Oct # # # Warning: Could not create server TCP listening socket ::*:#: unable to bind socket, errno: #\n      1x #M # Oct # # * Server initialized\n--- last 9 lines ---\n1:C 30 Oct 2026 07:52:25.785 # WARNING Memory overcommit must be enabled! Without it, a background save or replication may fail under low memory condition. Being disabled, it can also cause failures without low memory condition, see https://github.com/jemalloc/jemalloc/issues/1328. To fix this issue\n1:C 30 Oct 2026 07:52:25.785 * oO0OoO0OoO0Oo Redis is starting oO0OoO0OoO0Oo\n1:C 30 Oct 2026 07:52:25.785 * Redis version=7.4.12, bits=64, commit=00000000, modified=0, pid=1, just started\n1:C 30 Oct 2026 07:52:25.785 # Warning: no config file specified, using the default config. In order to specify a config file use redis-server /path/to/redis.conf\n1:M 30 Oct 2026 07:52:25.786 * monotonic clock: POSIX clock_gettime\n1:M 30 Oct 2026 07:52:25.787 * Running mode=standalone, port=6379.\n1:M 30 Oct 2026 07:52:25.787 # Warning: Could not create server TCP listening socket ::*:6379: unable to bind socket, errno: 97\n1:M 30 Oct 2026 07:52:25.787 * Server initialized\n1:M 30 Oct 2026 07:52:25.787 * Ready to accept connections tcp"
+  },
+  {
+   "step": 10,
+   "t": 2.69,
+   "tool": "run_diagnostic",
+   "kind": "observe",
+   "args": {
+    "service": "api",
+    "check": "disk"
+   },
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.11,
+   "result": "Filesystem                Size      Used Available Use% Mounted on\noverlay                 252.0G     18.6G     19.9G  48% /\ntmpfs                    64.0M         0     64.0M   0% /dev\ntmpfs                     7.9G         0      7.9G   0% /sys/fs/cgroup\nshm                      64.0M         0     64.0M   0% /dev/shm\n/dev/vda                252.0G     18.6G     19.9G  48% /config\ntmpfs                    48.0M      4.0K     48.0M   0% /data\n/dev/vda                252.0G     18.6G     19.9G  48% /etc/hostname\n/dev/vda                252.0G     18.6G     19.9G  48% /etc/hosts\n/dev/vda                252.0G     18.6G     19.9G  48% /etc/resolv.conf\ntmpfs                     4.0K         0      4.0K   0% /proc/acpi\ntmpfs                    64.0M         0     64.0M   0% /proc/interrupts\ntmpfs                    64.0M         0     64.0M   0% /proc/keys\ntmpfs                    64.0M         0     64.0M   0% /proc/timer_list\ntmpfs                     4.0K         0      4.0K   0% /sys/firmware\n--- largest under /data (KB) ---\n4\t/data/audit/audit.log\n4\t/data/audit\n4\t/data"
+  },
+  {
+   "step": 11,
+   "t": 2.8,
+   "tool": "run_diagnostic",
+   "kind": "observe",
+   "args": {
+    "service": "worker",
+    "check": "disk"
+   },
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.09,
+   "result": "Filesystem                Size      Used Available Use% Mounted on\noverlay                 252.0G     18.6G     19.9G  48% /\ntmpfs                    64.0M         0     64.0M   0% /dev\ntmpfs                     7.9G         0      7.9G   0% /sys/fs/cgroup\nshm                      64.0M         0     64.0M   0% /dev/shm\n/dev/vda                252.0G     18.6G     19.9G  48% /config\n/dev/vda                252.0G     18.6G     19.9G  48% /etc/hostname\n/dev/vda                252.0G     18.6G     19.9G  48% /etc/hosts\n/dev/vda                252.0G     18.6G     19.9G  48% /etc/resolv.conf\ntmpfs                     4.0K         0      4.0K   0% /proc/acpi\ntmpfs                    64.0M         0     64.0M   0% /proc/interrupts\ntmpfs                    64.0M         0     64.0M   0% /proc/keys\ntmpfs                    64.0M         0     64.0M   0% /proc/timer_list\ntmpfs                     4.0K         0      4.0K   0% /sys/firmware\n--- largest under /data (KB) ---"
+  },
+  {
+   "step": 12,
+   "t": 2.89,
+   "tool": "run_diagnostic",
+   "kind": "observe",
+   "args": {
+    "service": "postgres",
+    "check": "db_locks"
+   },
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.09,
+   "result": "blocked_pid | app | query | waiting_s | blocking_pid | blocking_app | state | blocking_query\n(no blocked sessions)"
+  },
+  {
+   "step": 13,
+   "t": 2.99,
+   "tool": "reconnect_network",
+   "kind": "act",
+   "args": {
+    "service": "redis",
+    "network": "backend"
+   },
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.07,
+   "result": "connected redis to backend: ok"
+  },
+  {
+   "step": 14,
+   "t": 11.06,
+   "tool": "verify_recovery",
+   "kind": "observe",
+   "args": {},
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 8.86,
+   "result": "{\n \"healthy\": true,\n \"probe_success_rate\": 1.0,\n \"probe_p95_ms\": 32.6,\n \"problems\": [],\n \"probes\": {\n  \"GET /healthz\": {\n   \"ok\": 8,\n   \"fail\": 0,\n   \"statuses\": [\n    200\n   ],\n   \"last_error\": \"\"\n  },\n  \"GET /api/health\": {\n   \"ok\": 8,\n   \"fail\": 0,\n   \"statuses\": [\n    200\n   ],\n   \"last_error\": \"\"\n  },\n  \"GET /api/products\": {\n   \"ok\": 8,\n   \"fail\": 0,\n   \"statuses\": [\n    200\n   ],\n   \"last_error\": \"\"\n  },\n  \"GET /api/orders/recent\": {\n   \"ok\": 8,\n   \"fail\": 0,\n   \"statuses\": [\n    200\n   ],\n   \"last_error\": \"\"\n  },\n  \"POST /api/orders\": {\n   \"ok\": 8,\n   \"fail\": 0,\n   \"statuses\": [\n    201\n   ],\n   \"last_error\": \"\"\n  }\n }\n}"
+  },
+  {
+   "step": 15,
+   "t": 19.93,
+   "tool": "submit_report",
+   "kind": "final",
+   "args": {
+    "root_causes": [
+     {
+      "component": "redis",
+      "category": "network_partition",
+      "evidence": "redis is not attached to the backend network it belongs on (list_services); 44 name-resolution errors in logs, e.g. probe /api/health: {\"checks\":{\"cache\":\"error: Error -2 connecting to redis:6379. Name does not resolve.\",\"database\":\"ok"
+     }
+    ],
+    "recovered": true,
+    "summary": "[confirmed] re-attach redis to the backend network (restores its DNS name) (confidence 0.94; evidence: redis is not attached to the backend network it belongs on (list_services)). Prevent: monitor container network attachment and DNS resolution between services."
+   },
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.0,
+   "result": "report submitted"
+  }
+ ],
+ "episode_seconds": 87.3
+}

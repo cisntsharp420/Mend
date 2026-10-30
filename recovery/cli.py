@@ -142,6 +142,7 @@ def cmd_report(a):
     from .report import build
     md = build(a.tags)
     if a.out:
+        Path(a.out).parent.mkdir(parents=True, exist_ok=True)
         Path(a.out).write_text(md)
         print(f"wrote {a.out}")
     print(md)

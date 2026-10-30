@@ -26,6 +26,7 @@ regression, ablations), technical judgment, engineering quality, communication.
 
 ## Status / next steps
 1. Done: sandbox, faults, verifier, toolbox, scenarios, baselines, reasoner agent (10/10 dev recovered), tests.
-2. Running/next: reasoner dev + held-out x2, baselines on all, ablations (`make ablations`).
-3. Then: docs/results.md via `python -m recovery report ...`, architecture diagram, pitch.
+2. Done: all evals in runs/ and docs/results.md (reasoner dev 10/10, held-out 23/24, 0 collateral; rules 4/12
+   held-out; ablations). Known limitation ho-09 is documented there and deliberately not tuned on.
+3. Next: architecture diagram, pitch.
 Never tune the reasoner on held-out results. Commit runs/ results as evidence. Never commit .env.

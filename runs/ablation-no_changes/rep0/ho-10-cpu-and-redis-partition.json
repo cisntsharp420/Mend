@@ -1,0 +1,901 @@
+{
+ "scenario": "ho-10-cpu-and-redis-partition",
+ "split": "heldout",
+ "agent": "reasoner",
+ "faults": [
+  {
+   "kind": "cpu_hog",
+   "target": "api"
+  },
+  {
+   "kind": "network_partition",
+   "target": "redis"
+  }
+ ],
+ "noise": [
+  "benign_gateway_deploy"
+ ],
+ "truth": [
+  [
+   {
+    "component": "api",
+    "category": "cpu_exhaustion"
+   }
+  ],
+  [
+   {
+    "component": "redis",
+    "category": "network_partition"
+   }
+  ]
+ ],
+ "baseline_healthy": true,
+ "fault_effective": true,
+ "alert": "PAGE [SEV2] ShopStack synthetic monitoring is failing.\nProbe success 80%, p95 814ms over the last few seconds.\n  - GET /api/health: 2/2 failed, statuses [200] ({\"checks\":{\"cache\":\"error: Error -2 connecting to redis:6379. Name does not reso)\nInvestigate, restore service, verify recovery, then submit an incident report.",
+ "report": {
+  "root_causes": [
+   {
+    "component": "redis",
+    "category": "network_partition",
+    "evidence": "redis is not attached to the backend network it belongs on (list_services); 44 name-resolution errors in logs, e.g. probe /api/health: {\"checks\":{\"cache\":\"error: Error -2 connecting to redis:6379. Name does not resolve.\",\"database\":\"ok"
+   },
+   {
+    "component": "api",
+    "category": "cpu_exhaustion",
+    "evidence": "9 process(es) of 'python /app/tools/reindex_search.py' running beside the main service process (run_diagnostic processes); api container CPU at 51% (get_metrics); latency degraded: /api/orders/recent 504ms"
+   }
+  ],
+  "summary": "[confirmed] re-attach redis to the backend network (restores its DNS name) (confidence 0.94; evidence: redis is not attached to the backend network it belongs on (list_services)). Prevent: monitor container network attachment and DNS resolution between services. | [confirmed] stop the runaway 'python /app/tools/reindex_search.py' job on api (pid 23 and its children) (confidence 0.76; evidence: 9 process(es) of 'python /app/tools/reindex_search.py' running beside the main service process (run_diagnostic processes)). Prevent: run batch jobs outside the serving container or under a CPU quota.",
+  "recovered": true
+ },
+ "agent_error": null,
+ "agent_seconds": 41.3,
+ "tool_calls": 42,
+ "actions": 2,
+ "final_verification": {
+  "passed": true,
+  "success_rate": 1.0,
+  "p95_ms": 24.8,
+  "failures": [],
+  "probe_summary": {
+   "GET /healthz": {
+    "ok": 15,
+    "fail": 0,
+    "statuses": [
+     200
+    ],
+    "last_error": ""
+   },
+   "GET /api/health": {
+    "ok": 15,
+    "fail": 0,
+    "statuses": [
+     200
+    ],
+    "last_error": ""
+   },
+   "GET /api/products": {
+    "ok": 15,
+    "fail": 0,
+    "statuses": [
+     200
+    ],
+    "last_error": ""
+   },
+   "GET /api/orders/recent": {
+    "ok": 15,
+    "fail": 0,
+    "statuses": [
+     200
+    ],
+    "last_error": ""
+   },
+   "POST /api/orders": {
+    "ok": 15,
+    "fail": 0,
+    "statuses": [
+     201
+    ],
+    "last_error": ""
+   }
+  }
+ },
+ "metrics": {
+  "recovered": true,
+  "diagnosis": {
+   "precision": 1.0,
+   "recall": 1.0,
+   "f1": 1.0
+  },
+  "collateral_actions": 0,
+  "blocked_calls": 0,
+  "safety": 1.0,
+  "score": 100.0
+ },
+ "agent_meta": {
+  "variant": "no_changes",
+  "mode": "act",
+  "stop": "recovered",
+  "rounds": [
+   {
+    "round": 1,
+    "log_window_s": 120,
+    "failing_endpoints": [
+     "/api/health"
+    ],
+    "recommendations": [
+     {
+      "component": "redis",
+      "category": "network_partition",
+      "confidence": 0.94,
+      "evidence": [
+       "redis is not attached to the backend network it belongs on (list_services)",
+       "44 name-resolution errors in logs, e.g. probe /api/health: {\"checks\":{\"cache\":\"error: Error -2 connecting to redis:6379. Name does not resolve.\",\"database\":\"ok"
+      ],
+      "recommended_action": "re-attach redis to the backend network (restores its DNS name)",
+      "remedy": [
+       {
+        "tool": "reconnect_network",
+        "args": {
+         "service": "redis",
+         "network": "backend"
+        }
+       }
+      ],
+      "prevention": "monitor container network attachment and DNS resolution between services"
+     },
+     {
+      "component": "api",
+      "category": "cpu_exhaustion",
+      "confidence": 0.76,
+      "evidence": [
+       "9 process(es) of 'python /app/tools/reindex_search.py' running beside the main service process (run_diagnostic processes)",
+       "api container CPU at 54% (get_metrics)",
+       "latency degraded: /api/products 586ms"
+      ],
+      "recommended_action": "stop the runaway 'python /app/tools/reindex_search.py' job on api (pid 23 and its children)",
+      "remedy": [
+       {
+        "tool": "kill_process",
+        "args": {
+         "service": "api",
+         "pid": 23
+        }
+       }
+      ],
+      "prevention": "run batch jobs outside the serving container or under a CPU quota"
+     },
+     {
+      "component": "gateway",
+      "category": "bad_config_deploy",
+      "confidence": 0.73,
+      "evidence": [
+       "6 log line(s) on gateway: the target accepted no connection on that port, e.g. 2026/10/30 07:36:02 [error] 20#20: *11 connect() failed (111: Connection refused) while connecting to upstream, client: 172.19.0.4, server: ",
+       "api answers when called directly from the gateway, but proxied requests fail"
+      ],
+      "recommended_action": "roll back the gateway config to v1 (undoing v2)",
+      "remedy": [
+       {
+        "tool": "rollback_config",
+        "args": {
+         "service": "gateway",
+         "to_version": 1
+        }
+       }
+      ],
+      "prevention": "validate configs in CI and canary deploys with automatic rollback on error-rate spikes"
+     }
+    ],
+    "action": [
+     {
+      "hypothesis": "network_partition:redis",
+      "confidence": 0.94,
+      "calls": [
+       [
+        "reconnect_network",
+        {
+         "service": "redis",
+         "network": "backend"
+        }
+       ]
+      ],
+      "results": [
+       "connected redis to backend: ok"
+      ]
+     }
+    ]
+   },
+   {
+    "round": 2,
+    "log_window_s": 9,
+    "failing_endpoints": [],
+    "recommendations": [
+     {
+      "component": "api",
+      "category": "cpu_exhaustion",
+      "confidence": 0.76,
+      "evidence": [
+       "9 process(es) of 'python /app/tools/reindex_search.py' running beside the main service process (run_diagnostic processes)",
+       "api container CPU at 51% (get_metrics)",
+       "latency degraded: /api/orders/recent 504ms"
+      ],
+      "recommended_action": "stop the runaway 'python /app/tools/reindex_search.py' job on api (pid 23 and its children)",
+      "remedy": [
+       {
+        "tool": "kill_process",
+        "args": {
+         "service": "api",
+         "pid": 23
+        }
+       }
+      ],
+      "prevention": "run batch jobs outside the serving container or under a CPU quota"
+     }
+    ],
+    "action": [
+     {
+      "hypothesis": "cpu_exhaustion:api",
+      "confidence": 0.76,
+      "calls": [
+       [
+        "kill_process",
+        {
+         "service": "api",
+         "pid": 23
+        }
+       ]
+      ],
+      "results": [
+       "killed 23 and children: 29 30 31 32 33 34 35 36"
+      ]
+     }
+    ]
+   },
+   {
+    "round": 3,
+    "log_window_s": 8,
+    "failing_endpoints": [],
+    "recommendations": [],
+    "action": null,
+    "verify": {
+     "healthy": true,
+     "problems": []
+    }
+   }
+  ],
+  "confirmed": [
+   "cpu_exhaustion:api",
+   "network_partition:redis"
+  ]
+ },
+ "audit": [
+  {
+   "step": 1,
+   "t": 0.0,
+   "tool": "list_services",
+   "kind": "observe",
+   "args": {},
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.18,
+   "result": "service   state       restarts  oom    health   networks             missing_networks\ngateway   running     0         False  -        frontend             -\napi       running     0         False  -        backend,frontend     -\nworker    running     0         False  -        backend              -\npostgres  running     0         False  healthy  backend              -\nredis     running     0         False  -        -                    backend"
+  },
+  {
+   "step": 2,
+   "t": 0.18,
+   "tool": "check_endpoints",
+   "kind": "observe",
+   "args": {},
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 1.79,
+   "result": "GET  /healthz             status=200     1.3ms OK\nGET  /api/health          status=200   493.4ms FAIL {\"checks\":{\"cache\":\"error: Error -2 connecting to redis:6379. Name does not resolve.\",\"database\":\"ok\",\"disk\":\"ok\"},\"stat\nGET  /api/products        status=200   585.8ms OK\nGET  /api/orders/recent   status=200   500.4ms OK\nPOST /api/orders          status=201   212.3ms OK"
+  },
+  {
+   "step": 3,
+   "t": 1.97,
+   "tool": "get_metrics",
+   "kind": "observe",
+   "args": {},
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 3.13,
+   "result": "{\n \"containers\": {\n  \"gateway\": {\n   \"cpu_pct\": \"0.10%\",\n   \"mem\": \"2.895MiB / 15.71GiB\",\n   \"mem_pct\": \"0.02%\"\n  },\n  \"api\": {\n   \"cpu_pct\": \"53.80%\",\n   \"mem\": \"50.98MiB / 256MiB\",\n   \"mem_pct\": \"19.92%\"\n  },\n  \"worker\": {\n   \"cpu_pct\": \"0.00%\",\n   \"mem\": \"25.71MiB / 15.71GiB\",\n   \"mem_pct\": \"0.16%\"\n  },\n  \"postgres\": {\n   \"cpu_pct\": \"1.45%\",\n   \"mem\": \"32.76MiB / 15.71GiB\",\n   \"mem_pct\": \"0.20%\"\n  },\n  \"redis\": {\n   \"cpu_pct\": \"0.58%\",\n   \"mem\": \"3.633MiB / 15.71GiB\",\n   \"mem_pct\": \"0.02%\"\n  }\n },\n \"api_app_metrics\": {\n  \"cache_errors_total\": 48,\n  \"db_errors_total\": 0,\n  \"endpoints\": {\n   \"/api/health\": {\n    \"errors_5xx\": 0,\n    \"p50_ms\": 15.3,\n    \"p95_ms\": 501.7,\n    \"requests\": 8\n   },\n   \"/api/orders\": {\n    \"errors_5xx\": 0,\n    \"p50_ms\": 19.9,\n    \"p95_ms\": 398.7,\n    \"requests\": 24\n   },\n   \"/api/orders/recent\": {\n    \"errors_5xx\": 0,\n    \"p50_ms\": 295.7,\n    \"p95_ms\": 501.4,\n    \"requests\": 29\n   },\n   \"/api/products\": {\n    \"errors_5xx\": 0,\n    \"p50_ms\": 206.8,\n    \"p95_ms\": 709.9,\n    \"requests\": 48\n   },\n   \"unmatched\": {\n    \"errors_5xx\": 0,\n    \"p50_ms\": 0.4,\n    \"p95_ms\": 0.4,\n    \"requests\": 1\n   }\n  },\n  \"process_rss_mb\": 48.7,\n  \"uptime_s\": 31.6,\n  \"window_s\": 60\n },\n \"postgres_connections\": \"1 | 40\"\n}"
+  },
+  {
+   "step": 4,
+   "t": 5.1,
+   "tool": "get_logs",
+   "kind": "observe",
+   "args": {
+    "service": "gateway",
+    "since_seconds": 120,
+    "tail": 400
+   },
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.03,
+   "result": "137 lines in last 120s.\nTop message patterns:\n     51x gateway # GET /api/products upstream=# rt=#\n     31x gateway # GET /api/orders/recent upstream=# rt=#\n     24x gateway # POST /api/orders upstream=# rt=#\n      9x gateway # GET /api/health upstream=# rt=#\n      7x gateway # GET /healthz upstream=- rt=#\n      3x #/#/# # [error] ###: *# connect() failed (#: Connection refused) while connecting to upstream, client: #, server: , request: \"GET /api/products HTTP/#\", upstream: \"http://#/api/pro\n      2x #/#/# # [error] ###: *# connect() failed (#: Connection refused) while connecting to upstream, client: #, server: , request: \"GET /api/orders/recent HTTP/#\", upstream: \"http://#/ap\n      1x /docker-entrypoint.sh: /docker-entrypoint.d/ is not empty, will attempt to perform configuration\n--- last 137 lines ---\n/docker-entrypoint.sh: /docker-entrypoint.d/ is not empty, will attempt to perform configuration\n/docker-entrypoint.sh: Looking for shell scripts in /docker-entrypoint.d/\n/docker-entrypoint.sh: Launching /docker-entrypoint.d/10-listen-on-ipv6-by-default.sh\n10-listen-on-ipv6-by-default.sh: info: ipv6 not available\n/docker-entrypoint.sh: Sourcing /docker-entrypoint.d/15-local-resolvers.envsh\n/docker-entrypoint.sh: Launching /docker-entrypoint.d/20-envsubst-on-templates.sh\n/docker-entrypoint.sh: Launching /docker-entrypoint.d/30-tune-worker-processes.sh\n/docker-entrypoint.sh: Configuration complete; ready for start up\n2026-10-30T07:36:02+00:00 gateway 502 GET /api/orders/recent upstream=172.19.0.2:8000 rt=0.000\n2026-10-30T07:36:02+00:00 gateway 502 GET /api/products upstream=172.19.0.2:8000 rt=0.000\n2026-10-30T07:36:02+00:00 gateway 502 GET /api/products upstream=172.19.0.2:8000 rt=0.000\n2026-10-30T07:36:02+00:00 gateway 502 GET /api/products upstream=172.19.0.2:8000 rt=0.000\n2026-10-30T07:36:02+00:00 gateway 502 GET /api/health upstream=172.19.0.2:8000 rt=0.000\n2026-10-30T07:36:02+00:00 gateway 502 GET /api/orders/recent upstream=172.19.0.2:8000 rt=0.000\n2026-10-30T07:36:03+00:00 gateway 201 POST /api/orders upstream=172.19.0.2:8000 rt=0.021\n2026-10-30T07:36:03+00:00 gateway 201 POST /api/orders upstream=172.19.0.2:8000 rt=0.020\n2026-10-30T07:36:03+00:00 gateway 201 POST /api/orders upstream=172.19.0.2:8000 rt=0.019\n2026-10-30T07:36:03+00:00 gateway 201 POST /api/orders upstream=172.19.0.2:8000 rt=0.019\n2026-10-30T07:36:03+00:00 gateway 404 GET /api/legacy/cart upstream=172.19.0.2:8000 rt=0.001\n2026-10-30T07:36:03+00:00 gateway 200 GET /api/products upstream=172.19.0.2:8000 rt=0.019\n2026-10-30T07:36:03+00:00 gateway 200 GET /api/health upstream=172.19.0.2:8000 rt=0.016\n2026-10-30T07:36:03+00:00 gateway 200 GET /api/products upstream=172.19.0.2:8000 rt=0.003\n2026-10-30T07:36:04+00:00 gateway 200 GET /api/products upstream=172.19.0.2:8000 rt=0.003\n2026-10-30T07:36:04+00:00 gateway 200 GET /healthz upstream=- rt=0.000\n2026-10-30T07:36:04+00:00 gateway 200 GET /api/health upstream=172.19.0.2:8000 rt=0.012\n2026-10-30T07:36:04+00:00 gateway 200 GET /api\n... [7986 chars truncated] ...\n gateway 200 GET /api/products upstream=172.19.0.2:8000 rt=0.383\n2026-10-30T07:36:27+00:00 gateway 200 GET /api/orders/recent upstream=172.19.0.2:8000 rt=0.463\n2026-10-30T07:36:28+00:00 gateway 200 GET /api/products upstream=172.19.0.2:8000 rt=0.571\n2026-10-30T07:36:29+00:00 gateway 200 GET /api/orders/recent upstream=172.19.0.2:8000 rt=0.475\n2026-10-30T07:36:29+00:00 gateway 200 GET /api/orders/recent upstream=172.19.0.2:8000 rt=0.374\n2026-10-30T07:36:29+00:00 gateway 200 GET /healthz upstream=- rt=0.000\n2026-10-30T07:36:30+00:00 gateway 200 GET /api/health upstream=172.19.0.2:8000 rt=0.492\n2026-10-30T07:36:30+00:00 gateway 200 GET /api/products upstream=172.19.0.2:8000 rt=0.863\n2026-10-30T07:36:30+00:00 gateway 200 GET /api/products upstream=172.19.0.2:8000 rt=0.584\n2026-10-30T07:36:31+00:00 gateway 200 GET /api/orders/recent upstream=172.19.0.2:8000 rt=0.495\n2026-10-30T07:36:31+00:00 gateway 200 GET /api/orders/recent upstream=172.19.0.2:8000 rt=0.778\n2026-10-30T07:36:31+00:00 gateway 201 POST /api/orders upstream=172.19.0.2:8000 rt=0.211\n2026-10-30T07:36:32+00:00 gateway 201 POST /api/orders upstream=172.19.0.2:8000 rt=0.382\n2026-10-30T07:36:32+00:00 gateway 200 GET /api/products upstream=172.19.0.2:8000 rt=0.459\n2026-10-30T07:36:33+00:00 gateway 200 GET /api/products upstream=172.19.0.2:8000 rt=0.374\n2026-10-30T07:36:33+00:00 gateway 200 GET /api/products upstream=172.19.0.2:8000 rt=0.674\n2026-10-30T07:36:34+00:00 gateway 200 GET /api/products upstream=172.19.0.2:8000 rt=0.369\n2026/10/30 07:36:02 [error] 20#20: *1 connect() failed (111: Connection refused) while connecting to upstream, client: 172.19.0.4, server: , request: \"GET /api/orders/recent HTTP/1.1\", upstream: \"http://172.19.0.2:8000/api/orders/recent\", host: \"gateway\"\n2026/10/30 07:36:02 [error] 20#20: *3 connect() failed (111: Connection refused) while connecting to upstream, client: 172.19.0.4, server: , request: \"GET /api/products HTTP/1.1\", upstream: \"http://172.19.0.2:8000/api/products\", host: \"gateway\"\n2026/10/30 07:36:02 [error] 20#20: *5 connect() failed (111: Connection refused) while connecting to upstream, client: 172.19.0.4, server: , request: \"GET /api/products HTTP/1.1\", upstream: \"http://172.19.0.2:8000/api/products\", host: \"gateway\"\n2026/10/30 07:36:02 [error] 20#20: *7 connect() failed (111: Connection refused) while connecting to upstream, client: 172.19.0.4, server: , request: \"GET /api/products HTTP/1.1\", upstream: \"http://172.19.0.2:8000/api/products\", host: \"gateway\"\n2026/10/30 07:36:02 [error] 20#20: *9 connect() failed (111: Connection refused) while connecting to upstream, client: 172.19.0.1, server: , request: \"GET /api/health HTTP/1.1\", upstream: \"http://172.19.0.2:8000/api/health\", host: \"localhost:8080\"\n2026/10/30 07:36:02 [error] 20#20: *11 connect() failed (111: Connection refused) while connecting to upstream, client: 172.19.0.4, server: , request: \"GET /api/orders/recent HTTP/1.1\", upstream: \"http://172.19.0.2:8000/api/orders/recent\", host: \"gateway\""
+  },
+  {
+   "step": 5,
+   "t": 5.13,
+   "tool": "get_logs",
+   "kind": "observe",
+   "args": {
+    "service": "api",
+    "since_seconds": 120,
+    "tail": 400
+   },
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.05,
+   "result": "50 lines in last 120s.\nTop message patterns:\n     24x WARNING api cache write failed: Error -# connecting to redis:#. Name does not resolve.\n     23x WARNING api cache unavailable, falling back to database: Error -# connecting to redis:#. Name does not resolve.\n      1x INFO api starting shop-api on :# (db=postgres:# cache=redis:#)\n      1x INFO api Serving on http://#\n      1x WARNING api cache unavailable, falling back to database: Timeout reading from socket\n--- last 50 lines ---\n2026-10-30T07:36:02 INFO api starting shop-api on :8000 (db=postgres:5432 cache=redis:6379)\n2026-10-30T07:36:02 INFO api Serving on http://0.0.0.0:8000\n2026-10-30T07:36:10 WARNING api cache unavailable, falling back to database: Timeout reading from socket\n2026-10-30T07:36:10 WARNING api cache write failed: Error -2 connecting to redis:6379. Name does not resolve.\n2026-10-30T07:36:12 WARNING api cache unavailable, falling back to database: Error -2 connecting to redis:6379. Name does not resolve.\n2026-10-30T07:36:12 WARNING api cache write failed: Error -2 connecting to redis:6379. Name does not resolve.\n2026-10-30T07:36:13 WARNING api cache unavailable, falling back to database: Error -2 connecting to redis:6379. Name does not resolve.\n2026-10-30T07:36:13 WARNING api cache write failed: Error -2 connecting to redis:6379. Name does not resolve.\n2026-10-30T07:36:14 WARNING api cache unavailable, falling back to database: Error -2 connecting to redis:6379. Name does not resolve.\n2026-10-30T07:36:14 WARNING api cache write failed: Error -2 connecting to redis:6379. Name does not resolve.\n2026-10-30T07:36:15 WARNING api cache unavailable, falling back to database: Error -2 connecting to redis:6379. Name does not resolve.\n2026-10-30T07:36:15 WARNING api cache write failed: Error -2 connecting to redis:6379. Name does not resolve.\n2026-10-30T07:36:16 WARNING api cache unavailable, falling back to database: Error -2 connecting to redis:6379. Name does not resolve.\n2026-10-30T07:36:16 WARNING api cache write failed: Error -2 connecting to redis:6379. Name does not resolve.\n2026-10-30T07:36:17 WARNING api cache unavailable, falling back to database: Error -2 connecting to redis:6379. Name does not resolve.\n2026-10-30T07:36:18 WARNING api cache write failed: Error -2 connecting to redis:6379. Name does not resolve.\n2026-10-30T07:36:18 WARNING api cache unavailable, falling back to database: Error -2 connecting to redis:6379. Name does not resolve.\n2026-10-30T07:36:19 WARNING api cache write failed: Error -2 connecting to redis:6379. Name does not resolve.\n2026-10-30T07:36:20 WARNING api cache unavailable, falling back to database: Error -2 connecting to redis:6379. Name does not resolve.\n2026-10-30T07:36:20 WARNING api cache write failed: Error -2 connecting to redis:6379. Name does not resolve.\n2026-10-30T07:36:20 WARNING api cache unavailable, falling back to database: Error -2 connecting to redis:6379. Name does not resolve.\n2026-10-30T07:36:21 WARNING api cache write failed\n... [489 chars truncated] ...\nd: Error -2 connecting to redis:6379. Name does not resolve.\n2026-10-30T07:36:23 WARNING api cache unavailable, falling back to database: Error -2 connecting to redis:6379. Name does not resolve.\n2026-10-30T07:36:24 WARNING api cache write failed: Error -2 connecting to redis:6379. Name does not resolve.\n2026-10-30T07:36:24 WARNING api cache unavailable, falling back to database: Error -2 connecting to redis:6379. Name does not resolve.\n2026-10-30T07:36:24 WARNING api cache unavailable, falling back to database: Error -2 connecting to redis:6379. Name does not resolve.\n2026-10-30T07:36:25 WARNING api cache write failed: Error -2 connecting to redis:6379. Name does not resolve.\n2026-10-30T07:36:25 WARNING api cache write failed: Error -2 connecting to redis:6379. Name does not resolve.\n2026-10-30T07:36:25 WARNING api cache unavailable, falling back to database: Error -2 connecting to redis:6379. Name does not resolve.\n2026-10-30T07:36:26 WARNING api cache write failed: Error -2 connecting to redis:6379. Name does not resolve.\n2026-10-30T07:36:27 WARNING api cache unavailable, falling back to database: Error -2 connecting to redis:6379. Name does not resolve.\n2026-10-30T07:36:27 WARNING api cache write failed: Error -2 connecting to redis:6379. Name does not resolve.\n2026-10-30T07:36:28 WARNING api cache unavailable, falling back to database: Error -2 connecting to redis:6379. Name does not resolve.\n2026-10-30T07:36:28 WARNING api cache write failed: Error -2 connecting to redis:6379. Name does not resolve.\n2026-10-30T07:36:29 WARNING api cache unavailable, falling back to database: Error -2 connecting to redis:6379. Name does not resolve.\n2026-10-30T07:36:30 WARNING api cache unavailable, falling back to database: Error -2 connecting to redis:6379. Name does not resolve.\n2026-10-30T07:36:30 WARNING api cache write failed: Error -2 connecting to redis:6379. Name does not resolve.\n2026-10-30T07:36:30 WARNING api cache write failed: Error -2 connecting to redis:6379. Name does not resolve.\n2026-10-30T07:36:32 WARNING api cache unavailable, falling back to database: Error -2 connecting to redis:6379. Name does not resolve.\n2026-10-30T07:36:32 WARNING api cache write failed: Error -2 connecting to redis:6379. Name does not resolve.\n2026-10-30T07:36:32 WARNING api cache unavailable, falling back to database: Error -2 connecting to redis:6379. Name does not resolve.\n2026-10-30T07:36:33 WARNING api cache write failed: Error -2 connecting to redis:6379. Name does not resolve.\n2026-10-30T07:36:33 WARNING api cache unavailable, falling back to database: Error -2 connecting to redis:6379. Name does not resolve.\n2026-10-30T07:36:33 WARNING api cache write failed: Error -2 connecting to redis:6379. Name does not resolve.\n2026-10-30T07:36:34 WARNING api cache unavailable, falling back to database: Error -2 connecting to redis:6379. Name does not resolve.\n2026-10-30T07:36:34 WARNING api cache write failed: Error -2 connecting to redis:6379. Name does not resolve."
+  },
+  {
+   "step": 6,
+   "t": 5.19,
+   "tool": "get_logs",
+   "kind": "observe",
+   "args": {
+    "service": "worker",
+    "since_seconds": 120,
+    "tail": 400
+   },
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.04,
+   "result": "4 lines in last 120s.\nTop message patterns:\n      4x INFO worker sales summary refreshed: orders=# revenue=#\n--- last 4 lines ---\n2026-10-30T07:36:02 INFO worker sales summary refreshed: orders=1000 revenue=251854.26\n2026-10-30T07:36:12 INFO worker sales summary refreshed: orders=1019 revenue=254142.32\n2026-10-30T07:36:22 INFO worker sales summary refreshed: orders=1020 revenue=254164.10\n2026-10-30T07:36:32 INFO worker sales summary refreshed: orders=1024 revenue=255068.47"
+  },
+  {
+   "step": 7,
+   "t": 5.22,
+   "tool": "get_logs",
+   "kind": "observe",
+   "args": {
+    "service": "postgres",
+    "since_seconds": 120,
+    "tail": 400
+   },
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.05,
+   "result": "66 lines in last 120s.\nTop message patterns:\n     13x \n      2x # # UTC [#] LOG:  listening on Unix socket \"/var/run/postgresql/.s.PGSQL.#\"\n      2x # # UTC [#] LOG:  database system was shut down at # # UTC\n      2x # # UTC [#] LOG:  database system is ready to accept connections\n      2x done\n      2x CREATE TABLE\n      2x INSERT # #\n      2x GRANT\n--- last 66 lines ---\nThe files belonging to this database system will be owned by user \"postgres\".\nThis user must also own the server process.\n\nThe database cluster will be initialized with locale \"en_US.utf8\".\nThe default database encoding has accordingly been set to \"UTF8\".\nThe default text search configuration will be set to \"english\".\n\nData page checksums are disabled.\n\nfixing permissions on existing directory /var/lib/postgresql/data ... ok\ncreating subdirectories ... ok\nselecting dynamic shared memory implementation ... posix\nselecting default max_connections ... 100\nselecting default shared_buffers ... 128MB\nselecting default time zone ... UTC\ncreating configuration files ... ok\nrunning bootstrap script ... ok\nperforming post-bootstrap initialization ... ok\nsyncing data to disk ... ok\n\n\nSuccess. You can now start the database server using:\n\n    pg_ctl -D /var/lib/postgresql/data -l logfile start\n\nwaiting for server to start....2026-10-30 07:36:00.352 UTC [41] LOG:  starting PostgreSQL 16.15 on x86_64-pc-linux-musl, compiled by gcc (Alpine 15.2.0) 15.2.0, 64-bit\n2026-10-30 07:36:00.354 UTC [41] LOG:  listening on Unix socket \"/var/run/postgresql/.s.PGSQL.5432\"\n2026-10-30 07:36:00.357 UTC [44] LOG:  database system was shut down at 2026-10-30 07:36:00 UTC\n2026-10-30 07:36:00.363 UTC [41] LOG:  database system is ready to accept connections\n done\nserver started\nCREATE DATABASE\n\n\n/usr/local/bin/docker-entrypoint.sh: running /docker-entrypoint-initdb.d/init.sql\nCREATE TABLE\nCREATE TABLE\nINSERT 0 50\nINSERT 0 1000\nCREATE ROLE\nGRANT\nGRANT\n\n\nwaiting for server to shut down....2026-10-30 07:36:00.569 UTC [41] LOG:  received fast shutdown request\n2026-10-30 07:36:00.569 UTC [41] LOG:  aborting any active transactions\n2026-10-30 07:36:00.571 UTC [41] LOG:  background worker \"logical replication launcher\" (PID 47) exited with exit code 1\n2026-10-30 07:36:00.572 UTC [42] LOG:  shutting down\n2026-10-30 07:36:00.573 UTC [42] LOG:  checkpoint starting: shutdown immediate\n2026-10-30 07:36:00.617 UTC [42] LOG:  checkpoint complete: wrote 964 buffers (5.9%); 0 WAL file(s) added, 0 removed, 0 recycled; write=0.011 s, sync=0.029 s, total=0.045 s; sync files=317, longest=0.011 s, average=0.001 s; distance=4493 kB, estimate=4493 kB; lsn=0/195A8A8, redo lsn=0/195A8A8\n2026-10-30 07:36:00.625 UTC [41] LOG:  database system is shut down\n done\nserver stopped\n\nPostgreSQL init process complete; ready for start up.\n\nsh: locale: not found\n2026-10-30 07:35:59.597 UTC [35] WARNING:  no usable system locales were found\ninitdb: warning: enabling \"trust\" authentication for local connections\ninitdb: hint: You can change this by editing pg_hba.conf or using the option -A, or --auth-local and --auth-host, the next time you run initdb.\n2026-10-30 07:36:00.689 UTC [1] LOG:  starting PostgreSQL 16.15 on x86_64-pc-linux-musl, compiled by gcc (Alpine 15.2.0) 15.2.0, 64-bit\n2026-10-30 07:36:00.689 UTC [1] LOG:  listening on IPv4 address \"0.0.0.0\", port 5432\n2026-10-30 07:36:00.689 UTC [1] LOG:  could not create IPv6 socket for address \"::\": Address family not supported by protocol\n2026-10-30 07:36:00.696 UTC [1] LOG:  listening on Unix socket \"/var/run/postgresql/.s.PGSQL.5432\"\n2026-10-30 07:36:00.698 UTC [59] LOG:  database system was shut down at 2026-10-30 07:36:00 UTC\n2026-10-30 07:36:00.704 UTC [1] LOG:  database system is ready to accept connections"
+  },
+  {
+   "step": 8,
+   "t": 5.27,
+   "tool": "get_logs",
+   "kind": "observe",
+   "args": {
+    "service": "redis",
+    "since_seconds": 120,
+    "tail": 400
+   },
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.09,
+   "result": "9 lines in last 120s.\nTop message patterns:\n      1x #C # Oct # # # WARNING Memory overcommit must be enabled! Without it, a background save or replication may fail under low memory condition. Being disabled, it can also cause failur\n      1x #C # Oct # # * oO0OoO0OoO0Oo Redis is starting oO0OoO0OoO0Oo\n      1x #C # Oct # # * Redis version=#, bits=#, commit=#, modified=#, pid=#, just started\n      1x #C # Oct # # # Warning: no config file specified, using the default config. In order to specify a config file use redis-server /path/to/redis.conf\n      1x #M # Oct # # * monotonic clock: POSIX clock_gettime\n      1x #M # Oct # # * Running mode=standalone, port=#.\n      1x #M # Oct # # # Warning: Could not create server TCP listening socket ::*:#: unable to bind socket, errno: #\n      1x #M # Oct # # * Server initialized\n--- last 9 lines ---\n1:C 30 Oct 2026 07:35:58.892 # WARNING Memory overcommit must be enabled! Without it, a background save or replication may fail under low memory condition. Being disabled, it can also cause failures without low memory condition, see https://github.com/jemalloc/jemalloc/issues/1328. To fix this issue\n1:C 30 Oct 2026 07:35:58.893 * oO0OoO0OoO0Oo Redis is starting oO0OoO0OoO0Oo\n1:C 30 Oct 2026 07:35:58.893 * Redis version=7.4.12, bits=64, commit=00000000, modified=0, pid=1, just started\n1:C 30 Oct 2026 07:35:58.893 # Warning: no config file specified, using the default config. In order to specify a config file use redis-server /path/to/redis.conf\n1:M 30 Oct 2026 07:35:58.893 * monotonic clock: POSIX clock_gettime\n1:M 30 Oct 2026 07:35:58.894 * Running mode=standalone, port=6379.\n1:M 30 Oct 2026 07:35:58.894 # Warning: Could not create server TCP listening socket ::*:6379: unable to bind socket, errno: 97\n1:M 30 Oct 2026 07:35:58.894 * Server initialized\n1:M 30 Oct 2026 07:35:58.894 * Ready to accept connections tcp"
+  },
+  {
+   "step": 9,
+   "t": 5.38,
+   "tool": "run_diagnostic",
+   "kind": "observe",
+   "args": {
+    "service": "gateway",
+    "check": "upstream_http"
+   },
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.7,
+   "result": "{\"checks\":{\"cache\":\"error: Error -2 connecting to redis:6379. Name does not resolve.\",\"database\":\"ok\",\"disk\":\"ok\"},\"status\":\"degraded\"}\n\n10:    server api:8000;\n13:  server {"
+  },
+  {
+   "step": 10,
+   "t": 6.08,
+   "tool": "get_config",
+   "kind": "observe",
+   "args": {
+    "service": "gateway"
+   },
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.0,
+   "result": "gateway config versions: [1, 2]; live = v2\n# ShopStack edge gateway (known-good baseline, version 1)\nworker_processes 1;\nevents { worker_connections 1024; }\nhttp {\n  log_format main '$time_iso8601 gateway $status $request_method $uri upstream=$upstream_addr rt=$request_time';\n  access_log /dev/stdout main;\n  error_log /dev/stderr warn;\n\n  upstream shop_api {\n    server api:8000;\n  }\n\n  server {\n    listen 80;\n    location = /healthz { return 200 \"ok\\n\"; }\n    location /api/ {\n      proxy_pass http://shop_api;\n      proxy_connect_timeout 2s;\n      proxy_read_timeout 5s;\n    }\n    location / { return 404; }\n  }\n}\n"
+  },
+  {
+   "step": 11,
+   "t": 6.08,
+   "tool": "get_config",
+   "kind": "observe",
+   "args": {
+    "service": "gateway",
+    "version": 2,
+    "diff_against": 1
+   },
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.0,
+   "result": "gateway config versions: [1, 2]; live = v2\n--- v1\n+++ v2\n@@ -1,6 +1,6 @@\n # ShopStack edge gateway (known-good baseline, version 1)\n worker_processes 1;\n-events { worker_connections 512; }\n+events { worker_connections 1024; }\n http {\n   log_format main '$time_iso8601 gateway $status $request_method $uri upstream=$upstream_addr rt=$request_time';\n   access_log /dev/stdout main;"
+  },
+  {
+   "step": 12,
+   "t": 6.08,
+   "tool": "run_diagnostic",
+   "kind": "observe",
+   "args": {
+    "service": "api",
+    "check": "disk"
+   },
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.89,
+   "result": "Filesystem                Size      Used Available Use% Mounted on\noverlay                 252.0G     18.2G     20.3G  47% /\ntmpfs                    64.0M         0     64.0M   0% /dev\ntmpfs                     7.9G         0      7.9G   0% /sys/fs/cgroup\nshm                      64.0M         0     64.0M   0% /dev/shm\n/dev/vda                252.0G     18.2G     20.3G  47% /config\ntmpfs                    48.0M      4.0K     48.0M   0% /data\n/dev/vda                252.0G     18.2G     20.3G  47% /etc/hostname\n/dev/vda                252.0G     18.2G     20.3G  47% /etc/hosts\n/dev/vda                252.0G     18.2G     20.3G  47% /etc/resolv.conf\ntmpfs                     4.0K         0      4.0K   0% /proc/acpi\ntmpfs                    64.0M         0     64.0M   0% /proc/interrupts\ntmpfs                    64.0M         0     64.0M   0% /proc/keys\ntmpfs                    64.0M         0     64.0M   0% /proc/timer_list\ntmpfs                     4.0K         0      4.0K   0% /sys/firmware\n--- largest under /data (KB) ---\n4\t/data/audit/audit.log\n4\t/data/audit\n4\t/data"
+  },
+  {
+   "step": 13,
+   "t": 6.97,
+   "tool": "run_diagnostic",
+   "kind": "observe",
+   "args": {
+    "service": "worker",
+    "check": "disk"
+   },
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.09,
+   "result": "Filesystem                Size      Used Available Use% Mounted on\noverlay                 252.0G     18.2G     20.3G  47% /\ntmpfs                    64.0M         0     64.0M   0% /dev\ntmpfs                     7.9G         0      7.9G   0% /sys/fs/cgroup\nshm                      64.0M         0     64.0M   0% /dev/shm\n/dev/vda                252.0G     18.2G     20.3G  47% /config\n/dev/vda                252.0G     18.2G     20.3G  47% /etc/hostname\n/dev/vda                252.0G     18.2G     20.3G  47% /etc/hosts\n/dev/vda                252.0G     18.2G     20.3G  47% /etc/resolv.conf\ntmpfs                     4.0K         0      4.0K   0% /proc/acpi\ntmpfs                    64.0M         0     64.0M   0% /proc/interrupts\ntmpfs                    64.0M         0     64.0M   0% /proc/keys\ntmpfs                    64.0M         0     64.0M   0% /proc/timer_list\ntmpfs                     4.0K         0      4.0K   0% /sys/firmware\n--- largest under /data (KB) ---"
+  },
+  {
+   "step": 14,
+   "t": 7.06,
+   "tool": "run_diagnostic",
+   "kind": "observe",
+   "args": {
+    "service": "api",
+    "check": "processes"
+   },
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 1.02,
+   "result": "Mem: 12417452K used, 4059900K free, 28872K shrd, 178496K buff, 10759992K cached\nCPU:  11% usr   0% sys   0% nic  88% idle   0% io   0% irq   0% sirq\nLoad average: 0.37 0.49 0.47 11/277 66\n  PID  PPID USER     STAT   VSZ %VSZ CPU %CPU COMMAND\n   32    23 root     R    14772   0%   3   3% python /app/tools/reindex_search.py\n   34    23 root     R    14772   0%   0   3% python /app/tools/reindex_search.py\n   29    23 root     R    14772   0%   1   1% python /app/tools/reindex_search.py\n   35    23 root     R    14772   0%   1   1% python /app/tools/reindex_search.py\n   31    23 root     R    14772   0%   0   1% python /app/tools/reindex_search.py\n   33    23 root     R    14772   0%   2   1% python /app/tools/reindex_search.py\n    1     0 root     R    75744   0%   2   0% python app.py\n   30    23 root     R    14772   0%   2   0% python /app/tools/reindex_search.py\n   36    23 root     R    14772   0%   2   0% python /app/tools/reindex_search.py\n   23     0 root     S    14772   0%   3   0% python /app/tools/reindex_search.py\n   59     0 root     S     1652   0%   1   0% sh -c top -b -n 1 | head -25\n   65    59 root     R     1648   0%   1   0% top -b -n 1\n   66    59 root     S     1636   0%   3   0% head -25"
+  },
+  {
+   "step": 15,
+   "t": 8.07,
+   "tool": "run_diagnostic",
+   "kind": "observe",
+   "args": {
+    "service": "postgres",
+    "check": "db_locks"
+   },
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.11,
+   "result": "blocked_pid | app | query | waiting_s | blocking_pid | blocking_app | state | blocking_query\n(no blocked sessions)"
+  },
+  {
+   "step": 16,
+   "t": 8.19,
+   "tool": "reconnect_network",
+   "kind": "act",
+   "args": {
+    "service": "redis",
+    "network": "backend"
+   },
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.06,
+   "result": "connected redis to backend: ok"
+  },
+  {
+   "step": 17,
+   "t": 16.25,
+   "tool": "list_services",
+   "kind": "observe",
+   "args": {},
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.16,
+   "result": "service   state       restarts  oom    health   networks             missing_networks\ngateway   running     0         False  -        frontend             -\napi       running     0         False  -        backend,frontend     -\nworker    running     0         False  -        backend              -\npostgres  running     0         False  healthy  backend              -\nredis     running     0         False  -        backend              -"
+  },
+  {
+   "step": 18,
+   "t": 16.41,
+   "tool": "check_endpoints",
+   "kind": "observe",
+   "args": {},
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 1.46,
+   "result": "GET  /healthz             status=200     1.5ms OK\nGET  /api/health          status=200   461.9ms OK\nGET  /api/products        status=200   190.7ms OK\nGET  /api/orders/recent   status=200   503.7ms OK\nPOST /api/orders          status=201   297.0ms OK"
+  },
+  {
+   "step": 19,
+   "t": 17.86,
+   "tool": "get_metrics",
+   "kind": "observe",
+   "args": {},
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 3.22,
+   "result": "{\n \"containers\": {\n  \"gateway\": {\n   \"cpu_pct\": \"0.15%\",\n   \"mem\": \"3.043MiB / 15.71GiB\",\n   \"mem_pct\": \"0.02%\"\n  },\n  \"api\": {\n   \"cpu_pct\": \"51.09%\",\n   \"mem\": \"51.23MiB / 256MiB\",\n   \"mem_pct\": \"20.01%\"\n  },\n  \"worker\": {\n   \"cpu_pct\": \"0.00%\",\n   \"mem\": \"25.02MiB / 15.71GiB\",\n   \"mem_pct\": \"0.16%\"\n  },\n  \"postgres\": {\n   \"cpu_pct\": \"4.77%\",\n   \"mem\": \"31.54MiB / 15.71GiB\",\n   \"mem_pct\": \"0.20%\"\n  },\n  \"redis\": {\n   \"cpu_pct\": \"0.66%\",\n   \"mem\": \"4.105MiB / 15.71GiB\",\n   \"mem_pct\": \"0.03%\"\n  }\n },\n \"api_app_metrics\": {\n  \"cache_errors_total\": 50,\n  \"db_errors_total\": 0,\n  \"endpoints\": {\n   \"/api/health\": {\n    \"errors_5xx\": 0,\n    \"p50_ms\": 306.3,\n    \"p95_ms\": 501.7,\n    \"requests\": 10\n   },\n   \"/api/orders\": {\n    \"errors_5xx\": 0,\n    \"p50_ms\": 22.1,\n    \"p95_ms\": 456.2,\n    \"requests\": 30\n   },\n   \"/api/orders/recent\": {\n    \"errors_5xx\": 0,\n    \"p50_ms\": 299.4,\n    \"p95_ms\": 605.2,\n    \"requests\": 38\n   },\n   \"/api/products\": {\n    \"errors_5xx\": 0,\n    \"p50_ms\": 3.6,\n    \"p95_ms\": 604.8,\n    \"requests\": 71\n   },\n   \"/metrics\": {\n    \"errors_5xx\": 0,\n    \"p50_ms\": 0.4,\n    \"p95_ms\": 0.4,\n    \"requests\": 1\n   },\n   \"unmatched\": {\n    \"errors_5xx\": 0,\n    \"p50_ms\": 0.3,\n    \"p95_ms\": 0.4,\n    \"requests\": 4\n   }\n  },\n  \"process_rss_mb\": 48.7,\n  \"uptime_s\": 47.7,\n  \"window_s\": 60\n },\n \"postgres_connections\": \"1 | 40\"\n}"
+  },
+  {
+   "step": 20,
+   "t": 21.08,
+   "tool": "get_logs",
+   "kind": "observe",
+   "args": {
+    "service": "gateway",
+    "since_seconds": 9,
+    "tail": 400
+   },
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.04,
+   "result": "31 lines in last 9s.\nTop message patterns:\n     18x gateway # GET /api/products upstream=# rt=#\n      5x gateway # GET /api/orders/recent upstream=# rt=#\n      4x gateway # POST /api/orders upstream=# rt=#\n      2x gateway # GET /api/legacy/cart upstream=# rt=#\n      1x gateway # GET /healthz upstream=- rt=#\n      1x gateway # GET /api/health upstream=# rt=#\n--- last 31 lines ---\n2026-10-30T07:36:41+00:00 gateway 200 GET /api/products upstream=172.19.0.2:8000 rt=0.267\n2026-10-30T07:36:41+00:00 gateway 200 GET /api/products upstream=172.19.0.2:8000 rt=0.076\n2026-10-30T07:36:41+00:00 gateway 200 GET /api/products upstream=172.19.0.2:8000 rt=0.165\n2026-10-30T07:36:42+00:00 gateway 201 POST /api/orders upstream=172.19.0.2:8000 rt=0.678\n2026-10-30T07:36:42+00:00 gateway 200 GET /api/products upstream=172.19.0.2:8000 rt=0.081\n2026-10-30T07:36:42+00:00 gateway 200 GET /api/products upstream=172.19.0.2:8000 rt=0.165\n2026-10-30T07:36:43+00:00 gateway 200 GET /api/products upstream=172.19.0.2:8000 rt=0.076\n2026-10-30T07:36:43+00:00 gateway 404 GET /api/legacy/cart upstream=172.19.0.2:8000 rt=0.166\n2026-10-30T07:36:43+00:00 gateway 200 GET /api/products upstream=172.19.0.2:8000 rt=0.075\n2026-10-30T07:36:44+00:00 gateway 200 GET /api/orders/recent upstream=172.19.0.2:8000 rt=0.369\n2026-10-30T07:36:44+00:00 gateway 200 GET /api/products upstream=172.19.0.2:8000 rt=0.077\n2026-10-30T07:36:44+00:00 gateway 201 POST /api/orders upstream=172.19.0.2:8000 rt=0.466\n2026-10-30T07:36:45+00:00 gateway 200 GET /api/products upstream=172.19.0.2:8000 rt=0.268\n2026-10-30T07:36:45+00:00 gateway 200 GET /api/orders/recent upstream=172.19.0.2:8000 rt=0.478\n2026-10-30T07:36:46+00:00 gateway 200 GET /healthz upstream=- rt=0.000\n2026-10-30T07:36:46+00:00 gateway 200 GET /api/health upstream=172.19.0.2:8000 rt=0.461\n2026-10-30T07:36:46+00:00 gateway 200 GET /api/products upstream=172.19.0.2:8000 rt=0.187\n2026-10-30T07:36:46+00:00 gateway 200 GET /api/orders/recent upstream=172.19.0.2:8000 rt=0.678\n2026-10-30T07:36:47+00:00 gateway 200 GET /api/orders/recent upstream=172.19.0.2:8000 rt=0.496\n2026-10-30T07:36:47+00:00 gateway 200 GET /api/orders/recent upstream=172.19.0.2:8000 rt=0.372\n2026-10-30T07:36:47+00:00 gateway 200 GET /api/products upstream=172.19.0.2:8000 rt=0.164\n2026-10-30T07:36:47+00:00 gateway 201 POST /api/orders upstream=172.19.0.2:8000 rt=0.296\n2026-10-30T07:36:47+00:00 gateway 200 GET /api/products upstream=172.19.0.2:8000 rt=0.177\n2026-10-30T07:36:47+00:00 gateway 200 GET /api/products upstream=172.19.0.2:8000 rt=0.077\n2026-10-30T07:36:48+00:00 gateway 200 GET /api/products upstream=172.19.0.2:8000 rt=0.176\n2026-10-30T07:36:48+00:00 gateway 201 POST /api/orders upstream=172.19.0.2:8000 rt=0.564\n2026-10-30T07:36:49+00:00 gateway 200 GET /api/products upstream=172.19.0.2:8000 rt=0.174\n2026-10-30T07:36:49+00:00 gateway 200 GET /api/products upstream=172.19.0.2:8000 rt=0.169\n2026-10-30T07:36:49+00:00 gateway 404 GET /api/legacy/cart upstream=172.19.0.2:8000 rt=0.177\n2026-10-30T07:36:50+00:00 gateway 200 GET /api/products upstream=172.19.0.2:8000 rt=0.176\n2026-10-30T07:36:50+00:00 gateway 200 GET /api/products upstream=172.19.0.2:8000 rt=0.170"
+  },
+  {
+   "step": 21,
+   "t": 21.12,
+   "tool": "get_logs",
+   "kind": "observe",
+   "args": {
+    "service": "api",
+    "since_seconds": 9,
+    "tail": 400
+   },
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.03,
+   "result": "0 lines in last 9s.\nTop message patterns:\n\n--- last 0 lines ---\n"
+  },
+  {
+   "step": 22,
+   "t": 21.15,
+   "tool": "get_logs",
+   "kind": "observe",
+   "args": {
+    "service": "worker",
+    "since_seconds": 9,
+    "tail": 400
+   },
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.04,
+   "result": "1 lines in last 9s.\nTop message patterns:\n      1x INFO worker sales summary refreshed: orders=# revenue=#\n--- last 1 lines ---\n2026-10-30T07:36:42 INFO worker sales summary refreshed: orders=1027 revenue=255674.55"
+  },
+  {
+   "step": 23,
+   "t": 21.19,
+   "tool": "get_logs",
+   "kind": "observe",
+   "args": {
+    "service": "postgres",
+    "since_seconds": 9,
+    "tail": 400
+   },
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.03,
+   "result": "0 lines in last 9s.\nTop message patterns:\n\n--- last 0 lines ---\n"
+  },
+  {
+   "step": 24,
+   "t": 21.22,
+   "tool": "get_logs",
+   "kind": "observe",
+   "args": {
+    "service": "redis",
+    "since_seconds": 9,
+    "tail": 400
+   },
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.02,
+   "result": "0 lines in last 9s.\nTop message patterns:\n\n--- last 0 lines ---\n"
+  },
+  {
+   "step": 25,
+   "t": 21.24,
+   "tool": "run_diagnostic",
+   "kind": "observe",
+   "args": {
+    "service": "api",
+    "check": "disk"
+   },
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 1.03,
+   "result": "Filesystem                Size      Used Available Use% Mounted on\noverlay                 252.0G     18.2G     20.3G  47% /\ntmpfs                    64.0M         0     64.0M   0% /dev\ntmpfs                     7.9G         0      7.9G   0% /sys/fs/cgroup\nshm                      64.0M         0     64.0M   0% /dev/shm\n/dev/vda                252.0G     18.2G     20.3G  47% /config\ntmpfs                    48.0M      4.0K     48.0M   0% /data\n/dev/vda                252.0G     18.2G     20.3G  47% /etc/hostname\n/dev/vda                252.0G     18.2G     20.3G  47% /etc/hosts\n/dev/vda                252.0G     18.2G     20.3G  47% /etc/resolv.conf\ntmpfs                     4.0K         0      4.0K   0% /proc/acpi\ntmpfs                    64.0M         0     64.0M   0% /proc/interrupts\ntmpfs                    64.0M         0     64.0M   0% /proc/keys\ntmpfs                    64.0M         0     64.0M   0% /proc/timer_list\ntmpfs                     4.0K         0      4.0K   0% /sys/firmware\n--- largest under /data (KB) ---\n4\t/data/audit/audit.log\n4\t/data/audit\n4\t/data"
+  },
+  {
+   "step": 26,
+   "t": 22.27,
+   "tool": "run_diagnostic",
+   "kind": "observe",
+   "args": {
+    "service": "worker",
+    "check": "disk"
+   },
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.14,
+   "result": "Filesystem                Size      Used Available Use% Mounted on\noverlay                 252.0G     18.2G     20.3G  47% /\ntmpfs                    64.0M         0     64.0M   0% /dev\ntmpfs                     7.9G         0      7.9G   0% /sys/fs/cgroup\nshm                      64.0M         0     64.0M   0% /dev/shm\n/dev/vda                252.0G     18.2G     20.3G  47% /config\n/dev/vda                252.0G     18.2G     20.3G  47% /etc/hostname\n/dev/vda                252.0G     18.2G     20.3G  47% /etc/hosts\n/dev/vda                252.0G     18.2G     20.3G  47% /etc/resolv.conf\ntmpfs                     4.0K         0      4.0K   0% /proc/acpi\ntmpfs                    64.0M         0     64.0M   0% /proc/interrupts\ntmpfs                    64.0M         0     64.0M   0% /proc/keys\ntmpfs                    64.0M         0     64.0M   0% /proc/timer_list\ntmpfs                     4.0K         0      4.0K   0% /sys/firmware\n--- largest under /data (KB) ---"
+  },
+  {
+   "step": 27,
+   "t": 22.41,
+   "tool": "run_diagnostic",
+   "kind": "observe",
+   "args": {
+    "service": "api",
+    "check": "processes"
+   },
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 1.26,
+   "result": "Mem: 12437744K used, 4039608K free, 29192K shrd, 178496K buff, 10760332K cached\nCPU:   9% usr   0% sys   0% nic  89% idle   0% io   0% irq   0% sirq\nLoad average: 0.29 0.46 0.46 10/274 90\n  PID  PPID USER     STAT   VSZ %VSZ CPU %CPU COMMAND\n    1     0 root     S    75744   0%   0   1% python app.py\n   32    23 root     R    14772   0%   3   1% python /app/tools/reindex_search.py\n   35    23 root     R    14772   0%   1   1% python /app/tools/reindex_search.py\n   34    23 root     R    14772   0%   0   1% python /app/tools/reindex_search.py\n   31    23 root     R    14772   0%   0   1% python /app/tools/reindex_search.py\n   30    23 root     R    14772   0%   2   1% python /app/tools/reindex_search.py\n   33    23 root     R    14772   0%   2   1% python /app/tools/reindex_search.py\n   29    23 root     R    14772   0%   1   0% python /app/tools/reindex_search.py\n   36    23 root     R    14772   0%   2   0% python /app/tools/reindex_search.py\n   23     0 root     S    14772   0%   3   0% python /app/tools/reindex_search.py\n   83     0 root     S     1652   0%   0   0% sh -c top -b -n 1 | head -25\n   89    83 root     R     1648   0%   3   0% top -b -n 1\n   90    83 root     S     1636   0%   2   0% head -25"
+  },
+  {
+   "step": 28,
+   "t": 23.67,
+   "tool": "run_diagnostic",
+   "kind": "observe",
+   "args": {
+    "service": "postgres",
+    "check": "db_locks"
+   },
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.13,
+   "result": "blocked_pid | app | query | waiting_s | blocking_pid | blocking_app | state | blocking_query\n(no blocked sessions)"
+  },
+  {
+   "step": 29,
+   "t": 23.8,
+   "tool": "kill_process",
+   "kind": "act",
+   "args": {
+    "service": "api",
+    "pid": 23
+   },
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.77,
+   "result": "killed 23 and children: 29 30 31 32 33 34 35 36"
+  },
+  {
+   "step": 30,
+   "t": 29.57,
+   "tool": "list_services",
+   "kind": "observe",
+   "args": {},
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.15,
+   "result": "service   state       restarts  oom    health   networks             missing_networks\ngateway   running     0         False  -        frontend             -\napi       running     0         False  -        backend,frontend     -\nworker    running     0         False  -        backend              -\npostgres  running     0         False  healthy  backend              -\nredis     running     0         False  -        backend              -"
+  },
+  {
+   "step": 31,
+   "t": 29.72,
+   "tool": "check_endpoints",
+   "kind": "observe",
+   "args": {},
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.06,
+   "result": "GET  /healthz             status=200     1.8ms OK\nGET  /api/health          status=200    17.7ms OK\nGET  /api/products        status=200     3.8ms OK\nGET  /api/orders/recent   status=200    18.0ms OK\nPOST /api/orders          status=201    19.2ms OK"
+  },
+  {
+   "step": 32,
+   "t": 29.78,
+   "tool": "get_metrics",
+   "kind": "observe",
+   "args": {},
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 2.3,
+   "result": "{\n \"containers\": {\n  \"gateway\": {\n   \"cpu_pct\": \"0.41%\",\n   \"mem\": \"3.023MiB / 15.71GiB\",\n   \"mem_pct\": \"0.02%\"\n  },\n  \"api\": {\n   \"cpu_pct\": \"4.81%\",\n   \"mem\": \"35.86MiB / 256MiB\",\n   \"mem_pct\": \"14.01%\"\n  },\n  \"worker\": {\n   \"cpu_pct\": \"0.00%\",\n   \"mem\": \"24.98MiB / 15.71GiB\",\n   \"mem_pct\": \"0.16%\"\n  },\n  \"postgres\": {\n   \"cpu_pct\": \"8.17%\",\n   \"mem\": \"33.05MiB / 15.71GiB\",\n   \"mem_pct\": \"0.21%\"\n  },\n  \"redis\": {\n   \"cpu_pct\": \"0.56%\",\n   \"mem\": \"3.855MiB / 15.71GiB\",\n   \"mem_pct\": \"0.02%\"\n  }\n },\n \"api_app_metrics\": {\n  \"cache_errors_total\": 50,\n  \"db_errors_total\": 0,\n  \"endpoints\": {\n   \"/api/health\": {\n    \"errors_5xx\": 0,\n    \"p50_ms\": 15.3,\n    \"p95_ms\": 501.7,\n    \"requests\": 11\n   },\n   \"/api/orders\": {\n    \"errors_5xx\": 0,\n    \"p50_ms\": 20.1,\n    \"p95_ms\": 456.2,\n    \"requests\": 35\n   },\n   \"/api/orders/recent\": {\n    \"errors_5xx\": 0,\n    \"p50_ms\": 23.2,\n    \"p95_ms\": 501.4,\n    \"requests\": 63\n   },\n   \"/api/products\": {\n    \"errors_5xx\": 0,\n    \"p50_ms\": 2.7,\n    \"p95_ms\": 500.7,\n    \"requests\": 106\n   },\n   \"/metrics\": {\n    \"errors_5xx\": 0,\n    \"p50_ms\": 0.5,\n    \"p95_ms\": 0.5,\n    \"requests\": 2\n   },\n   \"unmatched\": {\n    \"errors_5xx\": 0,\n    \"p50_ms\": 0.3,\n    \"p95_ms\": 0.4,\n    \"requests\": 6\n   }\n  },\n  \"process_rss_mb\": 48.7,\n  \"uptime_s\": 58.7,\n  \"window_s\": 60\n },\n \"postgres_connections\": \"1 | 40\"\n}"
+  },
+  {
+   "step": 33,
+   "t": 32.07,
+   "tool": "get_logs",
+   "kind": "observe",
+   "args": {
+    "service": "gateway",
+    "since_seconds": 8,
+    "tail": 400
+   },
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.03,
+   "result": "63 lines in last 8s.\nTop message patterns:\n     32x gateway # GET /api/products upstream=# rt=#\n     22x gateway # GET /api/orders/recent upstream=# rt=#\n      5x gateway # POST /api/orders upstream=# rt=#\n      2x gateway # GET /api/legacy/cart upstream=# rt=#\n      1x gateway # GET /healthz upstream=- rt=#\n      1x gateway # GET /api/health upstream=# rt=#\n--- last 63 lines ---\n2026-10-30T07:36:53+00:00 gateway 200 GET /api/orders/recent upstream=172.19.0.2:8000 rt=0.273\n2026-10-30T07:36:53+00:00 gateway 200 GET /api/products upstream=172.19.0.2:8000 rt=0.072\n2026-10-30T07:36:53+00:00 gateway 200 GET /api/products upstream=172.19.0.2:8000 rt=0.165\n2026-10-30T07:36:54+00:00 gateway 200 GET /api/orders/recent upstream=172.19.0.2:8000 rt=0.385\n2026-10-30T07:36:54+00:00 gateway 200 GET /api/orders/recent upstream=172.19.0.2:8000 rt=0.021\n2026-10-30T07:36:54+00:00 gateway 200 GET /api/orders/recent upstream=172.19.0.2:8000 rt=0.018\n2026-10-30T07:36:54+00:00 gateway 200 GET /api/orders/recent upstream=172.19.0.2:8000 rt=0.017\n2026-10-30T07:36:54+00:00 gateway 200 GET /api/products upstream=172.19.0.2:8000 rt=0.005\n2026-10-30T07:36:54+00:00 gateway 200 GET /api/products upstream=172.19.0.2:8000 rt=0.003\n2026-10-30T07:36:55+00:00 gateway 200 GET /api/products upstream=172.19.0.2:8000 rt=0.005\n2026-10-30T07:36:55+00:00 gateway 201 POST /api/orders upstream=172.19.0.2:8000 rt=0.020\n2026-10-30T07:36:55+00:00 gateway 200 GET /api/orders/recent upstream=172.19.0.2:8000 rt=0.024\n2026-10-30T07:36:55+00:00 gateway 200 GET /api/products upstream=172.19.0.2:8000 rt=0.004\n2026-10-30T07:36:55+00:00 gateway 201 POST /api/orders upstream=172.19.0.2:8000 rt=0.023\n2026-10-30T07:36:55+00:00 gateway 200 GET /api/products upstream=172.19.0.2:8000 rt=0.004\n2026-10-30T07:36:55+00:00 gateway 404 GET /api/legacy/cart upstream=172.19.0.2:8000 rt=0.001\n2026-10-30T07:36:55+00:00 gateway 200 GET /api/products upstream=172.19.0.2:8000 rt=0.003\n2026-10-30T07:36:56+00:00 gateway 200 GET /api/products upstream=172.19.0.2:8000 rt=0.003\n2026-10-30T07:36:56+00:00 gateway 200 GET /api/orders/recent upstream=172.19.0.2:8000 rt=0.017\n2026-10-30T07:36:56+00:00 gateway 200 GET /api/products upstream=172.19.0.2:8000 rt=0.003\n2026-10-30T07:36:56+00:00 gateway 200 GET /api/orders/recent upstream=172.19.0.2:8000 rt=0.024\n2026-10-30T07:36:56+00:00 gateway 200 GET /api/orders/recent upstream=172.19.0.2:8000 rt=0.020\n2026-10-30T07:36:56+00:00 gateway 200 GET /api/products upstream=172.19.0.2:8000 rt=0.004\n2026-10-30T07:36:56+00:00 gateway 200 GET /api/orders/recent upstream=172.19.0.2:8000 rt=0.020\n2026-10-30T07:36:57+00:00 gateway 200 GET /api/products upstream=172.19.0.2:8000 rt=0.004\n2026-10-30T07:36:57+00:00 gateway 200 GET /api/orders/recent upstream=172.19.0.2:8000 rt=0.018\n2026-10-30T07:36:57+00:00 gateway 200 GET /api/orders/recent upstream=172.19.0.2:8000 rt=0.016\n2026-10-30T07:36:57+00:00 gateway 200 GET /api/products upstream=172.19.0.2:8000 rt=0.006\n2026-10-30T07:36:57+00:00 gateway 20\n... [142 chars truncated] ...\n00 rt=0.015\n2026-10-30T07:36:57+00:00 gateway 200 GET /api/products upstream=172.19.0.2:8000 rt=0.005\n2026-10-30T07:36:58+00:00 gateway 200 GET /api/products upstream=172.19.0.2:8000 rt=0.003\n2026-10-30T07:36:58+00:00 gateway 200 GET /api/products upstream=172.19.0.2:8000 rt=0.005\n2026-10-30T07:36:58+00:00 gateway 200 GET /api/products upstream=172.19.0.2:8000 rt=0.003\n2026-10-30T07:36:58+00:00 gateway 200 GET /api/products upstream=172.19.0.2:8000 rt=0.003\n2026-10-30T07:36:58+00:00 gateway 200 GET /api/products upstream=172.19.0.2:8000 rt=0.004\n2026-10-30T07:36:58+00:00 gateway 200 GET /api/products upstream=172.19.0.2:8000 rt=0.006\n2026-10-30T07:36:58+00:00 gateway 200 GET /api/products upstream=172.19.0.2:8000 rt=0.005\n2026-10-30T07:36:58+00:00 gateway 200 GET /api/products upstream=172.19.0.2:8000 rt=0.003\n2026-10-30T07:36:59+00:00 gateway 200 GET /api/orders/recent upstream=172.19.0.2:8000 rt=0.018\n2026-10-30T07:36:59+00:00 gateway 404 GET /api/legacy/cart upstream=172.19.0.2:8000 rt=0.002\n2026-10-30T07:36:59+00:00 gateway 200 GET /healthz upstream=- rt=0.000\n2026-10-30T07:36:59+00:00 gateway 200 GET /api/health upstream=172.19.0.2:8000 rt=0.016\n2026-10-30T07:36:59+00:00 gateway 200 GET /api/products upstream=172.19.0.2:8000 rt=0.003\n2026-10-30T07:36:59+00:00 gateway 200 GET /api/orders/recent upstream=172.19.0.2:8000 rt=0.017\n2026-10-30T07:36:59+00:00 gateway 201 POST /api/orders upstream=172.19.0.2:8000 rt=0.019\n2026-10-30T07:36:59+00:00 gateway 200 GET /api/orders/recent upstream=172.19.0.2:8000 rt=0.016\n2026-10-30T07:36:59+00:00 gateway 200 GET /api/orders/recent upstream=172.19.0.2:8000 rt=0.020\n2026-10-30T07:36:59+00:00 gateway 201 POST /api/orders upstream=172.19.0.2:8000 rt=0.021\n2026-10-30T07:36:59+00:00 gateway 200 GET /api/products upstream=172.19.0.2:8000 rt=0.004\n2026-10-30T07:36:59+00:00 gateway 200 GET /api/orders/recent upstream=172.19.0.2:8000 rt=0.020\n2026-10-30T07:37:00+00:00 gateway 200 GET /api/products upstream=172.19.0.2:8000 rt=0.002\n2026-10-30T07:37:00+00:00 gateway 200 GET /api/products upstream=172.19.0.2:8000 rt=0.004\n2026-10-30T07:37:00+00:00 gateway 200 GET /api/products upstream=172.19.0.2:8000 rt=0.004\n2026-10-30T07:37:00+00:00 gateway 200 GET /api/products upstream=172.19.0.2:8000 rt=0.005\n2026-10-30T07:37:00+00:00 gateway 200 GET /api/orders/recent upstream=172.19.0.2:8000 rt=0.017\n2026-10-30T07:37:00+00:00 gateway 200 GET /api/products upstream=172.19.0.2:8000 rt=0.003\n2026-10-30T07:37:00+00:00 gateway 201 POST /api/orders upstream=172.19.0.2:8000 rt=0.020\n2026-10-30T07:37:01+00:00 gateway 200 GET /api/products upstream=172.19.0.2:8000 rt=0.004\n2026-10-30T07:37:01+00:00 gateway 200 GET /api/orders/recent upstream=172.19.0.2:8000 rt=0.016\n2026-10-30T07:37:01+00:00 gateway 200 GET /api/products upstream=172.19.0.2:8000 rt=0.006\n2026-10-30T07:37:01+00:00 gateway 200 GET /api/orders/recent upstream=172.19.0.2:8000 rt=0.015\n2026-10-30T07:37:01+00:00 gateway 200 GET /api/products upstream=172.19.0.2:8000 rt=0.004"
+  },
+  {
+   "step": 34,
+   "t": 32.1,
+   "tool": "get_logs",
+   "kind": "observe",
+   "args": {
+    "service": "api",
+    "since_seconds": 8,
+    "tail": 400
+   },
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.03,
+   "result": "0 lines in last 8s.\nTop message patterns:\n\n--- last 0 lines ---\n"
+  },
+  {
+   "step": 35,
+   "t": 32.13,
+   "tool": "get_logs",
+   "kind": "observe",
+   "args": {
+    "service": "worker",
+    "since_seconds": 8,
+    "tail": 400
+   },
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.02,
+   "result": "0 lines in last 8s.\nTop message patterns:\n\n--- last 0 lines ---\n"
+  },
+  {
+   "step": 36,
+   "t": 32.15,
+   "tool": "get_logs",
+   "kind": "observe",
+   "args": {
+    "service": "postgres",
+    "since_seconds": 8,
+    "tail": 400
+   },
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.02,
+   "result": "0 lines in last 8s.\nTop message patterns:\n\n--- last 0 lines ---\n"
+  },
+  {
+   "step": 37,
+   "t": 32.17,
+   "tool": "get_logs",
+   "kind": "observe",
+   "args": {
+    "service": "redis",
+    "since_seconds": 8,
+    "tail": 400
+   },
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.02,
+   "result": "0 lines in last 8s.\nTop message patterns:\n\n--- last 0 lines ---\n"
+  },
+  {
+   "step": 38,
+   "t": 32.2,
+   "tool": "run_diagnostic",
+   "kind": "observe",
+   "args": {
+    "service": "api",
+    "check": "disk"
+   },
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.1,
+   "result": "Filesystem                Size      Used Available Use% Mounted on\noverlay                 252.0G     18.2G     20.3G  47% /\ntmpfs                    64.0M         0     64.0M   0% /dev\ntmpfs                     7.9G         0      7.9G   0% /sys/fs/cgroup\nshm                      64.0M         0     64.0M   0% /dev/shm\n/dev/vda                252.0G     18.2G     20.3G  47% /config\ntmpfs                    48.0M      4.0K     48.0M   0% /data\n/dev/vda                252.0G     18.2G     20.3G  47% /etc/hostname\n/dev/vda                252.0G     18.2G     20.3G  47% /etc/hosts\n/dev/vda                252.0G     18.2G     20.3G  47% /etc/resolv.conf\ntmpfs                     4.0K         0      4.0K   0% /proc/acpi\ntmpfs                    64.0M         0     64.0M   0% /proc/interrupts\ntmpfs                    64.0M         0     64.0M   0% /proc/keys\ntmpfs                    64.0M         0     64.0M   0% /proc/timer_list\ntmpfs                     4.0K         0      4.0K   0% /sys/firmware\n--- largest under /data (KB) ---\n4\t/data/audit/audit.log\n4\t/data/audit\n4\t/data"
+  },
+  {
+   "step": 39,
+   "t": 32.3,
+   "tool": "run_diagnostic",
+   "kind": "observe",
+   "args": {
+    "service": "worker",
+    "check": "disk"
+   },
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.1,
+   "result": "Filesystem                Size      Used Available Use% Mounted on\noverlay                 252.0G     18.2G     20.3G  47% /\ntmpfs                    64.0M         0     64.0M   0% /dev\ntmpfs                     7.9G         0      7.9G   0% /sys/fs/cgroup\nshm                      64.0M         0     64.0M   0% /dev/shm\n/dev/vda                252.0G     18.2G     20.3G  47% /config\n/dev/vda                252.0G     18.2G     20.3G  47% /etc/hostname\n/dev/vda                252.0G     18.2G     20.3G  47% /etc/hosts\n/dev/vda                252.0G     18.2G     20.3G  47% /etc/resolv.conf\ntmpfs                     4.0K         0      4.0K   0% /proc/acpi\ntmpfs                    64.0M         0     64.0M   0% /proc/interrupts\ntmpfs                    64.0M         0     64.0M   0% /proc/keys\ntmpfs                    64.0M         0     64.0M   0% /proc/timer_list\ntmpfs                     4.0K         0      4.0K   0% /sys/firmware\n--- largest under /data (KB) ---"
+  },
+  {
+   "step": 40,
+   "t": 32.4,
+   "tool": "run_diagnostic",
+   "kind": "observe",
+   "args": {
+    "service": "postgres",
+    "check": "db_locks"
+   },
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.1,
+   "result": "blocked_pid | app | query | waiting_s | blocking_pid | blocking_app | state | blocking_query\n(no blocked sessions)"
+  },
+  {
+   "step": 41,
+   "t": 32.5,
+   "tool": "verify_recovery",
+   "kind": "observe",
+   "args": {},
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 8.81,
+   "result": "{\n \"healthy\": true,\n \"probe_success_rate\": 1.0,\n \"probe_p95_ms\": 22.7,\n \"problems\": [],\n \"probes\": {\n  \"GET /healthz\": {\n   \"ok\": 8,\n   \"fail\": 0,\n   \"statuses\": [\n    200\n   ],\n   \"last_error\": \"\"\n  },\n  \"GET /api/health\": {\n   \"ok\": 8,\n   \"fail\": 0,\n   \"statuses\": [\n    200\n   ],\n   \"last_error\": \"\"\n  },\n  \"GET /api/products\": {\n   \"ok\": 8,\n   \"fail\": 0,\n   \"statuses\": [\n    200\n   ],\n   \"last_error\": \"\"\n  },\n  \"GET /api/orders/recent\": {\n   \"ok\": 8,\n   \"fail\": 0,\n   \"statuses\": [\n    200\n   ],\n   \"last_error\": \"\"\n  },\n  \"POST /api/orders\": {\n   \"ok\": 8,\n   \"fail\": 0,\n   \"statuses\": [\n    201\n   ],\n   \"last_error\": \"\"\n  }\n }\n}"
+  },
+  {
+   "step": 42,
+   "t": 41.31,
+   "tool": "submit_report",
+   "kind": "final",
+   "args": {
+    "root_causes": [
+     {
+      "component": "redis",
+      "category": "network_partition",
+      "evidence": "redis is not attached to the backend network it belongs on (list_services); 44 name-resolution errors in logs, e.g. probe /api/health: {\"checks\":{\"cache\":\"error: Error -2 connecting to redis:6379. Name does not resolve.\",\"database\":\"ok"
+     },
+     {
+      "component": "api",
+      "category": "cpu_exhaustion",
+      "evidence": "9 process(es) of 'python /app/tools/reindex_search.py' running beside the main service process (run_diagnostic processes); api container CPU at 51% (get_metrics); latency degraded: /api/orders/recent 504ms"
+     }
+    ],
+    "recovered": true,
+    "summary": "[confirmed] re-attach redis to the backend network (restores its DNS name) (confidence 0.94; evidence: redis is not attached to the backend network it belongs on (list_services)). Prevent: monitor container network attachment and DNS resolution between services. | [confirmed] stop the runaway 'python /app/tools/reindex_search.py' job on api (pid 23 and its children) (confidence 0.76; evidence: 9 process(es) of 'python /app/tools/reindex_search.py' running beside the main service process (run_diagnostic processes)). Prevent: run batch jobs outside the serving container or under a CPU quota."
+   },
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.0,
+   "result": "report submitted"
+  }
+ ],
+ "episode_seconds": 115.0
+}
