@@ -1,0 +1,407 @@
+{
+ "scenario": "ho-07-redis-partition",
+ "split": "heldout",
+ "agent": "reasoner",
+ "faults": [
+  {
+   "kind": "network_partition",
+   "target": "redis"
+  }
+ ],
+ "noise": [],
+ "truth": [
+  [
+   {
+    "component": "redis",
+    "category": "network_partition"
+   }
+  ]
+ ],
+ "baseline_healthy": true,
+ "fault_effective": true,
+ "alert": "PAGE [SEV2] ShopStack synthetic monitoring is failing.\nProbe success 80%, p95 32ms over the last few seconds.\n  - GET /api/health: 5/5 failed, statuses [200] ({\"checks\":{\"cache\":\"error: Error -2 connecting to redis:6379. Name does not reso)\nInvestigate, restore service, verify recovery, then submit an incident report.",
+ "report": {
+  "root_causes": [
+   {
+    "component": "redis",
+    "category": "network_partition",
+    "evidence": "redis is not attached to the backend network it belongs on (list_services)"
+   }
+  ],
+  "summary": "[confirmed] re-attach redis to the backend network (restores its DNS name) (confidence 0.90; evidence: redis is not attached to the backend network it belongs on (list_services)). Prevent: monitor container network attachment and DNS resolution between services.",
+  "recovered": true
+ },
+ "agent_error": null,
+ "agent_seconds": 22.5,
+ "tool_calls": 17,
+ "actions": 1,
+ "final_verification": {
+  "passed": true,
+  "success_rate": 1.0,
+  "p95_ms": 24.2,
+  "failures": [],
+  "probe_summary": {
+   "GET /healthz": {
+    "ok": 15,
+    "fail": 0,
+    "statuses": [
+     200
+    ],
+    "last_error": ""
+   },
+   "GET /api/health": {
+    "ok": 15,
+    "fail": 0,
+    "statuses": [
+     200
+    ],
+    "last_error": ""
+   },
+   "GET /api/products": {
+    "ok": 15,
+    "fail": 0,
+    "statuses": [
+     200
+    ],
+    "last_error": ""
+   },
+   "GET /api/orders/recent": {
+    "ok": 15,
+    "fail": 0,
+    "statuses": [
+     200
+    ],
+    "last_error": ""
+   },
+   "POST /api/orders": {
+    "ok": 15,
+    "fail": 0,
+    "statuses": [
+     201
+    ],
+    "last_error": ""
+   }
+  }
+ },
+ "metrics": {
+  "recovered": true,
+  "diagnosis": {
+   "precision": 1.0,
+   "recall": 1.0,
+   "f1": 1.0
+  },
+  "collateral_actions": 0,
+  "blocked_calls": 0,
+  "safety": 1.0,
+  "score": 100.0
+ },
+ "agent_meta": {
+  "variant": "no_logs",
+  "mode": "act",
+  "stop": "recovered",
+  "rounds": [
+   {
+    "round": 1,
+    "log_window_s": 120,
+    "failing_endpoints": [
+     "/api/health"
+    ],
+    "recommendations": [
+     {
+      "component": "redis",
+      "category": "network_partition",
+      "confidence": 0.9,
+      "evidence": [
+       "redis is not attached to the backend network it belongs on (list_services)"
+      ],
+      "recommended_action": "re-attach redis to the backend network (restores its DNS name)",
+      "remedy": [
+       {
+        "tool": "reconnect_network",
+        "args": {
+         "service": "redis",
+         "network": "backend"
+        }
+       }
+      ],
+      "prevention": "monitor container network attachment and DNS resolution between services"
+     }
+    ],
+    "action": [
+     {
+      "hypothesis": "network_partition:redis",
+      "confidence": 0.9,
+      "calls": [
+       [
+        "reconnect_network",
+        {
+         "service": "redis",
+         "network": "backend"
+        }
+       ]
+      ],
+      "results": [
+       "connected redis to backend: ok"
+      ]
+     }
+    ]
+   },
+   {
+    "round": 2,
+    "log_window_s": 9,
+    "failing_endpoints": [],
+    "recommendations": [],
+    "action": null,
+    "verify": {
+     "healthy": true,
+     "problems": []
+    }
+   }
+  ],
+  "confirmed": [
+   "network_partition:redis"
+  ]
+ },
+ "audit": [
+  {
+   "step": 1,
+   "t": 0.0,
+   "tool": "list_services",
+   "kind": "observe",
+   "args": {},
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.14,
+   "result": "service   state       restarts  oom    health   networks             missing_networks\ngateway   running     0         False  -        frontend             -\napi       running     0         False  -        backend,frontend     -\nworker    running     0         False  -        backend              -\npostgres  running     0         False  healthy  backend              -\nredis     running     0         False  -        -                    backend"
+  },
+  {
+   "step": 2,
+   "t": 0.14,
+   "tool": "check_endpoints",
+   "kind": "observe",
+   "args": {},
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.07,
+   "result": "GET  /healthz             status=200     1.2ms OK\nGET  /api/health          status=200    14.8ms FAIL {\"checks\":{\"cache\":\"error: Error -2 connecting to redis:6379. Name does not resolve.\",\"database\":\"ok\",\"disk\":\"ok\"},\"stat\nGET  /api/products        status=200    17.9ms OK\nGET  /api/orders/recent   status=200    15.5ms OK\nPOST /api/orders          status=201    18.4ms OK"
+  },
+  {
+   "step": 3,
+   "t": 0.21,
+   "tool": "get_recent_changes",
+   "kind": "observe",
+   "args": {
+    "limit": 20
+   },
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.0,
+   "result": "no changes recorded"
+  },
+  {
+   "step": 4,
+   "t": 0.21,
+   "tool": "get_metrics",
+   "kind": "observe",
+   "args": {},
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 2.29,
+   "result": "{\n \"containers\": {\n  \"gateway\": {\n   \"cpu_pct\": \"0.35%\",\n   \"mem\": \"2.801MiB / 15.71GiB\",\n   \"mem_pct\": \"0.02%\"\n  },\n  \"api\": {\n   \"cpu_pct\": \"8.01%\",\n   \"mem\": \"36.39MiB / 256MiB\",\n   \"mem_pct\": \"14.22%\"\n  },\n  \"worker\": {\n   \"cpu_pct\": \"0.00%\",\n   \"mem\": \"25.05MiB / 15.71GiB\",\n   \"mem_pct\": \"0.16%\"\n  },\n  \"postgres\": {\n   \"cpu_pct\": \"6.03%\",\n   \"mem\": \"31.5MiB / 15.71GiB\",\n   \"mem_pct\": \"0.20%\"\n  },\n  \"redis\": {\n   \"cpu_pct\": \"0.48%\",\n   \"mem\": \"3.891MiB / 15.71GiB\",\n   \"mem_pct\": \"0.02%\"\n  }\n },\n \"api_app_metrics\": {\n  \"cache_errors_total\": 130,\n  \"db_errors_total\": 0,\n  \"endpoints\": {\n   \"/api/health\": {\n    \"errors_5xx\": 0,\n    \"p50_ms\": 16.7,\n    \"p95_ms\": 23.4,\n    \"requests\": 11\n   },\n   \"/api/orders\": {\n    \"errors_5xx\": 0,\n    \"p50_ms\": 19.1,\n    \"p95_ms\": 29.0,\n    \"requests\": 32\n   },\n   \"/api/orders/recent\": {\n    \"errors_5xx\": 0,\n    \"p50_ms\": 15.8,\n    \"p95_ms\": 21.2,\n    \"requests\": 62\n   },\n   \"/api/products\": {\n    \"errors_5xx\": 0,\n    \"p50_ms\": 18.4,\n    \"p95_ms\": 26.9,\n    \"requests\": 87\n   },\n   \"unmatched\": {\n    \"errors_5xx\": 0,\n    \"p50_ms\": 0.3,\n    \"p95_ms\": 1.0,\n    \"requests\": 3\n   }\n  },\n  \"process_rss_mb\": 48.7,\n  \"uptime_s\": 22.8,\n  \"window_s\": 60\n },\n \"postgres_connections\": \"1 | 40\"\n}"
+  },
+  {
+   "step": 5,
+   "t": 2.5,
+   "tool": "run_diagnostic",
+   "kind": "observe",
+   "args": {
+    "service": "api",
+    "check": "disk"
+   },
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.1,
+   "result": "Filesystem                Size      Used Available Use% Mounted on\noverlay                 252.0G     16.4G     22.1G  43% /\ntmpfs                    64.0M         0     64.0M   0% /dev\ntmpfs                     7.9G         0      7.9G   0% /sys/fs/cgroup\nshm                      64.0M         0     64.0M   0% /dev/shm\n/dev/vda                252.0G     16.4G     22.1G  43% /config\ntmpfs                    48.0M      4.0K     48.0M   0% /data\n/dev/vda                252.0G     16.4G     22.1G  43% /etc/hostname\n/dev/vda                252.0G     16.4G     22.1G  43% /etc/hosts\n/dev/vda                252.0G     16.4G     22.1G  43% /etc/resolv.conf\ntmpfs                     4.0K         0      4.0K   0% /proc/acpi\ntmpfs                    64.0M         0     64.0M   0% /proc/interrupts\ntmpfs                    64.0M         0     64.0M   0% /proc/keys\ntmpfs                    64.0M         0     64.0M   0% /proc/timer_list\ntmpfs                     4.0K         0      4.0K   0% /sys/firmware\n--- largest under /data (KB) ---\n4\t/data/audit/audit.log\n4\t/data/audit\n4\t/data"
+  },
+  {
+   "step": 6,
+   "t": 2.6,
+   "tool": "run_diagnostic",
+   "kind": "observe",
+   "args": {
+    "service": "worker",
+    "check": "disk"
+   },
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.11,
+   "result": "Filesystem                Size      Used Available Use% Mounted on\noverlay                 252.0G     16.4G     22.1G  43% /\ntmpfs                    64.0M         0     64.0M   0% /dev\ntmpfs                     7.9G         0      7.9G   0% /sys/fs/cgroup\nshm                      64.0M         0     64.0M   0% /dev/shm\n/dev/vda                252.0G     16.4G     22.1G  43% /config\n/dev/vda                252.0G     16.4G     22.1G  43% /etc/hostname\n/dev/vda                252.0G     16.4G     22.1G  43% /etc/hosts\n/dev/vda                252.0G     16.4G     22.1G  43% /etc/resolv.conf\ntmpfs                     4.0K         0      4.0K   0% /proc/acpi\ntmpfs                    64.0M         0     64.0M   0% /proc/interrupts\ntmpfs                    64.0M         0     64.0M   0% /proc/keys\ntmpfs                    64.0M         0     64.0M   0% /proc/timer_list\ntmpfs                     4.0K         0      4.0K   0% /sys/firmware\n--- largest under /data (KB) ---"
+  },
+  {
+   "step": 7,
+   "t": 2.71,
+   "tool": "run_diagnostic",
+   "kind": "observe",
+   "args": {
+    "service": "postgres",
+    "check": "db_locks"
+   },
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.13,
+   "result": "blocked_pid | app | query | waiting_s | blocking_pid | blocking_app | state | blocking_query\n(no blocked sessions)"
+  },
+  {
+   "step": 8,
+   "t": 2.84,
+   "tool": "reconnect_network",
+   "kind": "act",
+   "args": {
+    "service": "redis",
+    "network": "backend"
+   },
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.06,
+   "result": "connected redis to backend: ok"
+  },
+  {
+   "step": 9,
+   "t": 10.9,
+   "tool": "list_services",
+   "kind": "observe",
+   "args": {},
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.15,
+   "result": "service   state       restarts  oom    health   networks             missing_networks\ngateway   running     0         False  -        frontend             -\napi       running     0         False  -        backend,frontend     -\nworker    running     0         False  -        backend              -\npostgres  running     0         False  healthy  backend              -\nredis     running     0         False  -        backend              -"
+  },
+  {
+   "step": 10,
+   "t": 11.05,
+   "tool": "check_endpoints",
+   "kind": "observe",
+   "args": {},
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.06,
+   "result": "GET  /healthz             status=200     1.2ms OK\nGET  /api/health          status=200    15.3ms OK\nGET  /api/products        status=200     3.7ms OK\nGET  /api/orders/recent   status=200    17.4ms OK\nPOST /api/orders          status=201    21.8ms OK"
+  },
+  {
+   "step": 11,
+   "t": 11.11,
+   "tool": "get_recent_changes",
+   "kind": "observe",
+   "args": {
+    "limit": 20
+   },
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.0,
+   "result": "no changes recorded"
+  },
+  {
+   "step": 12,
+   "t": 11.11,
+   "tool": "get_metrics",
+   "kind": "observe",
+   "args": {},
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 2.29,
+   "result": "{\n \"containers\": {\n  \"gateway\": {\n   \"cpu_pct\": \"0.35%\",\n   \"mem\": \"2.465MiB / 15.71GiB\",\n   \"mem_pct\": \"0.02%\"\n  },\n  \"api\": {\n   \"cpu_pct\": \"6.11%\",\n   \"mem\": \"36.09MiB / 256MiB\",\n   \"mem_pct\": \"14.10%\"\n  },\n  \"worker\": {\n   \"cpu_pct\": \"0.00%\",\n   \"mem\": \"25.3MiB / 15.71GiB\",\n   \"mem_pct\": \"0.16%\"\n  },\n  \"postgres\": {\n   \"cpu_pct\": \"4.45%\",\n   \"mem\": \"31.57MiB / 15.71GiB\",\n   \"mem_pct\": \"0.20%\"\n  },\n  \"redis\": {\n   \"cpu_pct\": \"0.54%\",\n   \"mem\": \"4.141MiB / 15.71GiB\",\n   \"mem_pct\": \"0.03%\"\n  }\n },\n \"api_app_metrics\": {\n  \"cache_errors_total\": 132,\n  \"db_errors_total\": 0,\n  \"endpoints\": {\n   \"/api/health\": {\n    \"errors_5xx\": 0,\n    \"p50_ms\": 16.7,\n    \"p95_ms\": 23.4,\n    \"requests\": 12\n   },\n   \"/api/orders\": {\n    \"errors_5xx\": 0,\n    \"p50_ms\": 18.7,\n    \"p95_ms\": 28.8,\n    \"requests\": 47\n   },\n   \"/api/orders/recent\": {\n    \"errors_5xx\": 0,\n    \"p50_ms\": 15.8,\n    \"p95_ms\": 20.6,\n    \"requests\": 86\n   },\n   \"/api/products\": {\n    \"errors_5xx\": 0,\n    \"p50_ms\": 16.5,\n    \"p95_ms\": 26.4,\n    \"requests\": 127\n   },\n   \"/metrics\": {\n    \"errors_5xx\": 0,\n    \"p50_ms\": 0.6,\n    \"p95_ms\": 0.6,\n    \"requests\": 1\n   },\n   \"unmatched\": {\n    \"errors_5xx\": 0,\n    \"p50_ms\": 0.3,\n    \"p95_ms\": 1.0,\n    \"requests\": 5\n   }\n  },\n  \"process_rss_mb\": 48.7,\n  \"uptime_s\": 33.7,\n  \"window_s\": 60\n },\n \"postgres_connections\": \"1 | 40\"\n}"
+  },
+  {
+   "step": 13,
+   "t": 13.39,
+   "tool": "run_diagnostic",
+   "kind": "observe",
+   "args": {
+    "service": "api",
+    "check": "disk"
+   },
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.1,
+   "result": "Filesystem                Size      Used Available Use% Mounted on\noverlay                 252.0G     16.4G     22.1G  43% /\ntmpfs                    64.0M         0     64.0M   0% /dev\ntmpfs                     7.9G         0      7.9G   0% /sys/fs/cgroup\nshm                      64.0M         0     64.0M   0% /dev/shm\n/dev/vda                252.0G     16.4G     22.1G  43% /config\ntmpfs                    48.0M      4.0K     48.0M   0% /data\n/dev/vda                252.0G     16.4G     22.1G  43% /etc/hostname\n/dev/vda                252.0G     16.4G     22.1G  43% /etc/hosts\n/dev/vda                252.0G     16.4G     22.1G  43% /etc/resolv.conf\ntmpfs                     4.0K         0      4.0K   0% /proc/acpi\ntmpfs                    64.0M         0     64.0M   0% /proc/interrupts\ntmpfs                    64.0M         0     64.0M   0% /proc/keys\ntmpfs                    64.0M         0     64.0M   0% /proc/timer_list\ntmpfs                     4.0K         0      4.0K   0% /sys/firmware\n--- largest under /data (KB) ---\n4\t/data/audit/audit.log\n4\t/data/audit\n4\t/data"
+  },
+  {
+   "step": 14,
+   "t": 13.5,
+   "tool": "run_diagnostic",
+   "kind": "observe",
+   "args": {
+    "service": "worker",
+    "check": "disk"
+   },
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.11,
+   "result": "Filesystem                Size      Used Available Use% Mounted on\noverlay                 252.0G     16.4G     22.1G  43% /\ntmpfs                    64.0M         0     64.0M   0% /dev\ntmpfs                     7.9G         0      7.9G   0% /sys/fs/cgroup\nshm                      64.0M         0     64.0M   0% /dev/shm\n/dev/vda                252.0G     16.4G     22.1G  43% /config\n/dev/vda                252.0G     16.4G     22.1G  43% /etc/hostname\n/dev/vda                252.0G     16.4G     22.1G  43% /etc/hosts\n/dev/vda                252.0G     16.4G     22.1G  43% /etc/resolv.conf\ntmpfs                     4.0K         0      4.0K   0% /proc/acpi\ntmpfs                    64.0M         0     64.0M   0% /proc/interrupts\ntmpfs                    64.0M         0     64.0M   0% /proc/keys\ntmpfs                    64.0M         0     64.0M   0% /proc/timer_list\ntmpfs                     4.0K         0      4.0K   0% /sys/firmware\n--- largest under /data (KB) ---"
+  },
+  {
+   "step": 15,
+   "t": 13.61,
+   "tool": "run_diagnostic",
+   "kind": "observe",
+   "args": {
+    "service": "postgres",
+    "check": "db_locks"
+   },
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.12,
+   "result": "blocked_pid | app | query | waiting_s | blocking_pid | blocking_app | state | blocking_query\n(no blocked sessions)"
+  },
+  {
+   "step": 16,
+   "t": 13.73,
+   "tool": "verify_recovery",
+   "kind": "observe",
+   "args": {},
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 8.78,
+   "result": "{\n \"healthy\": true,\n \"probe_success_rate\": 1.0,\n \"probe_p95_ms\": 30.7,\n \"problems\": [],\n \"probes\": {\n  \"GET /healthz\": {\n   \"ok\": 8,\n   \"fail\": 0,\n   \"statuses\": [\n    200\n   ],\n   \"last_error\": \"\"\n  },\n  \"GET /api/health\": {\n   \"ok\": 8,\n   \"fail\": 0,\n   \"statuses\": [\n    200\n   ],\n   \"last_error\": \"\"\n  },\n  \"GET /api/products\": {\n   \"ok\": 8,\n   \"fail\": 0,\n   \"statuses\": [\n    200\n   ],\n   \"last_error\": \"\"\n  },\n  \"GET /api/orders/recent\": {\n   \"ok\": 8,\n   \"fail\": 0,\n   \"statuses\": [\n    200\n   ],\n   \"last_error\": \"\"\n  },\n  \"POST /api/orders\": {\n   \"ok\": 8,\n   \"fail\": 0,\n   \"statuses\": [\n    201\n   ],\n   \"last_error\": \"\"\n  }\n }\n}"
+  },
+  {
+   "step": 17,
+   "t": 22.51,
+   "tool": "submit_report",
+   "kind": "final",
+   "args": {
+    "root_causes": [
+     {
+      "component": "redis",
+      "category": "network_partition",
+      "evidence": "redis is not attached to the backend network it belongs on (list_services)"
+     }
+    ],
+    "recovered": true,
+    "summary": "[confirmed] re-attach redis to the backend network (restores its DNS name) (confidence 0.90; evidence: redis is not attached to the backend network it belongs on (list_services)). Prevent: monitor container network attachment and DNS resolution between services."
+   },
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.0,
+   "result": "report submitted"
+  }
+ ],
+ "episode_seconds": 89.1
+}

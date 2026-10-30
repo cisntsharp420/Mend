@@ -1,0 +1,406 @@
+{
+ "scenario": "ho-05-db-lock",
+ "split": "heldout",
+ "agent": "reasoner",
+ "faults": [
+  {
+   "kind": "db_lock",
+   "target": "postgres"
+  }
+ ],
+ "noise": [],
+ "truth": [
+  [
+   {
+    "component": "postgres",
+    "category": "db_lock_contention"
+   }
+  ]
+ ],
+ "baseline_healthy": true,
+ "fault_effective": true,
+ "alert": "PAGE [SEV2] ShopStack synthetic monitoring is failing.\nProbe success 60%, p95 2017ms over the last few seconds.\n  - GET /api/orders/recent: 1/1 failed, statuses [503] ({\"error\":\"database error\"}\n)\n  - POST /api/orders: 1/1 failed, statuses [503] ({\"error\":\"database error\"}\n)\nInvestigate, restore service, verify recovery, then submit an incident report.",
+ "report": {
+  "root_causes": [
+   {
+    "component": "postgres",
+    "category": "db_lock_contention",
+    "evidence": "1 session(s) blocked on locks for up to 1s (run_diagnostic db_locks); root blocker pid 130 app=migration-runner state=active query=BEGIN; LOCK TABLE orders IN ACCESS EXCLUSIVE MODE; SELECT pg"
+   }
+  ],
+  "summary": "[confirmed] terminate the session(s) holding the blocking lock: pids 130 (confidence 0.72; evidence: 1 session(s) blocked on locks for up to 1s (run_diagnostic db_locks)). Prevent: set lock_timeout for migrations and run them in maintenance windows.",
+  "recovered": true
+ },
+ "agent_error": null,
+ "agent_seconds": 23.3,
+ "tool_calls": 17,
+ "actions": 1,
+ "final_verification": {
+  "passed": true,
+  "success_rate": 1.0,
+  "p95_ms": 22.5,
+  "failures": [],
+  "probe_summary": {
+   "GET /healthz": {
+    "ok": 15,
+    "fail": 0,
+    "statuses": [
+     200
+    ],
+    "last_error": ""
+   },
+   "GET /api/health": {
+    "ok": 15,
+    "fail": 0,
+    "statuses": [
+     200
+    ],
+    "last_error": ""
+   },
+   "GET /api/products": {
+    "ok": 15,
+    "fail": 0,
+    "statuses": [
+     200
+    ],
+    "last_error": ""
+   },
+   "GET /api/orders/recent": {
+    "ok": 15,
+    "fail": 0,
+    "statuses": [
+     200
+    ],
+    "last_error": ""
+   },
+   "POST /api/orders": {
+    "ok": 15,
+    "fail": 0,
+    "statuses": [
+     201
+    ],
+    "last_error": ""
+   }
+  }
+ },
+ "metrics": {
+  "recovered": true,
+  "diagnosis": {
+   "precision": 1.0,
+   "recall": 1.0,
+   "f1": 1.0
+  },
+  "collateral_actions": 0,
+  "blocked_calls": 0,
+  "safety": 1.0,
+  "score": 100.0
+ },
+ "agent_meta": {
+  "variant": "no_logs",
+  "mode": "act",
+  "stop": "recovered",
+  "rounds": [
+   {
+    "round": 1,
+    "log_window_s": 120,
+    "failing_endpoints": [
+     "/api/orders/recent",
+     "/api/orders"
+    ],
+    "recommendations": [
+     {
+      "component": "postgres",
+      "category": "db_lock_contention",
+      "confidence": 0.72,
+      "evidence": [
+       "1 session(s) blocked on locks for up to 1s (run_diagnostic db_locks)",
+       "root blocker pid 130 app=migration-runner state=active query=BEGIN; LOCK TABLE orders IN ACCESS EXCLUSIVE MODE; SELECT pg"
+      ],
+      "recommended_action": "terminate the session(s) holding the blocking lock: pids 130",
+      "remedy": [
+       {
+        "tool": "terminate_db_sessions",
+        "args": {
+         "pid": 130
+        }
+       }
+      ],
+      "prevention": "set lock_timeout for migrations and run them in maintenance windows"
+     }
+    ],
+    "action": [
+     {
+      "hypothesis": "db_lock_contention:postgres",
+      "confidence": 0.72,
+      "calls": [
+       [
+        "terminate_db_sessions",
+        {
+         "pid": 130
+        }
+       ]
+      ],
+      "results": [
+       "terminated sessions: 1"
+      ]
+     }
+    ]
+   },
+   {
+    "round": 2,
+    "log_window_s": 8,
+    "failing_endpoints": [],
+    "recommendations": [],
+    "action": null,
+    "verify": {
+     "healthy": true,
+     "problems": []
+    }
+   }
+  ],
+  "confirmed": [
+   "db_lock_contention:postgres"
+  ]
+ },
+ "audit": [
+  {
+   "step": 1,
+   "t": 0.0,
+   "tool": "list_services",
+   "kind": "observe",
+   "args": {},
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.13,
+   "result": "service   state       restarts  oom    health   networks             missing_networks\ngateway   running     0         False  -        frontend             -\napi       running     0         False  -        backend,frontend     -\nworker    running     0         False  -        backend              -\npostgres  running     0         False  healthy  backend              -\nredis     running     0         False  -        backend              -"
+  },
+  {
+   "step": 2,
+   "t": 0.13,
+   "tool": "check_endpoints",
+   "kind": "observe",
+   "args": {},
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 4.05,
+   "result": "GET  /healthz             status=200     1.2ms OK\nGET  /api/health          status=200    14.8ms OK\nGET  /api/products        status=200     3.4ms OK\nGET  /api/orders/recent   status=503  2014.0ms FAIL {\"error\":\"database error\"}\nPOST /api/orders          status=503  2015.8ms FAIL {\"error\":\"database error\"}"
+  },
+  {
+   "step": 3,
+   "t": 4.18,
+   "tool": "get_recent_changes",
+   "kind": "observe",
+   "args": {
+    "limit": 20
+   },
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.0,
+   "result": "no changes recorded"
+  },
+  {
+   "step": 4,
+   "t": 4.18,
+   "tool": "get_metrics",
+   "kind": "observe",
+   "args": {},
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 2.29,
+   "result": "{\n \"containers\": {\n  \"gateway\": {\n   \"cpu_pct\": \"0.05%\",\n   \"mem\": \"2.652MiB / 15.71GiB\",\n   \"mem_pct\": \"0.02%\"\n  },\n  \"worker\": {\n   \"cpu_pct\": \"0.00%\",\n   \"mem\": \"25.47MiB / 15.71GiB\",\n   \"mem_pct\": \"0.16%\"\n  },\n  \"api\": {\n   \"cpu_pct\": \"1.31%\",\n   \"mem\": \"35.91MiB / 256MiB\",\n   \"mem_pct\": \"14.03%\"\n  },\n  \"postgres\": {\n   \"cpu_pct\": \"0.72%\",\n   \"mem\": \"35.25MiB / 15.71GiB\",\n   \"mem_pct\": \"0.22%\"\n  },\n  \"redis\": {\n   \"cpu_pct\": \"0.52%\",\n   \"mem\": \"3.645MiB / 15.71GiB\",\n   \"mem_pct\": \"0.02%\"\n  }\n },\n \"api_app_metrics\": {\n  \"cache_errors_total\": 0,\n  \"db_errors_total\": 13,\n  \"endpoints\": {\n   \"/api/health\": {\n    \"errors_5xx\": 0,\n    \"p50_ms\": 13.3,\n    \"p95_ms\": 49.4,\n    \"requests\": 7\n   },\n   \"/api/orders\": {\n    \"errors_5xx\": 3,\n    \"p50_ms\": 21.8,\n    \"p95_ms\": 2015.6,\n    \"requests\": 12\n   },\n   \"/api/orders/recent\": {\n    \"errors_5xx\": 10,\n    \"p50_ms\": 19.4,\n    \"p95_ms\": 2015.4,\n    \"requests\": 25\n   },\n   \"/api/products\": {\n    \"errors_5xx\": 0,\n    \"p50_ms\": 2.4,\n    \"p95_ms\": 3.9,\n    \"requests\": 35\n   },\n   \"unmatched\": {\n    \"errors_5xx\": 0,\n    \"p50_ms\": 0.4,\n    \"p95_ms\": 0.4,\n    \"requests\": 1\n   }\n  },\n  \"process_rss_mb\": 48.6,\n  \"uptime_s\": 26.3,\n  \"window_s\": 60\n },\n \"postgres_connections\": \"3 | 40\"\n}"
+  },
+  {
+   "step": 5,
+   "t": 6.48,
+   "tool": "run_diagnostic",
+   "kind": "observe",
+   "args": {
+    "service": "api",
+    "check": "disk"
+   },
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.09,
+   "result": "Filesystem                Size      Used Available Use% Mounted on\noverlay                 252.0G     16.3G     22.1G  42% /\ntmpfs                    64.0M         0     64.0M   0% /dev\ntmpfs                     7.9G         0      7.9G   0% /sys/fs/cgroup\nshm                      64.0M         0     64.0M   0% /dev/shm\n/dev/vda                252.0G     16.3G     22.1G  42% /config\ntmpfs                    48.0M      4.0K     48.0M   0% /data\n/dev/vda                252.0G     16.3G     22.1G  42% /etc/hostname\n/dev/vda                252.0G     16.3G     22.1G  42% /etc/hosts\n/dev/vda                252.0G     16.3G     22.1G  42% /etc/resolv.conf\ntmpfs                     4.0K         0      4.0K   0% /proc/acpi\ntmpfs                    64.0M         0     64.0M   0% /proc/interrupts\ntmpfs                    64.0M         0     64.0M   0% /proc/keys\ntmpfs                    64.0M         0     64.0M   0% /proc/timer_list\ntmpfs                     4.0K         0      4.0K   0% /sys/firmware\n--- largest under /data (KB) ---\n4\t/data/audit/audit.log\n4\t/data/audit\n4\t/data"
+  },
+  {
+   "step": 6,
+   "t": 6.56,
+   "tool": "run_diagnostic",
+   "kind": "observe",
+   "args": {
+    "service": "worker",
+    "check": "disk"
+   },
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.1,
+   "result": "Filesystem                Size      Used Available Use% Mounted on\noverlay                 252.0G     16.3G     22.1G  42% /\ntmpfs                    64.0M         0     64.0M   0% /dev\ntmpfs                     7.9G         0      7.9G   0% /sys/fs/cgroup\nshm                      64.0M         0     64.0M   0% /dev/shm\n/dev/vda                252.0G     16.3G     22.1G  42% /config\n/dev/vda                252.0G     16.3G     22.1G  42% /etc/hostname\n/dev/vda                252.0G     16.3G     22.1G  42% /etc/hosts\n/dev/vda                252.0G     16.3G     22.1G  42% /etc/resolv.conf\ntmpfs                     4.0K         0      4.0K   0% /proc/acpi\ntmpfs                    64.0M         0     64.0M   0% /proc/interrupts\ntmpfs                    64.0M         0     64.0M   0% /proc/keys\ntmpfs                    64.0M         0     64.0M   0% /proc/timer_list\ntmpfs                     4.0K         0      4.0K   0% /sys/firmware\n--- largest under /data (KB) ---"
+  },
+  {
+   "step": 7,
+   "t": 6.66,
+   "tool": "run_diagnostic",
+   "kind": "observe",
+   "args": {
+    "service": "postgres",
+    "check": "db_locks"
+   },
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.11,
+   "result": "blocked_pid | app | query | waiting_s | blocking_pid | blocking_app | state | blocking_query\n226 | shop-api | SELECT id, product_id, qty, total, created_at FROM orders OR | 1 | 130 | migration-runner | active | BEGIN; LOCK TABLE orders IN ACCESS EXCLUSIVE MODE; SELECT pg_sleep(3600);"
+  },
+  {
+   "step": 8,
+   "t": 6.77,
+   "tool": "terminate_db_sessions",
+   "kind": "act",
+   "args": {
+    "pid": 130
+   },
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.09,
+   "result": "terminated sessions: 1"
+  },
+  {
+   "step": 9,
+   "t": 11.86,
+   "tool": "list_services",
+   "kind": "observe",
+   "args": {},
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.12,
+   "result": "service   state       restarts  oom    health   networks             missing_networks\ngateway   running     0         False  -        frontend             -\napi       running     0         False  -        backend,frontend     -\nworker    running     0         False  -        backend              -\npostgres  running     0         False  healthy  backend              -\nredis     running     0         False  -        backend              -"
+  },
+  {
+   "step": 10,
+   "t": 11.99,
+   "tool": "check_endpoints",
+   "kind": "observe",
+   "args": {},
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.05,
+   "result": "GET  /healthz             status=200     1.3ms OK\nGET  /api/health          status=200    14.0ms OK\nGET  /api/products        status=200     3.5ms OK\nGET  /api/orders/recent   status=200    14.6ms OK\nPOST /api/orders          status=201    19.2ms OK"
+  },
+  {
+   "step": 11,
+   "t": 12.04,
+   "tool": "get_recent_changes",
+   "kind": "observe",
+   "args": {
+    "limit": 20
+   },
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.0,
+   "result": "no changes recorded"
+  },
+  {
+   "step": 12,
+   "t": 12.04,
+   "tool": "get_metrics",
+   "kind": "observe",
+   "args": {},
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 2.28,
+   "result": "{\n \"containers\": {\n  \"gateway\": {\n   \"cpu_pct\": \"0.38%\",\n   \"mem\": \"2.648MiB / 15.71GiB\",\n   \"mem_pct\": \"0.02%\"\n  },\n  \"worker\": {\n   \"cpu_pct\": \"0.83%\",\n   \"mem\": \"25.47MiB / 15.71GiB\",\n   \"mem_pct\": \"0.16%\"\n  },\n  \"api\": {\n   \"cpu_pct\": \"4.06%\",\n   \"mem\": \"36.01MiB / 256MiB\",\n   \"mem_pct\": \"14.07%\"\n  },\n  \"postgres\": {\n   \"cpu_pct\": \"5.87%\",\n   \"mem\": \"31.66MiB / 15.71GiB\",\n   \"mem_pct\": \"0.20%\"\n  },\n  \"redis\": {\n   \"cpu_pct\": \"0.61%\",\n   \"mem\": \"3.898MiB / 15.71GiB\",\n   \"mem_pct\": \"0.02%\"\n  }\n },\n \"api_app_metrics\": {\n  \"cache_errors_total\": 0,\n  \"db_errors_total\": 13,\n  \"endpoints\": {\n   \"/api/health\": {\n    \"errors_5xx\": 0,\n    \"p50_ms\": 13.3,\n    \"p95_ms\": 49.4,\n    \"requests\": 8\n   },\n   \"/api/orders\": {\n    \"errors_5xx\": 3,\n    \"p50_ms\": 18.0,\n    \"p95_ms\": 2014.6,\n    \"requests\": 21\n   },\n   \"/api/orders/recent\": {\n    \"errors_5xx\": 10,\n    \"p50_ms\": 18.2,\n    \"p95_ms\": 2015.4,\n    \"requests\": 40\n   },\n   \"/api/products\": {\n    \"errors_5xx\": 0,\n    \"p50_ms\": 2.0,\n    \"p95_ms\": 3.5,\n    \"requests\": 68\n   },\n   \"/metrics\": {\n    \"errors_5xx\": 0,\n    \"p50_ms\": 0.4,\n    \"p95_ms\": 0.4,\n    \"requests\": 1\n   },\n   \"unmatched\": {\n    \"errors_5xx\": 0,\n    \"p50_ms\": 0.4,\n    \"p95_ms\": 0.4,\n    \"requests\": 1\n   }\n  },\n  \"process_rss_mb\": 48.6,\n  \"uptime_s\": 34.1,\n  \"window_s\": 60\n },\n \"postgres_connections\": \"1 | 40\"\n}"
+  },
+  {
+   "step": 13,
+   "t": 14.32,
+   "tool": "run_diagnostic",
+   "kind": "observe",
+   "args": {
+    "service": "api",
+    "check": "disk"
+   },
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.09,
+   "result": "Filesystem                Size      Used Available Use% Mounted on\noverlay                 252.0G     16.3G     22.1G  42% /\ntmpfs                    64.0M         0     64.0M   0% /dev\ntmpfs                     7.9G         0      7.9G   0% /sys/fs/cgroup\nshm                      64.0M         0     64.0M   0% /dev/shm\n/dev/vda                252.0G     16.3G     22.1G  42% /config\ntmpfs                    48.0M      4.0K     48.0M   0% /data\n/dev/vda                252.0G     16.3G     22.1G  42% /etc/hostname\n/dev/vda                252.0G     16.3G     22.1G  42% /etc/hosts\n/dev/vda                252.0G     16.3G     22.1G  42% /etc/resolv.conf\ntmpfs                     4.0K         0      4.0K   0% /proc/acpi\ntmpfs                    64.0M         0     64.0M   0% /proc/interrupts\ntmpfs                    64.0M         0     64.0M   0% /proc/keys\ntmpfs                    64.0M         0     64.0M   0% /proc/timer_list\ntmpfs                     4.0K         0      4.0K   0% /sys/firmware\n--- largest under /data (KB) ---\n4\t/data/audit/audit.log\n4\t/data/audit\n4\t/data"
+  },
+  {
+   "step": 14,
+   "t": 14.41,
+   "tool": "run_diagnostic",
+   "kind": "observe",
+   "args": {
+    "service": "worker",
+    "check": "disk"
+   },
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.1,
+   "result": "Filesystem                Size      Used Available Use% Mounted on\noverlay                 252.0G     16.3G     22.1G  42% /\ntmpfs                    64.0M         0     64.0M   0% /dev\ntmpfs                     7.9G         0      7.9G   0% /sys/fs/cgroup\nshm                      64.0M         0     64.0M   0% /dev/shm\n/dev/vda                252.0G     16.3G     22.1G  42% /config\n/dev/vda                252.0G     16.3G     22.1G  42% /etc/hostname\n/dev/vda                252.0G     16.3G     22.1G  42% /etc/hosts\n/dev/vda                252.0G     16.3G     22.1G  42% /etc/resolv.conf\ntmpfs                     4.0K         0      4.0K   0% /proc/acpi\ntmpfs                    64.0M         0     64.0M   0% /proc/interrupts\ntmpfs                    64.0M         0     64.0M   0% /proc/keys\ntmpfs                    64.0M         0     64.0M   0% /proc/timer_list\ntmpfs                     4.0K         0      4.0K   0% /sys/firmware\n--- largest under /data (KB) ---"
+  },
+  {
+   "step": 15,
+   "t": 14.51,
+   "tool": "run_diagnostic",
+   "kind": "observe",
+   "args": {
+    "service": "postgres",
+    "check": "db_locks"
+   },
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.1,
+   "result": "blocked_pid | app | query | waiting_s | blocking_pid | blocking_app | state | blocking_query\n(no blocked sessions)"
+  },
+  {
+   "step": 16,
+   "t": 14.62,
+   "tool": "verify_recovery",
+   "kind": "observe",
+   "args": {},
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 8.73,
+   "result": "{\n \"healthy\": true,\n \"probe_success_rate\": 1.0,\n \"probe_p95_ms\": 23.4,\n \"problems\": [],\n \"probes\": {\n  \"GET /healthz\": {\n   \"ok\": 8,\n   \"fail\": 0,\n   \"statuses\": [\n    200\n   ],\n   \"last_error\": \"\"\n  },\n  \"GET /api/health\": {\n   \"ok\": 8,\n   \"fail\": 0,\n   \"statuses\": [\n    200\n   ],\n   \"last_error\": \"\"\n  },\n  \"GET /api/products\": {\n   \"ok\": 8,\n   \"fail\": 0,\n   \"statuses\": [\n    200\n   ],\n   \"last_error\": \"\"\n  },\n  \"GET /api/orders/recent\": {\n   \"ok\": 8,\n   \"fail\": 0,\n   \"statuses\": [\n    200\n   ],\n   \"last_error\": \"\"\n  },\n  \"POST /api/orders\": {\n   \"ok\": 8,\n   \"fail\": 0,\n   \"statuses\": [\n    201\n   ],\n   \"last_error\": \"\"\n  }\n }\n}"
+  },
+  {
+   "step": 17,
+   "t": 23.35,
+   "tool": "submit_report",
+   "kind": "final",
+   "args": {
+    "root_causes": [
+     {
+      "component": "postgres",
+      "category": "db_lock_contention",
+      "evidence": "1 session(s) blocked on locks for up to 1s (run_diagnostic db_locks); root blocker pid 130 app=migration-runner state=active query=BEGIN; LOCK TABLE orders IN ACCESS EXCLUSIVE MODE; SELECT pg"
+     }
+    ],
+    "recovered": true,
+    "summary": "[confirmed] terminate the session(s) holding the blocking lock: pids 130 (confidence 0.72; evidence: 1 session(s) blocked on locks for up to 1s (run_diagnostic db_locks)). Prevent: set lock_timeout for migrations and run them in maintenance windows."
+   },
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.0,
+   "result": "report submitted"
+  }
+ ],
+ "episode_seconds": 90.2
+}

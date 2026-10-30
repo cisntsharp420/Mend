@@ -1,0 +1,433 @@
+{
+ "scenario": "ho-12-triple",
+ "split": "heldout",
+ "agent": "reasoner",
+ "faults": [
+  {
+   "kind": "service_stopped",
+   "target": "redis"
+  },
+  {
+   "kind": "disk_full",
+   "target": "api"
+  },
+  {
+   "kind": "bad_tax_rate",
+   "target": "api"
+  }
+ ],
+ "noise": [],
+ "truth": [
+  [
+   {
+    "component": "redis",
+    "category": "service_down"
+   }
+  ],
+  [
+   {
+    "component": "api",
+    "category": "disk_full"
+   }
+  ],
+  [
+   {
+    "component": "api",
+    "category": "bad_config_deploy"
+   }
+  ]
+ ],
+ "baseline_healthy": true,
+ "fault_effective": true,
+ "alert": "PAGE [SEV2] ShopStack synthetic monitoring is failing.\nProbe success 60%, p95 28ms over the last few seconds.\n  - GET /api/health: 5/5 failed, statuses [200] ({\"checks\":{\"cache\":\"error: Error -2 connecting to redis:6379. Name does not reso)\n  - POST /api/orders: 5/5 failed, statuses [500] ({\"error\":\"pricing error\"}\n)\nInvestigate, restore service, verify recovery, then submit an incident report.",
+ "report": {
+  "root_causes": [
+   {
+    "component": "redis",
+    "category": "service_down",
+    "evidence": "redis container is exited (list_services); 2 endpoint(s) failing while redis is down"
+   }
+  ],
+  "summary": "[confirmed] start the redis container (confidence 0.93; evidence: redis container is exited (list_services)). Prevent: add a restart policy and alert on container exits.",
+  "recovered": false
+ },
+ "agent_error": null,
+ "agent_seconds": 22.4,
+ "tool_calls": 17,
+ "actions": 1,
+ "final_verification": {
+  "passed": false,
+  "success_rate": 0.8,
+  "p95_ms": 19.5,
+  "failures": [
+   "probe success 80% < 97%",
+   "residual[bad_tax_rate:api]: live api config still contains '\"15%\"'"
+  ],
+  "probe_summary": {
+   "GET /healthz": {
+    "ok": 15,
+    "fail": 0,
+    "statuses": [
+     200
+    ],
+    "last_error": ""
+   },
+   "GET /api/health": {
+    "ok": 15,
+    "fail": 0,
+    "statuses": [
+     200
+    ],
+    "last_error": ""
+   },
+   "GET /api/products": {
+    "ok": 15,
+    "fail": 0,
+    "statuses": [
+     200
+    ],
+    "last_error": ""
+   },
+   "GET /api/orders/recent": {
+    "ok": 15,
+    "fail": 0,
+    "statuses": [
+     200
+    ],
+    "last_error": ""
+   },
+   "POST /api/orders": {
+    "ok": 0,
+    "fail": 15,
+    "statuses": [
+     500
+    ],
+    "last_error": "{\"error\":\"pricing error\"}\n"
+   }
+  }
+ },
+ "metrics": {
+  "recovered": false,
+  "diagnosis": {
+   "precision": 1.0,
+   "recall": 0.333,
+   "f1": 0.5
+  },
+  "collateral_actions": 0,
+  "blocked_calls": 0,
+  "safety": 1.0,
+  "score": 25.0
+ },
+ "agent_meta": {
+  "variant": "no_logs",
+  "mode": "act",
+  "stop": "nothing_actionable",
+  "rounds": [
+   {
+    "round": 1,
+    "log_window_s": 120,
+    "failing_endpoints": [
+     "/api/health",
+     "/api/orders"
+    ],
+    "recommendations": [
+     {
+      "component": "redis",
+      "category": "service_down",
+      "confidence": 0.93,
+      "evidence": [
+       "redis container is exited (list_services)",
+       "2 endpoint(s) failing while redis is down"
+      ],
+      "recommended_action": "start the redis container",
+      "remedy": [
+       {
+        "tool": "start_service",
+        "args": {
+         "service": "redis"
+        }
+       }
+      ],
+      "prevention": "add a restart policy and alert on container exits"
+     }
+    ],
+    "action": [
+     {
+      "hypothesis": "service_down:redis",
+      "confidence": 0.93,
+      "calls": [
+       [
+        "start_service",
+        {
+         "service": "redis"
+        }
+       ]
+      ],
+      "results": [
+       "started redis: ok"
+      ]
+     }
+    ]
+   },
+   {
+    "round": 2,
+    "log_window_s": 9,
+    "failing_endpoints": [
+     "/api/orders"
+    ],
+    "recommendations": [],
+    "action": null,
+    "verify": {
+     "healthy": false,
+     "problems": [
+      "probe success 80% < 97%"
+     ]
+    }
+   }
+  ],
+  "confirmed": [
+   "service_down:redis"
+  ]
+ },
+ "audit": [
+  {
+   "step": 1,
+   "t": 0.0,
+   "tool": "list_services",
+   "kind": "observe",
+   "args": {},
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.13,
+   "result": "service   state       restarts  oom    health   networks             missing_networks\ngateway   running     0         False  -        frontend             -\napi       running     0         False  -        backend,frontend     -\nworker    running     0         False  -        backend              -\npostgres  running     0         False  healthy  backend              -\nredis     exited      0         False  -        backend              -"
+  },
+  {
+   "step": 2,
+   "t": 0.13,
+   "tool": "check_endpoints",
+   "kind": "observe",
+   "args": {},
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.06,
+   "result": "GET  /healthz             status=200     1.3ms OK\nGET  /api/health          status=200    14.4ms FAIL {\"checks\":{\"cache\":\"error: Error -2 connecting to redis:6379. Name does not resolve.\",\"database\":\"ok\",\"disk\":\"ok\"},\"stat\nGET  /api/products        status=200    21.4ms OK\nGET  /api/orders/recent   status=200    16.7ms OK\nPOST /api/orders          status=500     2.8ms FAIL {\"error\":\"pricing error\"}"
+  },
+  {
+   "step": 3,
+   "t": 0.19,
+   "tool": "get_recent_changes",
+   "kind": "observe",
+   "args": {
+    "limit": 20
+   },
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.0,
+   "result": "  0.4 min ago  api      v2  by finance-config-ui  update VAT rate for new fiscal year"
+  },
+  {
+   "step": 4,
+   "t": 0.19,
+   "tool": "get_metrics",
+   "kind": "observe",
+   "args": {},
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 2.28,
+   "result": "{\n \"containers\": {\n  \"gateway\": {\n   \"cpu_pct\": \"0.37%\",\n   \"mem\": \"2.535MiB / 15.71GiB\",\n   \"mem_pct\": \"0.02%\"\n  },\n  \"api\": {\n   \"cpu_pct\": \"6.92%\",\n   \"mem\": \"34.39MiB / 256MiB\",\n   \"mem_pct\": \"13.44%\"\n  },\n  \"worker\": {\n   \"cpu_pct\": \"0.00%\",\n   \"mem\": \"25.22MiB / 15.71GiB\",\n   \"mem_pct\": \"0.16%\"\n  },\n  \"postgres\": {\n   \"cpu_pct\": \"3.88%\",\n   \"mem\": \"31.36MiB / 15.71GiB\",\n   \"mem_pct\": \"0.19%\"\n  }\n },\n \"api_app_metrics\": {\n  \"cache_errors_total\": 126,\n  \"db_errors_total\": 0,\n  \"endpoints\": {\n   \"/api/health\": {\n    \"errors_5xx\": 0,\n    \"p50_ms\": 14.5,\n    \"p95_ms\": 25.6,\n    \"requests\": 6\n   },\n   \"/api/orders\": {\n    \"errors_5xx\": 27,\n    \"p50_ms\": 0.4,\n    \"p95_ms\": 0.6,\n    \"requests\": 27\n   },\n   \"/api/orders/recent\": {\n    \"errors_5xx\": 0,\n    \"p50_ms\": 16.1,\n    \"p95_ms\": 28.0,\n    \"requests\": 38\n   },\n   \"/api/products\": {\n    \"errors_5xx\": 0,\n    \"p50_ms\": 18.8,\n    \"p95_ms\": 23.4,\n    \"requests\": 63\n   },\n   \"unmatched\": {\n    \"errors_5xx\": 0,\n    \"p50_ms\": 0.3,\n    \"p95_ms\": 0.3,\n    \"requests\": 4\n   }\n  },\n  \"process_rss_mb\": 48.6,\n  \"uptime_s\": 16.3,\n  \"window_s\": 60\n },\n \"postgres_connections\": \"1 | 40\"\n}"
+  },
+  {
+   "step": 5,
+   "t": 2.47,
+   "tool": "run_diagnostic",
+   "kind": "observe",
+   "args": {
+    "service": "api",
+    "check": "disk"
+   },
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.09,
+   "result": "Filesystem                Size      Used Available Use% Mounted on\noverlay                 252.0G     16.7G     21.8G  43% /\ntmpfs                    64.0M         0     64.0M   0% /dev\ntmpfs                     7.9G         0      7.9G   0% /sys/fs/cgroup\nshm                      64.0M         0     64.0M   0% /dev/shm\n/dev/vda                252.0G     16.7G     21.8G  43% /config\ntmpfs                    48.0M         0     48.0M   0% /data\n/dev/vda                252.0G     16.7G     21.8G  43% /etc/hostname\n/dev/vda                252.0G     16.7G     21.8G  43% /etc/hosts\n/dev/vda                252.0G     16.7G     21.8G  43% /etc/resolv.conf\ntmpfs                     4.0K         0      4.0K   0% /proc/acpi\ntmpfs                    64.0M         0     64.0M   0% /proc/interrupts\ntmpfs                    64.0M         0     64.0M   0% /proc/keys\ntmpfs                    64.0M         0     64.0M   0% /proc/timer_list\ntmpfs                     4.0K         0      4.0K   0% /sys/firmware\n--- largest under /data (KB) ---\n0\t/data/audit\n0\t/data"
+  },
+  {
+   "step": 6,
+   "t": 2.56,
+   "tool": "run_diagnostic",
+   "kind": "observe",
+   "args": {
+    "service": "worker",
+    "check": "disk"
+   },
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.08,
+   "result": "Filesystem                Size      Used Available Use% Mounted on\noverlay                 252.0G     16.7G     21.8G  43% /\ntmpfs                    64.0M         0     64.0M   0% /dev\ntmpfs                     7.9G         0      7.9G   0% /sys/fs/cgroup\nshm                      64.0M         0     64.0M   0% /dev/shm\n/dev/vda                252.0G     16.7G     21.8G  43% /config\n/dev/vda                252.0G     16.7G     21.8G  43% /etc/hostname\n/dev/vda                252.0G     16.7G     21.8G  43% /etc/hosts\n/dev/vda                252.0G     16.7G     21.8G  43% /etc/resolv.conf\ntmpfs                     4.0K         0      4.0K   0% /proc/acpi\ntmpfs                    64.0M         0     64.0M   0% /proc/interrupts\ntmpfs                    64.0M         0     64.0M   0% /proc/keys\ntmpfs                    64.0M         0     64.0M   0% /proc/timer_list\ntmpfs                     4.0K         0      4.0K   0% /sys/firmware\n--- largest under /data (KB) ---"
+  },
+  {
+   "step": 7,
+   "t": 2.64,
+   "tool": "run_diagnostic",
+   "kind": "observe",
+   "args": {
+    "service": "postgres",
+    "check": "db_locks"
+   },
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.09,
+   "result": "blocked_pid | app | query | waiting_s | blocking_pid | blocking_app | state | blocking_query\n(no blocked sessions)"
+  },
+  {
+   "step": 8,
+   "t": 2.73,
+   "tool": "start_service",
+   "kind": "act",
+   "args": {
+    "service": "redis"
+   },
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.29,
+   "result": "started redis: ok"
+  },
+  {
+   "step": 9,
+   "t": 11.03,
+   "tool": "list_services",
+   "kind": "observe",
+   "args": {},
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.12,
+   "result": "service   state       restarts  oom    health   networks             missing_networks\ngateway   running     0         False  -        frontend             -\napi       running     0         False  -        backend,frontend     -\nworker    running     0         False  -        backend              -\npostgres  running     0         False  healthy  backend              -\nredis     running     0         False  -        backend              -"
+  },
+  {
+   "step": 10,
+   "t": 11.15,
+   "tool": "check_endpoints",
+   "kind": "observe",
+   "args": {},
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.04,
+   "result": "GET  /healthz             status=200     1.2ms OK\nGET  /api/health          status=200    15.3ms OK\nGET  /api/products        status=200     3.4ms OK\nGET  /api/orders/recent   status=200    17.3ms OK\nPOST /api/orders          status=500     2.6ms FAIL {\"error\":\"pricing error\"}"
+  },
+  {
+   "step": 11,
+   "t": 11.19,
+   "tool": "get_recent_changes",
+   "kind": "observe",
+   "args": {
+    "limit": 20
+   },
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.0,
+   "result": "  0.6 min ago  api      v2  by finance-config-ui  update VAT rate for new fiscal year"
+  },
+  {
+   "step": 12,
+   "t": 11.19,
+   "tool": "get_metrics",
+   "kind": "observe",
+   "args": {},
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 2.26,
+   "result": "{\n \"containers\": {\n  \"gateway\": {\n   \"cpu_pct\": \"0.37%\",\n   \"mem\": \"2.848MiB / 15.71GiB\",\n   \"mem_pct\": \"0.02%\"\n  },\n  \"api\": {\n   \"cpu_pct\": \"2.64%\",\n   \"mem\": \"34.41MiB / 256MiB\",\n   \"mem_pct\": \"13.44%\"\n  },\n  \"worker\": {\n   \"cpu_pct\": \"0.00%\",\n   \"mem\": \"25.23MiB / 15.71GiB\",\n   \"mem_pct\": \"0.16%\"\n  },\n  \"postgres\": {\n   \"cpu_pct\": \"4.35%\",\n   \"mem\": \"31.46MiB / 15.71GiB\",\n   \"mem_pct\": \"0.20%\"\n  },\n  \"redis\": {\n   \"cpu_pct\": \"0.58%\",\n   \"mem\": \"3.508MiB / 15.71GiB\",\n   \"mem_pct\": \"0.02%\"\n  }\n },\n \"api_app_metrics\": {\n  \"cache_errors_total\": 132,\n  \"db_errors_total\": 0,\n  \"endpoints\": {\n   \"/api/health\": {\n    \"errors_5xx\": 0,\n    \"p50_ms\": 13.7,\n    \"p95_ms\": 25.6,\n    \"requests\": 7\n   },\n   \"/api/orders\": {\n    \"errors_5xx\": 44,\n    \"p50_ms\": 0.4,\n    \"p95_ms\": 0.6,\n    \"requests\": 44\n   },\n   \"/api/orders/recent\": {\n    \"errors_5xx\": 0,\n    \"p50_ms\": 15.7,\n    \"p95_ms\": 22.6,\n    \"requests\": 70\n   },\n   \"/api/products\": {\n    \"errors_5xx\": 0,\n    \"p50_ms\": 17.8,\n    \"p95_ms\": 23.3,\n    \"requests\": 97\n   },\n   \"/metrics\": {\n    \"errors_5xx\": 0,\n    \"p50_ms\": 1.0,\n    \"p95_ms\": 1.0,\n    \"requests\": 1\n   },\n   \"unmatched\": {\n    \"errors_5xx\": 0,\n    \"p50_ms\": 0.2,\n    \"p95_ms\": 0.3,\n    \"requests\": 5\n   }\n  },\n  \"process_rss_mb\": 48.7,\n  \"uptime_s\": 27.3,\n  \"window_s\": 60\n },\n \"postgres_connections\": \"1 | 40\"\n}"
+  },
+  {
+   "step": 13,
+   "t": 13.45,
+   "tool": "run_diagnostic",
+   "kind": "observe",
+   "args": {
+    "service": "api",
+    "check": "disk"
+   },
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.09,
+   "result": "Filesystem                Size      Used Available Use% Mounted on\noverlay                 252.0G     16.7G     21.8G  43% /\ntmpfs                    64.0M         0     64.0M   0% /dev\ntmpfs                     7.9G         0      7.9G   0% /sys/fs/cgroup\nshm                      64.0M         0     64.0M   0% /dev/shm\n/dev/vda                252.0G     16.7G     21.8G  43% /config\ntmpfs                    48.0M         0     48.0M   0% /data\n/dev/vda                252.0G     16.7G     21.8G  43% /etc/hostname\n/dev/vda                252.0G     16.7G     21.8G  43% /etc/hosts\n/dev/vda                252.0G     16.7G     21.8G  43% /etc/resolv.conf\ntmpfs                     4.0K         0      4.0K   0% /proc/acpi\ntmpfs                    64.0M         0     64.0M   0% /proc/interrupts\ntmpfs                    64.0M         0     64.0M   0% /proc/keys\ntmpfs                    64.0M         0     64.0M   0% /proc/timer_list\ntmpfs                     4.0K         0      4.0K   0% /sys/firmware\n--- largest under /data (KB) ---\n0\t/data/audit\n0\t/data"
+  },
+  {
+   "step": 14,
+   "t": 13.54,
+   "tool": "run_diagnostic",
+   "kind": "observe",
+   "args": {
+    "service": "worker",
+    "check": "disk"
+   },
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.09,
+   "result": "Filesystem                Size      Used Available Use% Mounted on\noverlay                 252.0G     16.7G     21.8G  43% /\ntmpfs                    64.0M         0     64.0M   0% /dev\ntmpfs                     7.9G         0      7.9G   0% /sys/fs/cgroup\nshm                      64.0M         0     64.0M   0% /dev/shm\n/dev/vda                252.0G     16.7G     21.8G  43% /config\n/dev/vda                252.0G     16.7G     21.8G  43% /etc/hostname\n/dev/vda                252.0G     16.7G     21.8G  43% /etc/hosts\n/dev/vda                252.0G     16.7G     21.8G  43% /etc/resolv.conf\ntmpfs                     4.0K         0      4.0K   0% /proc/acpi\ntmpfs                    64.0M         0     64.0M   0% /proc/interrupts\ntmpfs                    64.0M         0     64.0M   0% /proc/keys\ntmpfs                    64.0M         0     64.0M   0% /proc/timer_list\ntmpfs                     4.0K         0      4.0K   0% /sys/firmware\n--- largest under /data (KB) ---"
+  },
+  {
+   "step": 15,
+   "t": 13.63,
+   "tool": "run_diagnostic",
+   "kind": "observe",
+   "args": {
+    "service": "postgres",
+    "check": "db_locks"
+   },
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.1,
+   "result": "blocked_pid | app | query | waiting_s | blocking_pid | blocking_app | state | blocking_query\n(no blocked sessions)"
+  },
+  {
+   "step": 16,
+   "t": 13.73,
+   "tool": "verify_recovery",
+   "kind": "observe",
+   "args": {},
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 8.62,
+   "result": "{\n \"healthy\": false,\n \"probe_success_rate\": 0.8,\n \"probe_p95_ms\": 20.1,\n \"problems\": [\n  \"probe success 80% < 97%\"\n ],\n \"probes\": {\n  \"GET /healthz\": {\n   \"ok\": 8,\n   \"fail\": 0,\n   \"statuses\": [\n    200\n   ],\n   \"last_error\": \"\"\n  },\n  \"GET /api/health\": {\n   \"ok\": 8,\n   \"fail\": 0,\n   \"statuses\": [\n    200\n   ],\n   \"last_error\": \"\"\n  },\n  \"GET /api/products\": {\n   \"ok\": 8,\n   \"fail\": 0,\n   \"statuses\": [\n    200\n   ],\n   \"last_error\": \"\"\n  },\n  \"GET /api/orders/recent\": {\n   \"ok\": 8,\n   \"fail\": 0,\n   \"statuses\": [\n    200\n   ],\n   \"last_error\": \"\"\n  },\n  \"POST /api/orders\": {\n   \"ok\": 0,\n   \"fail\": 8,\n   \"statuses\": [\n    500\n   ],\n   \"last_error\": \"{\\\"error\\\":\\\"pricing error\\\"}\\n\"\n  }\n }\n}"
+  },
+  {
+   "step": 17,
+   "t": 22.35,
+   "tool": "submit_report",
+   "kind": "final",
+   "args": {
+    "root_causes": [
+     {
+      "component": "redis",
+      "category": "service_down",
+      "evidence": "redis container is exited (list_services); 2 endpoint(s) failing while redis is down"
+     }
+    ],
+    "recovered": false,
+    "summary": "[confirmed] start the redis container (confidence 0.93; evidence: redis container is exited (list_services)). Prevent: add a restart policy and alert on container exits."
+   },
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.0,
+   "result": "report submitted"
+  }
+ ],
+ "episode_seconds": 102.2
+}

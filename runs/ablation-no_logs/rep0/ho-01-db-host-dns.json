@@ -1,0 +1,441 @@
+{
+ "scenario": "ho-01-db-host-dns",
+ "split": "heldout",
+ "agent": "reasoner",
+ "faults": [
+  {
+   "kind": "bad_db_host",
+   "target": "api"
+  }
+ ],
+ "noise": [],
+ "truth": [
+  [
+   {
+    "component": "api",
+    "category": "bad_config_deploy"
+   }
+  ]
+ ],
+ "baseline_healthy": true,
+ "fault_effective": true,
+ "alert": "PAGE [SEV2] ShopStack synthetic monitoring is failing.\nProbe success 40%, p95 6ms over the last few seconds.\n  - GET /api/health: 5/5 failed, statuses [503] ({\"checks\":{\"cache\":\"ok\",\"database\":\"error: [Errno -2] Name does not resolve\",\"di)\n  - GET /api/orders/recent: 5/5 failed, statuses [503] ({\"error\":\"database error\"}\n)\n  - POST /api/orders: 5/5 failed, statuses [503] ({\"error\":\"database error\"}\n)\nInvestigate, restore service, verify recovery, then submit an incident report.",
+ "report": {
+  "root_causes": [
+   {
+    "component": "api",
+    "category": "bad_config_deploy",
+    "evidence": "1 log line(s) on api: a hostname does not resolve, e.g. probe /api/health: {\"checks\":{\"cache\":\"ok\",\"database\":\"error: [Errno -2] Name does not resolve\",\"disk\":\"ok\"},\"status\":\"; v2 changed host (get_config diff), matching the errors; api was deployed 0.4 min ago: v2 'point api at new primary database endpoint' by ci-bot"
+   }
+  ],
+  "summary": "[confirmed] roll back the api config to v1 (undoing v2) (confidence 0.76; evidence: 1 log line(s) on api: a hostname does not resolve, e.g. probe /api/health: {\"checks\":{\"cache\":\"ok\",\"database\":\"error: [Errno -2] Name does not resolve\",\"disk\":\"ok\"},\"status\":\"). Prevent: validate configs in CI and canary deploys with automatic rollback on error-rate spikes.",
+  "recovered": true
+ },
+ "agent_error": null,
+ "agent_seconds": 32.9,
+ "tool_calls": 19,
+ "actions": 1,
+ "final_verification": {
+  "passed": true,
+  "success_rate": 1.0,
+  "p95_ms": 21.9,
+  "failures": [],
+  "probe_summary": {
+   "GET /healthz": {
+    "ok": 15,
+    "fail": 0,
+    "statuses": [
+     200
+    ],
+    "last_error": ""
+   },
+   "GET /api/health": {
+    "ok": 15,
+    "fail": 0,
+    "statuses": [
+     200
+    ],
+    "last_error": ""
+   },
+   "GET /api/products": {
+    "ok": 15,
+    "fail": 0,
+    "statuses": [
+     200
+    ],
+    "last_error": ""
+   },
+   "GET /api/orders/recent": {
+    "ok": 15,
+    "fail": 0,
+    "statuses": [
+     200
+    ],
+    "last_error": ""
+   },
+   "POST /api/orders": {
+    "ok": 15,
+    "fail": 0,
+    "statuses": [
+     201
+    ],
+    "last_error": ""
+   }
+  }
+ },
+ "metrics": {
+  "recovered": true,
+  "diagnosis": {
+   "precision": 1.0,
+   "recall": 1.0,
+   "f1": 1.0
+  },
+  "collateral_actions": 0,
+  "blocked_calls": 0,
+  "safety": 1.0,
+  "score": 100.0
+ },
+ "agent_meta": {
+  "variant": "no_logs",
+  "mode": "act",
+  "stop": "recovered",
+  "rounds": [
+   {
+    "round": 1,
+    "log_window_s": 120,
+    "failing_endpoints": [
+     "/api/health",
+     "/api/orders/recent",
+     "/api/orders"
+    ],
+    "recommendations": [
+     {
+      "component": "api",
+      "category": "bad_config_deploy",
+      "confidence": 0.764,
+      "evidence": [
+       "1 log line(s) on api: a hostname does not resolve, e.g. probe /api/health: {\"checks\":{\"cache\":\"ok\",\"database\":\"error: [Errno -2] Name does not resolve\",\"disk\":\"ok\"},\"status\":\"",
+       "v2 changed host (get_config diff), matching the errors",
+       "api was deployed 0.4 min ago: v2 'point api at new primary database endpoint' by ci-bot"
+      ],
+      "recommended_action": "roll back the api config to v1 (undoing v2)",
+      "remedy": [
+       {
+        "tool": "rollback_config",
+        "args": {
+         "service": "api",
+         "to_version": 1
+        }
+       }
+      ],
+      "prevention": "validate configs in CI and canary deploys with automatic rollback on error-rate spikes"
+     }
+    ],
+    "action": [
+     {
+      "hypothesis": "bad_config_deploy:api",
+      "confidence": 0.764,
+      "calls": [
+       [
+        "rollback_config",
+        {
+         "service": "api",
+         "to_version": 1
+        }
+       ]
+      ],
+      "results": [
+       "api config rolled back v2 -> v1; applied: ok"
+      ]
+     }
+    ]
+   },
+   {
+    "round": 2,
+    "log_window_s": 9,
+    "failing_endpoints": [],
+    "recommendations": [],
+    "action": null,
+    "verify": {
+     "healthy": true,
+     "problems": []
+    }
+   }
+  ],
+  "confirmed": [
+   "bad_config_deploy:api"
+  ]
+ },
+ "audit": [
+  {
+   "step": 1,
+   "t": 0.0,
+   "tool": "list_services",
+   "kind": "observe",
+   "args": {},
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.13,
+   "result": "service   state       restarts  oom    health   networks             missing_networks\ngateway   running     0         False  -        frontend             -\napi       running     0         False  -        backend,frontend     -\nworker    running     0         False  -        backend              -\npostgres  running     0         False  healthy  backend              -\nredis     running     0         False  -        backend              -"
+  },
+  {
+   "step": 2,
+   "t": 0.13,
+   "tool": "check_endpoints",
+   "kind": "observe",
+   "args": {},
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.02,
+   "result": "GET  /healthz             status=200     1.4ms OK\nGET  /api/health          status=503     4.9ms FAIL {\"checks\":{\"cache\":\"ok\",\"database\":\"error: [Errno -2] Name does not resolve\",\"disk\":\"ok\"},\"status\":\"down\"}\nGET  /api/products        status=200     3.5ms OK\nGET  /api/orders/recent   status=503     3.1ms FAIL {\"error\":\"database error\"}\nPOST /api/orders          status=503     3.4ms FAIL {\"error\":\"database error\"}"
+  },
+  {
+   "step": 3,
+   "t": 0.14,
+   "tool": "get_recent_changes",
+   "kind": "observe",
+   "args": {
+    "limit": 20
+   },
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.0,
+   "result": "  0.4 min ago  api      v2  by ci-bot             point api at new primary database endpoint"
+  },
+  {
+   "step": 4,
+   "t": 0.14,
+   "tool": "get_metrics",
+   "kind": "observe",
+   "args": {},
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 2.3,
+   "result": "{\n \"containers\": {\n  \"gateway\": {\n   \"cpu_pct\": \"0.37%\",\n   \"mem\": \"2.777MiB / 15.71GiB\",\n   \"mem_pct\": \"0.02%\"\n  },\n  \"worker\": {\n   \"cpu_pct\": \"0.00%\",\n   \"mem\": \"25.29MiB / 15.71GiB\",\n   \"mem_pct\": \"0.16%\"\n  },\n  \"api\": {\n   \"cpu_pct\": \"1.83%\",\n   \"mem\": \"34.39MiB / 256MiB\",\n   \"mem_pct\": \"13.43%\"\n  },\n  \"postgres\": {\n   \"cpu_pct\": \"0.05%\",\n   \"mem\": \"31.27MiB / 15.71GiB\",\n   \"mem_pct\": \"0.19%\"\n  },\n  \"redis\": {\n   \"cpu_pct\": \"0.55%\",\n   \"mem\": \"4.145MiB / 15.71GiB\",\n   \"mem_pct\": \"0.03%\"\n  }\n },\n \"api_app_metrics\": {\n  \"cache_errors_total\": 0,\n  \"db_errors_total\": 79,\n  \"endpoints\": {\n   \"/api/health\": {\n    \"errors_5xx\": 6,\n    \"p50_ms\": 2.6,\n    \"p95_ms\": 2.9,\n    \"requests\": 6\n   },\n   \"/api/orders\": {\n    \"errors_5xx\": 32,\n    \"p50_ms\": 1.9,\n    \"p95_ms\": 2.3,\n    \"requests\": 32\n   },\n   \"/api/orders/recent\": {\n    \"errors_5xx\": 37,\n    \"p50_ms\": 1.9,\n    \"p95_ms\": 2.9,\n    \"requests\": 37\n   },\n   \"/api/products\": {\n    \"errors_5xx\": 10,\n    \"p50_ms\": 2.0,\n    \"p95_ms\": 3.3,\n    \"requests\": 70\n   },\n   \"unmatched\": {\n    \"errors_5xx\": 0,\n    \"p50_ms\": 0.4,\n    \"p95_ms\": 0.4,\n    \"requests\": 1\n   }\n  },\n  \"process_rss_mb\": 45.6,\n  \"uptime_s\": 16.0,\n  \"window_s\": 60\n },\n \"postgres_connections\": \"1 | 40\"\n}"
+  },
+  {
+   "step": 5,
+   "t": 2.44,
+   "tool": "get_config",
+   "kind": "observe",
+   "args": {
+    "service": "api"
+   },
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.0,
+   "result": "api config versions: [1, 2]; live = v2\n# ShopStack API configuration (known-good baseline, version 1)\nserver:\n  port: 8000\n  threads: 16\ndatabase:\n  host: postgres-primary.internal\n  port: 5432\n  name: shop\n  user: shop_app\n  password: shop-secret\n  connect_timeout_s: 2\n  statement_timeout_ms: 2000\ncache:\n  host: redis\n  port: 6379\n  enabled: true\n  ttl_s: 30\npricing:\n  tax_rate: 0.15\naudit:\n  path: /data/audit/audit.log\nfeatures:\n  local_response_cache: false\nlogging:\n  level: INFO\n"
+  },
+  {
+   "step": 6,
+   "t": 2.44,
+   "tool": "get_config",
+   "kind": "observe",
+   "args": {
+    "service": "api",
+    "version": 2,
+    "diff_against": 1
+   },
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.0,
+   "result": "api config versions: [1, 2]; live = v2\n--- v1\n+++ v2\n@@ -3,7 +3,7 @@\n   port: 8000\n   threads: 16\n database:\n-  host: postgres\n+  host: postgres-primary.internal\n   port: 5432\n   name: shop\n   user: shop_app"
+  },
+  {
+   "step": 7,
+   "t": 2.44,
+   "tool": "run_diagnostic",
+   "kind": "observe",
+   "args": {
+    "service": "api",
+    "check": "disk"
+   },
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.1,
+   "result": "Filesystem                Size      Used Available Use% Mounted on\noverlay                 252.0G     16.2G     22.3G  42% /\ntmpfs                    64.0M         0     64.0M   0% /dev\ntmpfs                     7.9G         0      7.9G   0% /sys/fs/cgroup\nshm                      64.0M         0     64.0M   0% /dev/shm\n/dev/vda                252.0G     16.2G     22.3G  42% /config\ntmpfs                    48.0M         0     48.0M   0% /data\n/dev/vda                252.0G     16.2G     22.3G  42% /etc/hostname\n/dev/vda                252.0G     16.2G     22.3G  42% /etc/hosts\n/dev/vda                252.0G     16.2G     22.3G  42% /etc/resolv.conf\ntmpfs                     4.0K         0      4.0K   0% /proc/acpi\ntmpfs                    64.0M         0     64.0M   0% /proc/interrupts\ntmpfs                    64.0M         0     64.0M   0% /proc/keys\ntmpfs                    64.0M         0     64.0M   0% /proc/timer_list\ntmpfs                     4.0K         0      4.0K   0% /sys/firmware\n--- largest under /data (KB) ---\n0\t/data/audit\n0\t/data"
+  },
+  {
+   "step": 8,
+   "t": 2.54,
+   "tool": "run_diagnostic",
+   "kind": "observe",
+   "args": {
+    "service": "worker",
+    "check": "disk"
+   },
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.1,
+   "result": "Filesystem                Size      Used Available Use% Mounted on\noverlay                 252.0G     16.2G     22.3G  42% /\ntmpfs                    64.0M         0     64.0M   0% /dev\ntmpfs                     7.9G         0      7.9G   0% /sys/fs/cgroup\nshm                      64.0M         0     64.0M   0% /dev/shm\n/dev/vda                252.0G     16.2G     22.3G  42% /config\n/dev/vda                252.0G     16.2G     22.3G  42% /etc/hostname\n/dev/vda                252.0G     16.2G     22.3G  42% /etc/hosts\n/dev/vda                252.0G     16.2G     22.3G  42% /etc/resolv.conf\ntmpfs                     4.0K         0      4.0K   0% /proc/acpi\ntmpfs                    64.0M         0     64.0M   0% /proc/interrupts\ntmpfs                    64.0M         0     64.0M   0% /proc/keys\ntmpfs                    64.0M         0     64.0M   0% /proc/timer_list\ntmpfs                     4.0K         0      4.0K   0% /sys/firmware\n--- largest under /data (KB) ---"
+  },
+  {
+   "step": 9,
+   "t": 2.65,
+   "tool": "run_diagnostic",
+   "kind": "observe",
+   "args": {
+    "service": "postgres",
+    "check": "db_locks"
+   },
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.12,
+   "result": "blocked_pid | app | query | waiting_s | blocking_pid | blocking_app | state | blocking_query\n(no blocked sessions)"
+  },
+  {
+   "step": 10,
+   "t": 2.77,
+   "tool": "rollback_config",
+   "kind": "act",
+   "args": {
+    "service": "api",
+    "to_version": 1
+   },
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 10.64,
+   "result": "api config rolled back v2 -> v1; applied: ok"
+  },
+  {
+   "step": 11,
+   "t": 21.41,
+   "tool": "list_services",
+   "kind": "observe",
+   "args": {},
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.15,
+   "result": "service   state       restarts  oom    health   networks             missing_networks\ngateway   running     0         False  -        frontend             -\napi       running     0         False  -        backend,frontend     -\nworker    running     0         False  -        backend              -\npostgres  running     0         False  healthy  backend              -\nredis     running     0         False  -        backend              -"
+  },
+  {
+   "step": 12,
+   "t": 21.56,
+   "tool": "check_endpoints",
+   "kind": "observe",
+   "args": {},
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.05,
+   "result": "GET  /healthz             status=200     1.1ms OK\nGET  /api/health          status=200    15.1ms OK\nGET  /api/products        status=200     4.0ms OK\nGET  /api/orders/recent   status=200    17.6ms OK\nPOST /api/orders          status=201    16.3ms OK"
+  },
+  {
+   "step": 13,
+   "t": 21.61,
+   "tool": "get_recent_changes",
+   "kind": "observe",
+   "args": {
+    "limit": 20
+   },
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.0,
+   "result": "  0.3 min ago  api      v1  by recovery-agent     rollback to v1\n  0.8 min ago  api      v2  by ci-bot             point api at new primary database endpoint"
+  },
+  {
+   "step": 14,
+   "t": 21.61,
+   "tool": "get_metrics",
+   "kind": "observe",
+   "args": {},
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 2.28,
+   "result": "{\n \"containers\": {\n  \"gateway\": {\n   \"cpu_pct\": \"0.37%\",\n   \"mem\": \"2.766MiB / 15.71GiB\",\n   \"mem_pct\": \"0.02%\"\n  },\n  \"worker\": {\n   \"cpu_pct\": \"0.00%\",\n   \"mem\": \"25.05MiB / 15.71GiB\",\n   \"mem_pct\": \"0.16%\"\n  },\n  \"api\": {\n   \"cpu_pct\": \"5.73%\",\n   \"mem\": \"34.49MiB / 256MiB\",\n   \"mem_pct\": \"13.47%\"\n  },\n  \"postgres\": {\n   \"cpu_pct\": \"7.69%\",\n   \"mem\": \"32.01MiB / 15.71GiB\",\n   \"mem_pct\": \"0.20%\"\n  },\n  \"redis\": {\n   \"cpu_pct\": \"0.60%\",\n   \"mem\": \"3.895MiB / 15.71GiB\",\n   \"mem_pct\": \"0.02%\"\n  }\n },\n \"api_app_metrics\": {\n  \"cache_errors_total\": 0,\n  \"db_errors_total\": 0,\n  \"endpoints\": {\n   \"/api/health\": {\n    \"errors_5xx\": 0,\n    \"p50_ms\": 12.6,\n    \"p95_ms\": 12.6,\n    \"requests\": 1\n   },\n   \"/api/orders\": {\n    \"errors_5xx\": 0,\n    \"p50_ms\": 17.9,\n    \"p95_ms\": 22.3,\n    \"requests\": 18\n   },\n   \"/api/orders/recent\": {\n    \"errors_5xx\": 0,\n    \"p50_ms\": 16.8,\n    \"p95_ms\": 19.6,\n    \"requests\": 16\n   },\n   \"/api/products\": {\n    \"errors_5xx\": 0,\n    \"p50_ms\": 2.0,\n    \"p95_ms\": 3.4,\n    \"requests\": 35\n   },\n   \"unmatched\": {\n    \"errors_5xx\": 0,\n    \"p50_ms\": 0.2,\n    \"p95_ms\": 0.4,\n    \"requests\": 3\n   }\n  },\n  \"process_rss_mb\": 48.3,\n  \"uptime_s\": 9.6,\n  \"window_s\": 60\n },\n \"postgres_connections\": \"1 | 40\"\n}"
+  },
+  {
+   "step": 15,
+   "t": 23.89,
+   "tool": "run_diagnostic",
+   "kind": "observe",
+   "args": {
+    "service": "api",
+    "check": "disk"
+   },
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.09,
+   "result": "Filesystem                Size      Used Available Use% Mounted on\noverlay                 252.0G     16.2G     22.3G  42% /\ntmpfs                    64.0M         0     64.0M   0% /dev\ntmpfs                     7.9G         0      7.9G   0% /sys/fs/cgroup\nshm                      64.0M         0     64.0M   0% /dev/shm\n/dev/vda                252.0G     16.2G     22.3G  42% /config\ntmpfs                    48.0M      4.0K     48.0M   0% /data\n/dev/vda                252.0G     16.2G     22.3G  42% /etc/hostname\n/dev/vda                252.0G     16.2G     22.3G  42% /etc/hosts\n/dev/vda                252.0G     16.2G     22.3G  42% /etc/resolv.conf\ntmpfs                     4.0K         0      4.0K   0% /proc/acpi\ntmpfs                    64.0M         0     64.0M   0% /proc/interrupts\ntmpfs                    64.0M         0     64.0M   0% /proc/keys\ntmpfs                    64.0M         0     64.0M   0% /proc/timer_list\ntmpfs                     4.0K         0      4.0K   0% /sys/firmware\n--- largest under /data (KB) ---\n4\t/data/audit/audit.log\n4\t/data/audit\n4\t/data"
+  },
+  {
+   "step": 16,
+   "t": 23.98,
+   "tool": "run_diagnostic",
+   "kind": "observe",
+   "args": {
+    "service": "worker",
+    "check": "disk"
+   },
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.1,
+   "result": "Filesystem                Size      Used Available Use% Mounted on\noverlay                 252.0G     16.2G     22.3G  42% /\ntmpfs                    64.0M         0     64.0M   0% /dev\ntmpfs                     7.9G         0      7.9G   0% /sys/fs/cgroup\nshm                      64.0M         0     64.0M   0% /dev/shm\n/dev/vda                252.0G     16.2G     22.3G  42% /config\n/dev/vda                252.0G     16.2G     22.3G  42% /etc/hostname\n/dev/vda                252.0G     16.2G     22.3G  42% /etc/hosts\n/dev/vda                252.0G     16.2G     22.3G  42% /etc/resolv.conf\ntmpfs                     4.0K         0      4.0K   0% /proc/acpi\ntmpfs                    64.0M         0     64.0M   0% /proc/interrupts\ntmpfs                    64.0M         0     64.0M   0% /proc/keys\ntmpfs                    64.0M         0     64.0M   0% /proc/timer_list\ntmpfs                     4.0K         0      4.0K   0% /sys/firmware\n--- largest under /data (KB) ---"
+  },
+  {
+   "step": 17,
+   "t": 24.09,
+   "tool": "run_diagnostic",
+   "kind": "observe",
+   "args": {
+    "service": "postgres",
+    "check": "db_locks"
+   },
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.1,
+   "result": "blocked_pid | app | query | waiting_s | blocking_pid | blocking_app | state | blocking_query\n(no blocked sessions)"
+  },
+  {
+   "step": 18,
+   "t": 24.19,
+   "tool": "verify_recovery",
+   "kind": "observe",
+   "args": {},
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 8.75,
+   "result": "{\n \"healthy\": true,\n \"probe_success_rate\": 1.0,\n \"probe_p95_ms\": 21.8,\n \"problems\": [],\n \"probes\": {\n  \"GET /healthz\": {\n   \"ok\": 8,\n   \"fail\": 0,\n   \"statuses\": [\n    200\n   ],\n   \"last_error\": \"\"\n  },\n  \"GET /api/health\": {\n   \"ok\": 8,\n   \"fail\": 0,\n   \"statuses\": [\n    200\n   ],\n   \"last_error\": \"\"\n  },\n  \"GET /api/products\": {\n   \"ok\": 8,\n   \"fail\": 0,\n   \"statuses\": [\n    200\n   ],\n   \"last_error\": \"\"\n  },\n  \"GET /api/orders/recent\": {\n   \"ok\": 8,\n   \"fail\": 0,\n   \"statuses\": [\n    200\n   ],\n   \"last_error\": \"\"\n  },\n  \"POST /api/orders\": {\n   \"ok\": 8,\n   \"fail\": 0,\n   \"statuses\": [\n    201\n   ],\n   \"last_error\": \"\"\n  }\n }\n}"
+  },
+  {
+   "step": 19,
+   "t": 32.94,
+   "tool": "submit_report",
+   "kind": "final",
+   "args": {
+    "root_causes": [
+     {
+      "component": "api",
+      "category": "bad_config_deploy",
+      "evidence": "1 log line(s) on api: a hostname does not resolve, e.g. probe /api/health: {\"checks\":{\"cache\":\"ok\",\"database\":\"error: [Errno -2] Name does not resolve\",\"disk\":\"ok\"},\"status\":\"; v2 changed host (get_config diff), matching the errors; api was deployed 0.4 min ago: v2 'point api at new primary database endpoint' by ci-bot"
+     }
+    ],
+    "recovered": true,
+    "summary": "[confirmed] roll back the api config to v1 (undoing v2) (confidence 0.76; evidence: 1 log line(s) on api: a hostname does not resolve, e.g. probe /api/health: {\"checks\":{\"cache\":\"ok\",\"database\":\"error: [Errno -2] Name does not resolve\",\"disk\":\"ok\"},\"status\":\"). Prevent: validate configs in CI and canary deploys with automatic rollback on error-rate spikes."
+   },
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.0,
+   "result": "report submitted"
+  }
+ ],
+ "episode_seconds": 110.1
+}

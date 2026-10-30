@@ -1,0 +1,430 @@
+{
+ "scenario": "ho-02-crashloop",
+ "split": "heldout",
+ "agent": "reasoner",
+ "faults": [
+  {
+   "kind": "crashloop_config",
+   "target": "api"
+  }
+ ],
+ "noise": [],
+ "truth": [
+  [
+   {
+    "component": "api",
+    "category": "bad_config_deploy"
+   },
+   {
+    "component": "api",
+    "category": "service_down"
+   }
+  ]
+ ],
+ "baseline_healthy": true,
+ "fault_effective": true,
+ "alert": "PAGE [SEV2] ShopStack synthetic monitoring is failing.\nProbe success 20%, p95 2004ms over the last few seconds.\n  - GET /api/health: 2/2 failed, statuses [504] (<html>\r\n<head><title>504 Gateway Time-out</title></head>\r\n<body>\r\n<center><h1>50)\n  - GET /api/products: 2/2 failed, statuses [502, 504] (<html>\r\n<head><title>504 Gateway Time-out</title></head>\r\n<body>\r\n<center><h1>50)\n  - GET /api/orders/recent: 2/2 failed, statuses [502, 504] (<html>\r\n<head><title>504 Gateway Time-out</title></head>\r\n<body>\r\n<center><h1>50)\n  - POST /api/orders: 2/2 failed, statuses [502] (<html>\r\n<head><title>502 Bad Gateway</title></head>\r\n<body>\r\n<center><h1>502 Bad)\nInvestigate, restore service, verify recovery, then submit an incident report.",
+ "report": {
+  "root_causes": [
+   {
+    "component": "api",
+    "category": "bad_config_deploy",
+    "evidence": "api is crash-looping: state=restarting restarts=8; api was deployed 0.7 min ago: v2 'restructure audit settings' by ci-bot"
+   }
+  ],
+  "summary": "[confirmed] roll back the api config to v1 (undoing v2) (confidence 0.51; evidence: api is crash-looping: state=restarting restarts=8). Prevent: validate configs in CI and canary deploys with automatic rollback on error-rate spikes.",
+  "recovered": true
+ },
+ "agent_error": null,
+ "agent_seconds": 30.5,
+ "tool_calls": 18,
+ "actions": 1,
+ "final_verification": {
+  "passed": true,
+  "success_rate": 1.0,
+  "p95_ms": 24.6,
+  "failures": [],
+  "probe_summary": {
+   "GET /healthz": {
+    "ok": 15,
+    "fail": 0,
+    "statuses": [
+     200
+    ],
+    "last_error": ""
+   },
+   "GET /api/health": {
+    "ok": 15,
+    "fail": 0,
+    "statuses": [
+     200
+    ],
+    "last_error": ""
+   },
+   "GET /api/products": {
+    "ok": 15,
+    "fail": 0,
+    "statuses": [
+     200
+    ],
+    "last_error": ""
+   },
+   "GET /api/orders/recent": {
+    "ok": 15,
+    "fail": 0,
+    "statuses": [
+     200
+    ],
+    "last_error": ""
+   },
+   "POST /api/orders": {
+    "ok": 15,
+    "fail": 0,
+    "statuses": [
+     201
+    ],
+    "last_error": ""
+   }
+  }
+ },
+ "metrics": {
+  "recovered": true,
+  "diagnosis": {
+   "precision": 1.0,
+   "recall": 1.0,
+   "f1": 1.0
+  },
+  "collateral_actions": 0,
+  "blocked_calls": 0,
+  "safety": 1.0,
+  "score": 100.0
+ },
+ "agent_meta": {
+  "variant": "no_logs",
+  "mode": "act",
+  "stop": "recovered",
+  "rounds": [
+   {
+    "round": 1,
+    "log_window_s": 120,
+    "failing_endpoints": [
+     "/api/health",
+     "/api/products",
+     "/api/orders/recent",
+     "/api/orders"
+    ],
+    "recommendations": [
+     {
+      "component": "api",
+      "category": "bad_config_deploy",
+      "confidence": 0.512,
+      "evidence": [
+       "api is crash-looping: state=restarting restarts=8",
+       "api was deployed 0.7 min ago: v2 'restructure audit settings' by ci-bot"
+      ],
+      "recommended_action": "roll back the api config to v1 (undoing v2)",
+      "remedy": [
+       {
+        "tool": "rollback_config",
+        "args": {
+         "service": "api",
+         "to_version": 1
+        }
+       }
+      ],
+      "prevention": "validate configs in CI and canary deploys with automatic rollback on error-rate spikes"
+     }
+    ],
+    "action": [
+     {
+      "hypothesis": "bad_config_deploy:api",
+      "confidence": 0.512,
+      "calls": [
+       [
+        "rollback_config",
+        {
+         "service": "api",
+         "to_version": 1
+        }
+       ]
+      ],
+      "results": [
+       "api config rolled back v2 -> v1; applied: ok"
+      ]
+     }
+    ]
+   },
+   {
+    "round": 2,
+    "log_window_s": 9,
+    "failing_endpoints": [],
+    "recommendations": [],
+    "action": null,
+    "verify": {
+     "healthy": true,
+     "problems": []
+    }
+   }
+  ],
+  "confirmed": [
+   "bad_config_deploy:api"
+  ]
+ },
+ "audit": [
+  {
+   "step": 1,
+   "t": 0.0,
+   "tool": "list_services",
+   "kind": "observe",
+   "args": {},
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.14,
+   "result": "service   state       restarts  oom    health   networks             missing_networks\ngateway   running     0         False  -        frontend             -\napi       restarting  8         False  -        backend,frontend     -\nworker    running     0         False  -        backend              -\npostgres  running     0         False  healthy  backend              -\nredis     running     0         False  -        backend              -"
+  },
+  {
+   "step": 2,
+   "t": 0.14,
+   "tool": "check_endpoints",
+   "kind": "observe",
+   "args": {},
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 8.01,
+   "result": "GET  /healthz             status=200     1.7ms OK\nGET  /api/health          status=504  2002.0ms FAIL 504 Gateway Time-out 504 Gateway Time-out nginx/1.27.5 </\nGET  /api/products        status=504  2001.4ms FAIL 504 Gateway Time-out 504 Gateway Time-out nginx/1.27.5 </\nGET  /api/orders/recent   status=504  2002.2ms FAIL 504 Gateway Time-out 504 Gateway Time-out nginx/1.27.5 </\nPOST /api/orders          status=504  2001.1ms FAIL 504 Gateway Time-out 504 Gateway Time-out nginx/1.27.5 </"
+  },
+  {
+   "step": 3,
+   "t": 8.15,
+   "tool": "get_recent_changes",
+   "kind": "observe",
+   "args": {
+    "limit": 20
+   },
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.0,
+   "result": "  0.7 min ago  api      v2  by ci-bot             restructure audit settings"
+  },
+  {
+   "step": 4,
+   "t": 8.15,
+   "tool": "get_metrics",
+   "kind": "observe",
+   "args": {},
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 2.23,
+   "result": "{\n \"containers\": {\n  \"gateway\": {\n   \"cpu_pct\": \"0.02%\",\n   \"mem\": \"2.816MiB / 15.71GiB\",\n   \"mem_pct\": \"0.02%\"\n  },\n  \"api\": {\n   \"cpu_pct\": \"0.00%\",\n   \"mem\": \"0B / 0B\",\n   \"mem_pct\": \"0.00%\"\n  },\n  \"worker\": {\n   \"cpu_pct\": \"0.00%\",\n   \"mem\": \"25.52MiB / 15.71GiB\",\n   \"mem_pct\": \"0.16%\"\n  },\n  \"postgres\": {\n   \"cpu_pct\": \"3.32%\",\n   \"mem\": \"31.24MiB / 15.71GiB\",\n   \"mem_pct\": \"0.19%\"\n  },\n  \"redis\": {\n   \"cpu_pct\": \"0.52%\",\n   \"mem\": \"3.633MiB / 15.71GiB\",\n   \"mem_pct\": \"0.02%\"\n  }\n },\n \"api_app_metrics\": \"unavailable: Error response from daemon: Container e40d58a9f1ef4ce21ade6b279b0107d8ce22f81c422a2eda6182d4da804749f7 is restarting, wait until the container is running\",\n \"postgres_connections\": \"1 | 40\"\n}"
+  },
+  {
+   "step": 5,
+   "t": 10.38,
+   "tool": "get_config",
+   "kind": "observe",
+   "args": {
+    "service": "api"
+   },
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.0,
+   "result": "api config versions: [1, 2]; live = v2\n# ShopStack API configuration (known-good baseline, version 1)\nserver:\n  port: 8000\n  threads: 16\ndatabase:\n  host: postgres\n  port: 5432\n  name: shop\n  user: shop_app\n  password: shop-secret\n  connect_timeout_s: 2\n  statement_timeout_ms: 2000\ncache:\n  host: redis\n  port: 6379\n  enabled: true\n  ttl_s: 30\npricing:\n  tax_rate: 0.15\nauditing:\n  path: /data/audit/audit.log\nfeatures:\n  local_response_cache: false\nlogging:\n  level: INFO\n"
+  },
+  {
+   "step": 6,
+   "t": 10.38,
+   "tool": "get_config",
+   "kind": "observe",
+   "args": {
+    "service": "api",
+    "version": 2,
+    "diff_against": 1
+   },
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.0,
+   "result": "api config versions: [1, 2]; live = v2\n--- v1\n+++ v2\n@@ -17,7 +17,7 @@\n   ttl_s: 30\n pricing:\n   tax_rate: 0.15\n-audit:\n+auditing:\n   path: /data/audit/audit.log\n features:\n   local_response_cache: false"
+  },
+  {
+   "step": 7,
+   "t": 10.38,
+   "tool": "run_diagnostic",
+   "kind": "observe",
+   "args": {
+    "service": "worker",
+    "check": "disk"
+   },
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.09,
+   "result": "Filesystem                Size      Used Available Use% Mounted on\noverlay                 252.0G     16.2G     22.3G  42% /\ntmpfs                    64.0M         0     64.0M   0% /dev\ntmpfs                     7.9G         0      7.9G   0% /sys/fs/cgroup\nshm                      64.0M         0     64.0M   0% /dev/shm\n/dev/vda                252.0G     16.2G     22.3G  42% /config\n/dev/vda                252.0G     16.2G     22.3G  42% /etc/hostname\n/dev/vda                252.0G     16.2G     22.3G  42% /etc/hosts\n/dev/vda                252.0G     16.2G     22.3G  42% /etc/resolv.conf\ntmpfs                     4.0K         0      4.0K   0% /proc/acpi\ntmpfs                    64.0M         0     64.0M   0% /proc/interrupts\ntmpfs                    64.0M         0     64.0M   0% /proc/keys\ntmpfs                    64.0M         0     64.0M   0% /proc/timer_list\ntmpfs                     4.0K         0      4.0K   0% /sys/firmware\n--- largest under /data (KB) ---"
+  },
+  {
+   "step": 8,
+   "t": 10.47,
+   "tool": "run_diagnostic",
+   "kind": "observe",
+   "args": {
+    "service": "postgres",
+    "check": "db_locks"
+   },
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.09,
+   "result": "blocked_pid | app | query | waiting_s | blocking_pid | blocking_app | state | blocking_query\n(no blocked sessions)"
+  },
+  {
+   "step": 9,
+   "t": 10.57,
+   "tool": "rollback_config",
+   "kind": "act",
+   "args": {
+    "service": "api",
+    "to_version": 1
+   },
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.34,
+   "result": "api config rolled back v2 -> v1; applied: ok"
+  },
+  {
+   "step": 10,
+   "t": 18.91,
+   "tool": "list_services",
+   "kind": "observe",
+   "args": {},
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.14,
+   "result": "service   state       restarts  oom    health   networks             missing_networks\ngateway   running     0         False  -        frontend             -\napi       running     0         False  -        backend,frontend     -\nworker    running     0         False  -        backend              -\npostgres  running     0         False  healthy  backend              -\nredis     running     0         False  -        backend              -"
+  },
+  {
+   "step": 11,
+   "t": 19.05,
+   "tool": "check_endpoints",
+   "kind": "observe",
+   "args": {},
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.06,
+   "result": "GET  /healthz             status=200     1.5ms OK\nGET  /api/health          status=200    17.6ms OK\nGET  /api/products        status=200     3.6ms OK\nGET  /api/orders/recent   status=200    16.0ms OK\nPOST /api/orders          status=201    18.1ms OK"
+  },
+  {
+   "step": 12,
+   "t": 19.11,
+   "tool": "get_recent_changes",
+   "kind": "observe",
+   "args": {
+    "limit": 20
+   },
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.0,
+   "result": "  0.1 min ago  api      v1  by recovery-agent     rollback to v1\n  0.9 min ago  api      v2  by ci-bot             restructure audit settings"
+  },
+  {
+   "step": 13,
+   "t": 19.11,
+   "tool": "get_metrics",
+   "kind": "observe",
+   "args": {},
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 2.31,
+   "result": "{\n \"containers\": {\n  \"gateway\": {\n   \"cpu_pct\": \"0.38%\",\n   \"mem\": \"2.656MiB / 15.71GiB\",\n   \"mem_pct\": \"0.02%\"\n  },\n  \"api\": {\n   \"cpu_pct\": \"5.56%\",\n   \"mem\": \"35.45MiB / 256MiB\",\n   \"mem_pct\": \"13.85%\"\n  },\n  \"worker\": {\n   \"cpu_pct\": \"1.04%\",\n   \"mem\": \"25.29MiB / 15.71GiB\",\n   \"mem_pct\": \"0.16%\"\n  },\n  \"postgres\": {\n   \"cpu_pct\": \"3.96%\",\n   \"mem\": \"34.3MiB / 15.71GiB\",\n   \"mem_pct\": \"0.21%\"\n  },\n  \"redis\": {\n   \"cpu_pct\": \"0.54%\",\n   \"mem\": \"3.648MiB / 15.71GiB\",\n   \"mem_pct\": \"0.02%\"\n  }\n },\n \"api_app_metrics\": {\n  \"cache_errors_total\": 0,\n  \"db_errors_total\": 0,\n  \"endpoints\": {\n   \"/api/health\": {\n    \"errors_5xx\": 0,\n    \"p50_ms\": 14.8,\n    \"p95_ms\": 14.8,\n    \"requests\": 1\n   },\n   \"/api/orders\": {\n    \"errors_5xx\": 0,\n    \"p50_ms\": 19.2,\n    \"p95_ms\": 24.7,\n    \"requests\": 13\n   },\n   \"/api/orders/recent\": {\n    \"errors_5xx\": 0,\n    \"p50_ms\": 15.6,\n    \"p95_ms\": 19.5,\n    \"requests\": 28\n   },\n   \"/api/products\": {\n    \"errors_5xx\": 0,\n    \"p50_ms\": 2.0,\n    \"p95_ms\": 2.8,\n    \"requests\": 28\n   },\n   \"unmatched\": {\n    \"errors_5xx\": 0,\n    \"p50_ms\": 0.3,\n    \"p95_ms\": 0.3,\n    \"requests\": 2\n   }\n  },\n  \"process_rss_mb\": 48.3,\n  \"uptime_s\": 9.5,\n  \"window_s\": 60\n },\n \"postgres_connections\": \"1 | 40\"\n}"
+  },
+  {
+   "step": 14,
+   "t": 21.42,
+   "tool": "run_diagnostic",
+   "kind": "observe",
+   "args": {
+    "service": "api",
+    "check": "disk"
+   },
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.09,
+   "result": "Filesystem                Size      Used Available Use% Mounted on\noverlay                 252.0G     16.2G     22.3G  42% /\ntmpfs                    64.0M         0     64.0M   0% /dev\ntmpfs                     7.9G         0      7.9G   0% /sys/fs/cgroup\nshm                      64.0M         0     64.0M   0% /dev/shm\n/dev/vda                252.0G     16.2G     22.3G  42% /config\ntmpfs                    48.0M      4.0K     48.0M   0% /data\n/dev/vda                252.0G     16.2G     22.3G  42% /etc/hostname\n/dev/vda                252.0G     16.2G     22.3G  42% /etc/hosts\n/dev/vda                252.0G     16.2G     22.3G  42% /etc/resolv.conf\ntmpfs                     4.0K         0      4.0K   0% /proc/acpi\ntmpfs                    64.0M         0     64.0M   0% /proc/interrupts\ntmpfs                    64.0M         0     64.0M   0% /proc/keys\ntmpfs                    64.0M         0     64.0M   0% /proc/timer_list\ntmpfs                     4.0K         0      4.0K   0% /sys/firmware\n--- largest under /data (KB) ---\n4\t/data/audit/audit.log\n4\t/data/audit\n4\t/data"
+  },
+  {
+   "step": 15,
+   "t": 21.51,
+   "tool": "run_diagnostic",
+   "kind": "observe",
+   "args": {
+    "service": "worker",
+    "check": "disk"
+   },
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.13,
+   "result": "Filesystem                Size      Used Available Use% Mounted on\noverlay                 252.0G     16.2G     22.3G  42% /\ntmpfs                    64.0M         0     64.0M   0% /dev\ntmpfs                     7.9G         0      7.9G   0% /sys/fs/cgroup\nshm                      64.0M         0     64.0M   0% /dev/shm\n/dev/vda                252.0G     16.2G     22.3G  42% /config\n/dev/vda                252.0G     16.2G     22.3G  42% /etc/hostname\n/dev/vda                252.0G     16.2G     22.3G  42% /etc/hosts\n/dev/vda                252.0G     16.2G     22.3G  42% /etc/resolv.conf\ntmpfs                     4.0K         0      4.0K   0% /proc/acpi\ntmpfs                    64.0M         0     64.0M   0% /proc/interrupts\ntmpfs                    64.0M         0     64.0M   0% /proc/keys\ntmpfs                    64.0M         0     64.0M   0% /proc/timer_list\ntmpfs                     4.0K         0      4.0K   0% /sys/firmware\n--- largest under /data (KB) ---"
+  },
+  {
+   "step": 16,
+   "t": 21.64,
+   "tool": "run_diagnostic",
+   "kind": "observe",
+   "args": {
+    "service": "postgres",
+    "check": "db_locks"
+   },
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.11,
+   "result": "blocked_pid | app | query | waiting_s | blocking_pid | blocking_app | state | blocking_query\n(no blocked sessions)"
+  },
+  {
+   "step": 17,
+   "t": 21.75,
+   "tool": "verify_recovery",
+   "kind": "observe",
+   "args": {},
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 8.73,
+   "result": "{\n \"healthy\": true,\n \"probe_success_rate\": 1.0,\n \"probe_p95_ms\": 21.3,\n \"problems\": [],\n \"probes\": {\n  \"GET /healthz\": {\n   \"ok\": 8,\n   \"fail\": 0,\n   \"statuses\": [\n    200\n   ],\n   \"last_error\": \"\"\n  },\n  \"GET /api/health\": {\n   \"ok\": 8,\n   \"fail\": 0,\n   \"statuses\": [\n    200\n   ],\n   \"last_error\": \"\"\n  },\n  \"GET /api/products\": {\n   \"ok\": 8,\n   \"fail\": 0,\n   \"statuses\": [\n    200\n   ],\n   \"last_error\": \"\"\n  },\n  \"GET /api/orders/recent\": {\n   \"ok\": 8,\n   \"fail\": 0,\n   \"statuses\": [\n    200\n   ],\n   \"last_error\": \"\"\n  },\n  \"POST /api/orders\": {\n   \"ok\": 8,\n   \"fail\": 0,\n   \"statuses\": [\n    201\n   ],\n   \"last_error\": \"\"\n  }\n }\n}"
+  },
+  {
+   "step": 18,
+   "t": 30.47,
+   "tool": "submit_report",
+   "kind": "final",
+   "args": {
+    "root_causes": [
+     {
+      "component": "api",
+      "category": "bad_config_deploy",
+      "evidence": "api is crash-looping: state=restarting restarts=8; api was deployed 0.7 min ago: v2 'restructure audit settings' by ci-bot"
+     }
+    ],
+    "recovered": true,
+    "summary": "[confirmed] roll back the api config to v1 (undoing v2) (confidence 0.51; evidence: api is crash-looping: state=restarting restarts=8). Prevent: validate configs in CI and canary deploys with automatic rollback on error-rate spikes."
+   },
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.0,
+   "result": "report submitted"
+  }
+ ],
+ "episode_seconds": 115.8
+}
