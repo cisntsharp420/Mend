@@ -93,7 +93,7 @@ const LEVELMAP = `<!doctype html><html><head>${FONTS}<style>${BASE}
     await p.screenshot({ ...jpg("app-results.jpg"), fullPage: true,
       clip: { x: 0, y: box.y - 24, width: 1440, height: end.y + end.height - box.y + 48 } });
   });
-  await app("#ho-08-rollback-trap", { width: 1440, height: 900 }, async (p) => {
+  await app("#ho-11-conn-leak-and-dns", { width: 1440, height: 900 }, async (p) => {
     await p.click('[data-agent="reasoner"]');
     await p.evaluate(() => scrollTo(0, 0));   // the click scrolls; clip boxes must be measured from the top
     const box = await (await p.$("#replay")).boundingBox();

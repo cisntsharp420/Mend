@@ -24,7 +24,7 @@ from recovery.faults import FAULTS  # noqa: E402
 from recovery.playbook import recommendations  # noqa: E402
 from recovery.scoring import WEIGHTS  # noqa: E402
 
-DEFAULT_TAGS = ["baseline-noop", "baseline-restart_all", "baseline-rules"]
+DEFAULT_TAGS = ["baseline-noop", "baseline-restart_all", "baseline-rules", "reasoner-dev", "reasoner-heldout"]
 RESULT_CHARS = 900
 
 
@@ -68,6 +68,8 @@ def build(tags: list[str]) -> dict:
         for split, st in run["by_split"].items():
             summary.setdefault(run["agent"], {})[split] = {**st, "repeats": run.get("repeats", 1)}
     order = sorted(scenarios.values(), key=lambda s: (s["split"] != "dev", s["id"]))
+    featured = [a for a in ("reasoner", "llm") if a in agents]   # Mend AI first, baselines after
+    agents = featured + [a for a in agents if a not in featured]
     return {"agents": agents, "weights": WEIGHTS, "scenarios": order, "reports": reports(tags), "summary": summary,
             "names": {a: display_name(a) for a in agents}, "notes": {a: DESCRIPTIONS.get(a, "") for a in agents}}
 

@@ -31,14 +31,16 @@ Mend is an agent that recovers failing systems, and a test bench that proves it.
 **Open the page.** Point at the hero numbers: 22 incidents, 12 fault types, 12 never-seen tests,
 100 recorded runs. *"Every run on this page really happened."*
 
-**Click "Watch a recovery".** It opens `ho-08-rollback-trap` with **Mend AI** and plays it.
-- The trap: a bad deploy, then a harmless deploy on top of it, so "undo the last change" is not
-  enough.
-- Watch the steps: Mend AI reads the logs ("password authentication failed"), reads the config
-  diffs, finds the deploy that changed the password, and rolls back past it in one step.
-- Verdict card: **100/100**, one action, zero collateral damage.
+**Click "Watch a recovery".** It opens `ho-11-conn-leak-and-dns` with **Mend AI** and plays it.
+- Two faults at once: a background job leaking database connections, and a bad deploy pointing
+  the API at a host that doesn't exist. The challenge calls this out: multiple issues at once.
+- Watch the steps: Mend AI sees the database at 38 of 40 connections with "too many clients"
+  errors, stops the leaking `report-backfill` job, then sees hostname errors from the bad deploy
+  and rolls the config back.
+- Verdict card: **100/100**, both root causes named, zero collateral damage, in 42 seconds.
+- Point at the agent buttons: **Runbook 10, Restart 3, Idle 10.** Only Mend AI fixed it.
 
-**Switch to the Restart Agent** on the same incident.
+**Open `ho-08-rollback-trap`** (a bad deploy hidden under a harmless one) and click **Restart Agent**.
 - It restarts all five services. Nothing is fixed: **0/100**, and 4 of those restarts hit
   services that were never broken.
 - *"This is why the verifier matters. A restart can turn the dashboard green for a moment, but it
