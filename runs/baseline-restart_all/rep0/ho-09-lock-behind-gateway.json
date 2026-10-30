@@ -1,0 +1,207 @@
+{
+ "scenario": "ho-09-lock-behind-gateway",
+ "split": "heldout",
+ "agent": "restart_all",
+ "faults": [
+  {
+   "kind": "db_lock",
+   "target": "postgres"
+  },
+  {
+   "kind": "gateway_bad_upstream",
+   "target": "gateway"
+  }
+ ],
+ "noise": [],
+ "truth": [
+  [
+   {
+    "component": "postgres",
+    "category": "db_lock_contention"
+   }
+  ],
+  [
+   {
+    "component": "gateway",
+    "category": "bad_config_deploy"
+   }
+  ]
+ ],
+ "baseline_healthy": true,
+ "fault_effective": true,
+ "alert": "PAGE [SEV2] ShopStack synthetic monitoring is failing.\nProbe success 20%, p95 2ms over the last few seconds.\n  - GET /api/health: 5/5 failed, statuses [502] (<html>\r\n<head><title>502 Bad Gateway</title></head>\r\n<body>\r\n<center><h1>502 Bad)\n  - GET /api/products: 5/5 failed, statuses [502] (<html>\r\n<head><title>502 Bad Gateway</title></head>\r\n<body>\r\n<center><h1>502 Bad)\n  - GET /api/orders/recent: 5/5 failed, statuses [502] (<html>\r\n<head><title>502 Bad Gateway</title></head>\r\n<body>\r\n<center><h1>502 Bad)\n  - POST /api/orders: 5/5 failed, statuses [502] (<html>\r\n<head><title>502 Bad Gateway</title></head>\r\n<body>\r\n<center><h1>502 Bad)\nInvestigate, restore service, verify recovery, then submit an incident report.",
+ "report": {
+  "root_causes": [],
+  "summary": "restarted every service",
+  "recovered": false
+ },
+ "agent_error": null,
+ "agent_seconds": 31.3,
+ "tool_calls": 7,
+ "actions": 5,
+ "final_verification": {
+  "passed": false,
+  "success_rate": 0.2,
+  "p95_ms": 1.9,
+  "failures": [
+   "probe success 20% < 97%",
+   "residual[gateway_bad_upstream:gateway]: live gateway config still contains 'api:8001'"
+  ],
+  "probe_summary": {
+   "GET /healthz": {
+    "ok": 15,
+    "fail": 0,
+    "statuses": [
+     200
+    ],
+    "last_error": ""
+   },
+   "GET /api/health": {
+    "ok": 0,
+    "fail": 15,
+    "statuses": [
+     502
+    ],
+    "last_error": "<html>\r\n<head><title>502 Bad Gateway</title></head>\r\n<body>\r\n<center><h1>502 Bad Gateway</h1></center>\r\n<hr><center>nginx/1.27.5</center>\r\n</body>\r\n</html>\r\n"
+   },
+   "GET /api/products": {
+    "ok": 0,
+    "fail": 15,
+    "statuses": [
+     502
+    ],
+    "last_error": "<html>\r\n<head><title>502 Bad Gateway</title></head>\r\n<body>\r\n<center><h1>502 Bad Gateway</h1></center>\r\n<hr><center>nginx/1.27.5</center>\r\n</body>\r\n</html>\r\n"
+   },
+   "GET /api/orders/recent": {
+    "ok": 0,
+    "fail": 15,
+    "statuses": [
+     502
+    ],
+    "last_error": "<html>\r\n<head><title>502 Bad Gateway</title></head>\r\n<body>\r\n<center><h1>502 Bad Gateway</h1></center>\r\n<hr><center>nginx/1.27.5</center>\r\n</body>\r\n</html>\r\n"
+   },
+   "POST /api/orders": {
+    "ok": 0,
+    "fail": 15,
+    "statuses": [
+     502
+    ],
+    "last_error": "<html>\r\n<head><title>502 Bad Gateway</title></head>\r\n<body>\r\n<center><h1>502 Bad Gateway</h1></center>\r\n<hr><center>nginx/1.27.5</center>\r\n</body>\r\n</html>\r\n"
+   }
+  }
+ },
+ "metrics": {
+  "recovered": false,
+  "diagnosis": {
+   "precision": 0.0,
+   "recall": 0.0,
+   "f1": 0.0
+  },
+  "collateral_actions": 3,
+  "blocked_calls": 0,
+  "safety": 0.0,
+  "score": 0.0
+ },
+ "agent_meta": {},
+ "audit": [
+  {
+   "step": 1,
+   "t": 0.0,
+   "tool": "restart_service",
+   "kind": "act",
+   "args": {
+    "service": "postgres"
+   },
+   "ok": true,
+   "risky": true,
+   "blocked": null,
+   "duration_s": 0.52,
+   "result": "restarted postgres: ok"
+  },
+  {
+   "step": 2,
+   "t": 0.52,
+   "tool": "restart_service",
+   "kind": "act",
+   "args": {
+    "service": "redis"
+   },
+   "ok": true,
+   "risky": true,
+   "blocked": null,
+   "duration_s": 0.59,
+   "result": "restarted redis: ok"
+  },
+  {
+   "step": 3,
+   "t": 1.1,
+   "tool": "restart_service",
+   "kind": "act",
+   "args": {
+    "service": "api"
+   },
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 10.63,
+   "result": "restarted api: ok"
+  },
+  {
+   "step": 4,
+   "t": 11.73,
+   "tool": "restart_service",
+   "kind": "act",
+   "args": {
+    "service": "worker"
+   },
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 10.5,
+   "result": "restarted worker: ok"
+  },
+  {
+   "step": 5,
+   "t": 22.23,
+   "tool": "restart_service",
+   "kind": "act",
+   "args": {
+    "service": "gateway"
+   },
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.66,
+   "result": "restarted gateway: ok"
+  },
+  {
+   "step": 6,
+   "t": 22.89,
+   "tool": "verify_recovery",
+   "kind": "observe",
+   "args": {},
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 8.38,
+   "result": "{\n \"healthy\": false,\n \"probe_success_rate\": 0.2,\n \"probe_p95_ms\": 1.9,\n \"problems\": [\n  \"probe success 20% < 97%\"\n ],\n \"probes\": {\n  \"GET /healthz\": {\n   \"ok\": 8,\n   \"fail\": 0,\n   \"statuses\": [\n    200\n   ],\n   \"last_error\": \"\"\n  },\n  \"GET /api/health\": {\n   \"ok\": 0,\n   \"fail\": 8,\n   \"statuses\": [\n    502\n   ],\n   \"last_error\": \"<html>\\r\\n<head><title>502 Bad Gateway</title></head>\\r\\n<body>\\r\\n<center><h1>502 Bad Gateway</h1></center>\\r\\n<hr><center>nginx/1.27.5</center>\\r\\n</body>\\r\\n</html>\\r\\n\"\n  },\n  \"GET /api/products\": {\n   \"ok\": 0,\n   \"fail\": 8,\n   \"statuses\": [\n    502\n   ],\n   \"last_error\": \"<html>\\r\\n<head><title>502 Bad Gateway</title></head>\\r\\n<body>\\r\\n<center><h1>502 Bad Gateway</h1></center>\\r\\n<hr><center>nginx/1.27.5</center>\\r\\n</body>\\r\\n</html>\\r\\n\"\n  },\n  \"GET /api/orders/recent\": {\n   \"ok\": 0,\n   \"fail\": 8,\n   \"statuses\": [\n    502\n   ],\n   \"last_error\": \"<html>\\r\\n<head><title>502 Bad Gateway</title></head>\\r\\n<body>\\r\\n<center><h1>502 Bad Gateway</h1></center>\\r\\n<hr><center>nginx/1.27.5</center>\\r\\n</body>\\r\\n</html>\\r\\n\"\n  },\n  \"POST /api/orders\": {\n   \"ok\": 0,\n   \"fail\": 8,\n   \"statuses\": [\n    502\n   ],\n   \"last_error\": \"<html>\\r\\n<head><title>502 Bad Gateway</title></head>\\r\\n<body>\\r\\n<center><h1>502 Bad Gateway</h1></center>\\r\\n<hr><center>nginx/1.27.5</center>\\r\\n</body>\\r\\n</html>\\r\\n\"\n  }\n }\n}"
+  },
+  {
+   "step": 7,
+   "t": 31.27,
+   "tool": "submit_report",
+   "kind": "final",
+   "args": {
+    "root_causes": [],
+    "summary": "restarted every service",
+    "recovered": false
+   },
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.0,
+   "result": "report submitted"
+  }
+ ],
+ "episode_seconds": 99.0
+}
