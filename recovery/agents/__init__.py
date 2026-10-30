@@ -24,13 +24,14 @@ AGENTS = ["noop", "restart_all", "rules", "reasoner", "llm"]
 
 # Names shown to people (reports, web app). Internal ids above stay the same everywhere else.
 DISPLAY_NAMES = {"noop": "Idle Agent", "restart_all": "Restart Agent", "rules": "Runbook Agent",
-                 "reasoner": "Reasoning Agent", "llm": "Mend AI"}
+                 "reasoner": "Mend AI", "llm": "Mend AI (Claude)"}
 DESCRIPTIONS = {"noop": "does nothing; the floor every agent must beat",
                 "restart_all": "restarts every service, the classic first reflex",
                 "rules": "a hand-written runbook built from the dev incidents",
-                "reasoner": "forms hypotheses from logs, metrics and diagnostics, fixes the most likely cause, re-checks; "
-                            "designed knowing all 12 fault types, never tuned on held-out runs",
-                "llm": "Claude, reasoning over the same toolbox"}
+                "reasoner": "a reasoning engine: forms hypotheses from logs, metrics and diagnostics, fixes the most "
+                            "likely cause, re-checks; runs offline, designed knowing all 12 fault types, never tuned "
+                            "on held-out runs",
+                "llm": "Claude reasoning over the same toolbox; needs an Anthropic API key"}
 
 
 def display_name(agent: str) -> str:

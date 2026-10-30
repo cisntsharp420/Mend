@@ -379,7 +379,7 @@ function renderIncident() {
       </section>
     </div>
     <section class="card">
-      <div class="tl-head"><h3>What the ${esc(NAME(state.agent))} did, step by step <span style="text-transform:none;letter-spacing:0;font-weight:400">(${esc(AGENT_NOTE[state.agent] || "")})</span></h3>
+      <div class="tl-head"><h3>What ${NAME(state.agent).endsWith("Agent") ? "the " : ""}${esc(NAME(state.agent))} did, step by step <span style="text-transform:none;letter-spacing:0;font-weight:400">(${esc(AGENT_NOTE[state.agent] || "")})</span></h3>
         <div class="ctrl"><button type="button" class="primary" id="play">▶ Play</button><button type="button" id="next">Next step</button><button type="button" id="all">Show all</button></div></div>
       ${run.error ? `<p class="empty">Agent error: ${esc(run.error)}</p>` : ""}
       ${steps ? `<ol class="steps" id="steps">${steps}</ol>` : `<p class="empty">No tool calls.</p>`}
@@ -499,10 +499,11 @@ document.addEventListener("click", e => {
   else if (t.id === "all") showAll();
 });
 addEventListener("hashchange", () => select(location.hash.slice(1)));
-select(byId[location.hash.slice(1)] ? location.hash.slice(1) : "ho-08-rollback-trap", "rules");
+select(byId[location.hash.slice(1)] ? location.hash.slice(1) : "ho-08-rollback-trap", DATA.agents.includes("reasoner") ? "reasoner" : "rules");
 
 function renderStats() {
-  const runs = DATA.scenarios.reduce((n, s) => n + Object.keys(s.runs).length, 0);
+  const runs = DATA.summary ? Object.values(DATA.summary).flatMap(Object.values).reduce((n, st) => n + st.episodes, 0)
+    : DATA.scenarios.reduce((n, s) => n + Object.keys(s.runs).length, 0);
   const kinds = new Set(DATA.scenarios.flatMap(s => s.faults.map(f => f.kind))).size;
   const held = DATA.scenarios.filter(s => s.split === "heldout").length;
   $("#stats").innerHTML = [[DATA.scenarios.length, "incidents"], [kinds, "fault types"], [held, "never-seen tests"], [runs, "recorded runs"]]
