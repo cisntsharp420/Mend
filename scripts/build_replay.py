@@ -5,16 +5,20 @@ Usage: python scripts/build_replay.py [--raw PATH] [tag ...]   (default: the thr
 
 The page embeds a compact copy of each episode record (alert, faults, every tool call with a
 trimmed result, the agent's report, the verifier's verdict, the score), so it opens in any
-browser with nothing installed and nothing running.
+browser with nothing installed and nothing running. It also embeds each run's CSV and PDF
+incident report (the same files `python -m recovery export` writes) for its download buttons.
 """
 from __future__ import annotations
 
+import base64
 import json
 import sys
+import tempfile
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
+from recovery import export  # noqa: E402
 from recovery.faults import FAULTS  # noqa: E402
 from recovery.scoring import WEIGHTS  # noqa: E402
 
@@ -58,7 +62,30 @@ def build(tags: list[str]) -> dict:
                 "truth": rec["truth"], "runs": {}})
             sc["runs"][agent] = episode(rec)
     order = sorted(scenarios.values(), key=lambda s: (s["split"] != "dev", s["id"]))
-    return {"agents": agents, "weights": WEIGHTS, "scenarios": order}
+    return {"agents": agents, "weights": WEIGHTS, "scenarios": order, "reports": reports(tags)}
+
+
+def reports(tags: list[str]) -> dict:
+    """The same CSV and PDF files `python -m recovery export` writes, embedded for the download buttons."""
+    out: dict = {"runs": {}}
+    with tempfile.TemporaryDirectory() as tmp:
+        every = []
+        for tag in tags:
+            recs = export.load(tag)
+            every += recs
+            csv_path, pdf_path = Path(tmp) / f"{tag}.csv", Path(tmp) / f"{tag}.pdf"
+            export.write_csv(recs, csv_path)
+            entry = {"tag": tag, "csv": csv_path.read_text(encoding="utf-8-sig")}
+            try:
+                export.write_pdf(recs, pdf_path, f"Incident Recovery Report: {tag}")
+                entry["pdf"] = base64.b64encode(pdf_path.read_bytes()).decode()
+            except SystemExit:   # reportlab not installed: ship the CSV only
+                pass
+            out["runs"][recs[0]["agent"]] = entry
+        all_path = Path(tmp) / "all.csv"
+        export.write_csv(every, all_path)
+        out["all_csv"] = all_path.read_text(encoding="utf-8-sig")
+    return out
 
 
 def main() -> None:

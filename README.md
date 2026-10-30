@@ -22,7 +22,8 @@ Full per-scenario table: [`docs/results.md`](docs/results.md). Raw episode recor
 
 **See it without installing anything:** open [`docs/replay.html`](docs/replay.html) in any browser.
 It replays every recorded run step by step: the pager alert, each tool call and its output, the
-agent's report, and the verifier's verdict. Rebuild it from new runs with
+agent's report, and the verifier's verdict, with buttons to download each agent's PDF and CSV
+incident report. Rebuild it from new runs with
 `python scripts/build_replay.py <tag> ...`.
 
 **What this shows**

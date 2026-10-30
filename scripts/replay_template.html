@@ -137,6 +137,17 @@ button:focus-visible, a:focus-visible, summary:focus-visible { outline: 2px soli
 .facts { display: flex; flex-wrap: wrap; gap: 6px 18px; font-size: .84rem; color: var(--muted) }
 .facts b { color: var(--ink); font-weight: 500 }
 footer { color: var(--muted); font-size: .84rem; max-width: 80ch }
+/* report downloads */
+.reports { background: var(--panel); border: 1px solid var(--line); border-radius: var(--r); padding: 12px 16px;
+  display: flex; flex-wrap: wrap; gap: 10px 20px; align-items: center; justify-content: space-between }
+.reports .what { display: grid; gap: 2px; min-width: 0 }
+.reports .what p { margin: 0; color: var(--muted); font-size: .86rem }
+.reports .ctrl button .ext { font: 600 .68rem var(--f-body); letter-spacing: .07em; margin-right: 6px; color: var(--accent) }
+.reports .ctrl button.primary .ext { color: inherit; opacity: .85 }
+.reports .ctrl button:disabled { opacity: .55; cursor: progress }
+#dl-msg { flex-basis: 100%; margin: 0; font-size: .84rem; color: var(--muted) }
+#dl-msg:empty { display: none }
+#dl-msg.err { color: var(--bad) }
 @media (prefers-reduced-motion: reduce) { * { scroll-behavior: auto !important } }
 </style>
 
@@ -145,6 +156,17 @@ footer { color: var(--muted); font-size: .84rem; max-width: 80ch }
     <h1>ShopStack Incident Replay</h1>
     <p class="lede">Every run below really happened. A five-service shop was broken on purpose, an agent tried to fix it through a guarded toolbox, and an independent verifier decided whether it actually recovered. Pick an incident, pick an agent, and press Play.</p>
   </header>
+
+  <section class="reports" aria-label="Download reports">
+    <div class="what"><h3>Incident reports</h3>
+      <p>Summary plus one page per incident: alert, ground truth, the agent's report, every step, the verdict.</p></div>
+    <div class="ctrl">
+      <button type="button" class="primary" id="dl-pdf"><span class="ext">PDF</span><span class="lbl">Report</span></button>
+      <button type="button" id="dl-csv"><span class="ext">CSV</span><span class="lbl">Spreadsheet</span></button>
+      <button type="button" id="dl-all"><span class="ext">CSV</span>All agents</button>
+    </div>
+    <p id="dl-msg" role="status" aria-live="polite"></p>
+  </section>
 
   <section class="board" aria-label="Scoreboard"><table id="board"></table></section>
 
@@ -297,12 +319,53 @@ function play() {
   state.timer = setInterval(() => { if (!nextStep()) stopPlay(); }, 650);
 }
 
+function renderReports() {
+  const r = DATA.reports?.runs?.[state.agent];
+  $("#dl-pdf").hidden = !r?.pdf; $("#dl-csv").hidden = !r;
+  $("#dl-pdf .lbl").textContent = `Report: ${state.agent}`;
+  $("#dl-csv .lbl").textContent = `Spreadsheet: ${state.agent}`;
+}
+
+function say(text, err = false) { const m = $("#dl-msg"); m.textContent = text; m.classList.toggle("err", err); }
+
+async function offer(filename, data, button) {
+  button.disabled = true; say("");
+  try {
+    if (window.claude?.use) {
+      const downloads = await window.claude.use("downloads");
+      if (!downloads) return say("Downloads aren't available in this view. The same files are in docs/reports/ in the project.", true);
+      await downloads.save({ filename, data });
+      say(`Saved ${filename}.`);
+    } else {   // opened as a plain file outside Claude: an ordinary browser download
+      const a = Object.assign(document.createElement("a"), { href: URL.createObjectURL(data), download: filename });
+      document.body.append(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+      say(`Downloading ${filename}.`);
+    }
+  } catch (e) {
+    const code = e?.code;
+    if (code === "declined") say("Download cancelled.");
+    else if (code === "rate_limited") say("Another download is waiting for your confirmation. Finish that one first.", true);
+    else say("Downloads aren't available in this view. The same files are in docs/reports/ in the project.", true);
+  } finally { button.disabled = false; }
+}
+
+const csvBlob = text => new Blob(["\ufeff" + text], { type: "text/csv" });   // BOM so Excel reads UTF-8
+const pdfBlob = b64 => new Blob([Uint8Array.from(atob(b64), c => c.charCodeAt(0))], { type: "application/pdf" });
+
+document.addEventListener("click", e => {
+  const t = e.target.closest("button"); if (!t) return;
+  const r = DATA.reports?.runs?.[state.agent];
+  if (t.id === "dl-pdf" && r?.pdf) offer(`incident-report-${state.agent}.pdf`, pdfBlob(r.pdf), t);
+  else if (t.id === "dl-csv" && r) offer(`incident-report-${state.agent}.csv`, csvBlob(r.csv), t);
+  else if (t.id === "dl-all" && DATA.reports) offer("incident-reports-all-agents.csv", csvBlob(DATA.reports.all_csv), t);
+});
+
 function select(id, agent) {
   if (!byId[id]) return;
   state.id = id;
   state.agent = agent && byId[id].runs[agent] ? agent : (state.agent && byId[id].runs[state.agent] ? state.agent : DATA.agents[DATA.agents.length - 1]);
   if (location.hash.slice(1) !== id) history.replaceState(null, "", "#" + id);
-  renderBoard(); renderQueue(); renderIncident();
+  renderBoard(); renderReports(); renderQueue(); renderIncident();
 }
 
 document.addEventListener("click", e => {
