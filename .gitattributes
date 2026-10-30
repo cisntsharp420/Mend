@@ -1,0 +1,3 @@
+# Config files are mounted into Linux containers; keep LF endings on Windows clones too.
+* text=auto eol=lf
+*.whl binary
