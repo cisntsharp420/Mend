@@ -20,6 +20,7 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 from recovery import export  # noqa: E402
 from recovery.faults import FAULTS  # noqa: E402
+from recovery.playbook import recommendations  # noqa: E402
 from recovery.scoring import WEIGHTS  # noqa: E402
 
 DEFAULT_TAGS = ["baseline-noop", "baseline-restart_all", "baseline-rules"]
@@ -59,7 +60,7 @@ def build(tags: list[str]) -> dict:
             sc = scenarios.setdefault(rec["scenario"], {
                 "id": rec["scenario"], "split": rec["split"], "noise": rec.get("noise", []),
                 "faults": [{**fl, "about": FAULTS[fl["kind"]].description} for fl in rec["faults"]],
-                "truth": rec["truth"], "runs": {}})
+                "truth": rec["truth"], "advice": recommendations(rec["faults"]), "runs": {}})
             sc["runs"][agent] = episode(rec)
     order = sorted(scenarios.values(), key=lambda s: (s["split"] != "dev", s["id"]))
     return {"agents": agents, "weights": WEIGHTS, "scenarios": order, "reports": reports(tags)}

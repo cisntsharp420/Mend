@@ -189,6 +189,11 @@ main.page { display: grid; gap: 28px; padding-block: 8px 64px }
 .facts { display: flex; flex-wrap: wrap; gap: 6px 20px; font-size: .84rem; color: var(--muted) }
 .facts b { color: var(--ink); font-weight: 600 }
 
+.advice ul { margin: 0; padding-left: 18px; display: grid; gap: 5px; color: #d5e4e0 }
+.advice .adv-row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap }
+.advice .adv-label { font-weight: 700; font-size: .92rem }
+.advice .badge { margin-top: 0 }
+
 footer.site { border-top: 1px solid var(--line); color: var(--muted); font-size: .84rem }
 footer.site .inner { padding-block: 24px 36px; display: flex; flex-wrap: wrap; gap: 10px 32px; justify-content: space-between }
 footer.site p { margin: 0; max-width: 78ch }
@@ -386,6 +391,17 @@ function renderIncident() {
       </div>
       <div><span class="facts">Agent reported: </span>${reported.length ? reported.map(k => `<span class="rc ${hit(k) ? "hit" : "miss"}">${esc(k)}</span>`).join("") : `<span class="facts">no root cause</span>`}</div>
       ${run.verify.failures?.length ? `<div class="facts">Verifier findings: ${run.verify.failures.map(esc).join("; ")}</div>` : ""}
+    </section>
+    <section class="card advice">
+      <h3>Recommendations</h3>
+      <div class="adv-row"><span class="adv-label">Immediate fix</span>
+        <span class="badge ${m.recovered ? "ok" : "bad"}">${m.recovered ? "Done by the agent" : "Still needed"}</span></div>
+      <ul>${(s.advice || []).map(a => `<li>${esc(a.fix)}</li>`).join("")}</ul>
+      <div class="adv-row"><span class="adv-label">Prevent a repeat</span></div>
+      <ul>${(s.advice || []).flatMap(a => a.prevent).map(p => `<li>${esc(p)}</li>`).join("")}</ul>
+      ${run.report?.recommendations?.length ? `<div class="adv-row"><span class="adv-label">The agent's own recommendations</span></div>
+      <ul>${run.report.recommendations.map(p => `<li>${esc(p)}</li>`).join("")}</ul>` : ""}
+      <p class="empty">Fix and prevention advice come from the remediation playbook for the injected fault types, not from the agent.</p>
     </section>`;
 }
 

@@ -144,7 +144,10 @@ python -m recovery export baseline-noop baseline-restart_all baseline-rules   # 
 `export` writes to `docs/reports/`: for each run, `<tag>.csv` (one row per incident: verdict,
 score breakdown, true vs reported root causes, evidence, actions taken, verifier numbers) and
 `<tag>.pdf` (a summary page, then one page per incident with the pager alert, ground truth,
-the agent's report, every tool call, and the verification result), plus `all_episodes.csv`.
+the agent's report, every tool call, the verification result, and recommendations), plus
+`all_episodes.csv`. Recommendations give the immediate fix (marked done or still needed) and how to
+prevent a repeat, from a remediation playbook for each fault type (`recovery/playbook.py`); an
+agent can add its own through the optional `recommendations` field of `submit_report`.
 
 Manual demo: `python -m recovery inject dev-04-db-password`, then `python -m recovery status`
 shows the broken system.

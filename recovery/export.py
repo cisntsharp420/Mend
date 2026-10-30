@@ -13,6 +13,7 @@ from pathlib import Path
 from xml.sax.saxutils import escape
 
 from .faults import FAULTS
+from .playbook import recommendations
 from .sandbox import ROOT
 from .scoring import WEIGHTS
 
@@ -21,7 +22,8 @@ COLUMNS = [
     "safety_points", "diagnosis_precision", "diagnosis_recall", "diagnosis_f1", "collateral_actions",
     "blocked_calls", "actions", "tool_calls", "agent_seconds", "traffic_success_rate", "p95_ms",
     "injected_faults", "red_herrings", "true_root_causes", "reported_root_causes", "evidence", "agent_summary",
-    "actions_taken", "verifier_findings", "agent_error",
+    "actions_taken", "verifier_findings", "agent_error", "fix_status", "recommended_fix", "prevention",
+    "agent_recommendations",
 ]
 
 
@@ -76,6 +78,10 @@ def row(rec: dict) -> dict:
         "reported_root_causes": _causes(rc), "evidence": " | ".join(c.get("evidence", "") for c in rc if c.get("evidence")),
         "agent_summary": rep.get("summary", ""), "actions_taken": "; ".join(_actions(rec.get("audit", []))),
         "verifier_findings": "; ".join(fv.get("failures", [])), "agent_error": (rec.get("agent_error") or "").strip()[:300],
+        "fix_status": "done by the agent" if m["recovered"] else "still needed",
+        "recommended_fix": " | ".join(r["fix"] for r in recommendations(rec["faults"])),
+        "prevention": " | ".join(p for r in recommendations(rec["faults"]) for p in r["prevent"]),
+        "agent_recommendations": " | ".join(rep.get("recommendations", [])),
     }
 
 
@@ -222,6 +228,20 @@ def write_pdf(recs: list[dict], path: Path, title: str) -> None:
         if r["verifier_findings"]:
             verif.append(P(f"Findings: {escape(r['verifier_findings'])}"))
         story.append(KeepTogether(verif))
+
+        recs = recommendations(rec["faults"])
+        status = ('<font color="#1d7a4c">done by the agent</font>' if good
+                  else '<font color="#be3329"><b>still needed</b></font>')
+        advice = [P("Recommendations", "h2"), P(f"<b>Immediate fix</b> ({status})")]
+        advice += [P(f"• {escape(x['fix'])}") for x in recs]
+        advice.append(P("<b>Prevent a repeat</b>"))
+        advice += [P(f"• {escape(t)}") for x in recs for t in x["prevent"]]
+        if rep.get("recommendations"):
+            advice.append(P("<b>The agent's own recommendations</b>"))
+            advice += [P(f"• {escape(t)}") for t in rep["recommendations"]]
+        advice.append(P("Fix and prevention advice come from the remediation playbook for the injected fault "
+                        "types, not from the agent.", "sub"))
+        story.append(KeepTogether(advice))
 
     def footer(canvas, doc):
         canvas.saveState()

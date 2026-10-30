@@ -45,3 +45,21 @@ def test_pdf_is_written(tmp_path):
     p = tmp_path / "out.pdf"
     write_pdf([REC], p, "Incident Recovery Report: t")
     assert p.read_bytes()[:5] == b"%PDF-" and p.stat().st_size > 2000
+
+
+def test_playbook_covers_every_fault_type():
+    from recovery.faults import FAULTS
+    from recovery.playbook import PLAYBOOK, recommendations
+    assert set(PLAYBOOK) == set(FAULTS)
+    (r,) = recommendations([{"kind": "network_partition", "target": "redis"}])
+    assert "redis" in r["fix"] and len(r["prevent"]) >= 2
+
+
+def test_row_includes_recommendations():
+    r = row(REC)
+    assert r["fix_status"] == "done by the agent"
+    assert r["recommended_fix"].startswith("Roll back the api config") and r["prevention"]
+    unrecovered = {**REC, "metrics": {**REC["metrics"], "recovered": False},
+                   "report": {**REC["report"], "recommendations": ["rotate secrets via a vault"]}}
+    r2 = row(unrecovered)
+    assert r2["fix_status"] == "still needed" and r2["agent_recommendations"] == "rotate secrets via a vault"

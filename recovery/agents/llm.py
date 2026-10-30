@@ -53,7 +53,8 @@ When rolling back, choose the last version that is actually good, which may be m
 unless it is the only way to contain damage.
 - Finish with submit_report. Categories: {", ".join(CATEGORIES)}. Report one entry per distinct \
 root cause, naming the component where the cause lives (e.g. the service whose config or process \
-is at fault), not every service that showed symptoms."""
+is at fault), not every service that showed symptoms. Add up to three short recommendations: \
+anything still needed to fix the incident, and how to prevent it from happening again."""
 
 MINIMAL_PROMPT = ("You are an SRE agent. The ShopStack system is failing. Use the tools to fix it, "
                   "then call submit_report.")
