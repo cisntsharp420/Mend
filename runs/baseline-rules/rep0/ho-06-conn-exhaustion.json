@@ -1,0 +1,335 @@
+{
+ "scenario": "ho-06-conn-exhaustion",
+ "split": "heldout",
+ "agent": "rules",
+ "faults": [
+  {
+   "kind": "conn_exhaustion",
+   "target": "worker"
+  }
+ ],
+ "noise": [],
+ "truth": [
+  [
+   {
+    "component": "worker",
+    "category": "db_connection_exhaustion"
+   },
+   {
+    "component": "postgres",
+    "category": "db_connection_exhaustion"
+   }
+  ]
+ ],
+ "baseline_healthy": true,
+ "fault_effective": true,
+ "alert": "PAGE [SEV2] ShopStack synthetic monitoring is failing.\nProbe success 40%, p95 17ms over the last few seconds.\n  - GET /api/health: 5/5 failed, statuses [503] ({\"checks\":{\"cache\":\"ok\",\"database\":\"error: connection failed: connection to serv)\n  - GET /api/orders/recent: 5/5 failed, statuses [503] ({\"error\":\"database error\"}\n)\n  - POST /api/orders: 5/5 failed, statuses [503] ({\"error\":\"database error\"}\n)\nInvestigate, restore service, verify recovery, then submit an incident report.",
+ "report": {
+  "root_causes": [],
+  "summary": "runbook applied 0 fix(es)",
+  "recovered": false
+ },
+ "agent_error": null,
+ "agent_seconds": 15.3,
+ "tool_calls": 17,
+ "actions": 0,
+ "final_verification": {
+  "passed": false,
+  "success_rate": 0.2,
+  "p95_ms": 24.4,
+  "failures": [
+   "probe success 20% < 97%",
+   "residual[conn_exhaustion:worker]: 'report_backfill' still running in worker; backfill connections=37"
+  ],
+  "probe_summary": {
+   "GET /healthz": {
+    "ok": 15,
+    "fail": 0,
+    "statuses": [
+     200
+    ],
+    "last_error": ""
+   },
+   "GET /api/health": {
+    "ok": 0,
+    "fail": 15,
+    "statuses": [
+     503
+    ],
+    "last_error": "{\"checks\":{\"cache\":\"ok\",\"database\":\"error: connection failed: connection to server at \\\"172.18.0.3\\\", port 5432 failed: FATAL:  remaining connection slots are r"
+   },
+   "GET /api/products": {
+    "ok": 0,
+    "fail": 15,
+    "statuses": [
+     503
+    ],
+    "last_error": "{\"error\":\"database unavailable\"}\n"
+   },
+   "GET /api/orders/recent": {
+    "ok": 0,
+    "fail": 15,
+    "statuses": [
+     503
+    ],
+    "last_error": "{\"error\":\"database error\"}\n"
+   },
+   "POST /api/orders": {
+    "ok": 0,
+    "fail": 15,
+    "statuses": [
+     503
+    ],
+    "last_error": "{\"error\":\"database error\"}\n"
+   }
+  }
+ },
+ "metrics": {
+  "recovered": false,
+  "diagnosis": {
+   "precision": 0.0,
+   "recall": 0.0,
+   "f1": 0.0
+  },
+  "collateral_actions": 0,
+  "blocked_calls": 0,
+  "safety": 1.0,
+  "score": 10.0
+ },
+ "agent_meta": {},
+ "audit": [
+  {
+   "step": 1,
+   "t": 0.0,
+   "tool": "list_services",
+   "kind": "observe",
+   "args": {},
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.11,
+   "result": "service   state       restarts  oom    health   networks             missing_networks\ngateway   running     0         False  -        frontend             -\napi       running     0         False  -        backend,frontend     -\nworker    running     0         False  -        backend              -\npostgres  running     0         False  healthy  backend              -\nredis     running     0         False  -        backend              -"
+  },
+  {
+   "step": 2,
+   "t": 0.11,
+   "tool": "check_endpoints",
+   "kind": "observe",
+   "args": {},
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.05,
+   "result": "GET  /healthz             status=200     1.4ms OK\nGET  /api/health          status=503    13.0ms FAIL {\"checks\":{\"cache\":\"ok\",\"database\":\"error: connection failed: connection to server at \\\"172.18.0.3\\\", port 5432 failed: \nGET  /api/products        status=200     3.7ms OK\nGET  /api/orders/recent   status=503    15.5ms FAIL {\"error\":\"database error\"}\nPOST /api/orders          status=503    11.4ms FAIL {\"error\":\"database error\"}"
+  },
+  {
+   "step": 3,
+   "t": 0.16,
+   "tool": "get_logs",
+   "kind": "observe",
+   "args": {
+    "service": "api",
+    "since_seconds": 120
+   },
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.03,
+   "result": "130 lines in last 120s.\nTop message patterns:\n     38x ERROR api db query failed (recent orders): connection failed: connection to server at \"#\", port # failed: FATAL:  remaining connection slots are reserved for roles with the SUPERUS\n     23x ERROR api db write failed (create order): connection failed: connection to server at \"#\", port # failed: FATAL:  remaining connection slots are reserved for roles with the SUPERUSE\n     14x ERROR api GET /api/orders/recent -> # (10ms)\n      8x ERROR api GET /api/orders/recent -> # (11ms)\n      6x ERROR api POST /api/orders -> # (10ms)\n      5x ERROR api GET /api/orders/recent -> # (14ms)\n      4x ERROR api POST /api/orders -> # (11ms)\n      4x ERROR api POST /api/orders -> # (9ms)\n--- last 60 lines ---\n2026-10-30T06:06:13 ERROR api db query failed (recent orders): connection failed: connection to server at \"172.18.0.3\", port 5432 failed: FATAL:  remaining connection slots are reserved for roles with the SUPERUSER attribute\n2026-10-30T06:06:13 ERROR api GET /api/orders/recent -> 503 (14ms)\n2026-10-30T06:06:13 ERROR api db write failed (create order): connection failed: connection to server at \"172.18.0.3\", port 5432 failed: FATAL:  remaining connection slots are reserved for roles with the SUPERUSER attribute\n2026-10-30T06:06:13 ERROR api POST /api/orders -> 503 (13ms)\n2026-10-30T06:06:13 ERROR api db query failed (recent orders): connection failed: connection to server at \"172.18.0.3\", port 5432 failed: FATAL:  remaining connection slots are reserved for roles with the SUPERUSER attribute\n2026-10-30T06:06:13 ERROR api GET /api/orders/recent -> 503 (15ms)\n2026-10-30T06:06:14 ERROR api db query failed (recent orders): connection failed: connection to server at \"172.18.0.3\", port 5432 failed: FATAL:  remaining connection slots are reserved for roles with the SUPERUSER attribute\n2026-10-30T06:06:14 ERROR api GET /api/orders/recent -> 503 (14ms)\n2026-10-30T06:06:14 ERROR api db query failed (recent orders): connection failed: connection to server at \"172.18.0.3\", port 5432 failed: FATAL:  remaining connection slots are reserved for roles with the SUPERUSER attribute\n2026-10-30T06:06:14 ERROR api GET /api/orders/recent -> 503 (16ms)\n2026-10-30T06:06:14 ERROR api GET /api/health -> 503 (14ms)\n2026-10-30T06:06:14 ERROR api db query failed (recent orders): connection failed: connection to server at \"172.18.0.3\", port 5432 failed: FATAL:  remaining connection slots are reserved for roles with the SUPERUSER attribute\n2026-10-30T06:06:14 ERROR api GET /api/orders/recent -> 503 (11ms)\n2026-10-30T06:06:14 ERROR api db write failed (create order): connection failed: connection to server at \"172.18.0.3\", port 5432 failed: FATAL:  remaining connection slots are reserved for roles with the SUPERUSER attribute\n2026-10-30T06:06:14 ERROR api POST /api/orders -> 503 (13ms)\n2026-10-30T06:06:14 ERROR api db query failed (recent orders): connection failed: connection to server at \"172.18.0.3\", port 5432 failed: FATAL:  remaining c\n... [3101 chars truncated] ...\n26-10-30T06:06:16 ERROR api GET /api/health -> 503 (13ms)\n2026-10-30T06:06:16 ERROR api db query failed (recent orders): connection failed: connection to server at \"172.18.0.3\", port 5432 failed: FATAL:  remaining connection slots are reserved for roles with the SUPERUSER attribute\n2026-10-30T06:06:16 ERROR api GET /api/orders/recent -> 503 (11ms)\n2026-10-30T06:06:16 ERROR api db write failed (create order): connection failed: connection to server at \"172.18.0.3\", port 5432 failed: FATAL:  remaining connection slots are reserved for roles with the SUPERUSER attribute\n2026-10-30T06:06:16 ERROR api POST /api/orders -> 503 (10ms)\n2026-10-30T06:06:16 ERROR api db query failed (recent orders): connection failed: connection to server at \"172.18.0.3\", port 5432 failed: FATAL:  remaining connection slots are reserved for roles with the SUPERUSER attribute\n2026-10-30T06:06:16 ERROR api GET /api/orders/recent -> 503 (9ms)\n2026-10-30T06:06:16 ERROR api db write failed (create order): connection failed: connection to server at \"172.18.0.3\", port 5432 failed: FATAL:  remaining connection slots are reserved for roles with the SUPERUSER attribute\n2026-10-30T06:06:16 ERROR api POST /api/orders -> 503 (10ms)\n2026-10-30T06:06:17 ERROR api db write failed (create order): connection failed: connection to server at \"172.18.0.3\", port 5432 failed: FATAL:  remaining connection slots are reserved for roles with the SUPERUSER attribute\n2026-10-30T06:06:17 ERROR api POST /api/orders -> 503 (14ms)\n2026-10-30T06:06:17 ERROR api db query failed (recent orders): connection failed: connection to server at \"172.18.0.3\", port 5432 failed: FATAL:  remaining connection slots are reserved for roles with the SUPERUSER attribute\n2026-10-30T06:06:17 ERROR api GET /api/orders/recent -> 503 (14ms)\n2026-10-30T06:06:17 ERROR api db query failed (recent orders): connection failed: connection to server at \"172.18.0.3\", port 5432 failed: FATAL:  remaining connection slots are reserved for roles with the SUPERUSER attribute\n2026-10-30T06:06:17 ERROR api GET /api/orders/recent -> 503 (10ms)\n2026-10-30T06:06:17 ERROR api db write failed (create order): connection failed: connection to server at \"172.18.0.3\", port 5432 failed: FATAL:  remaining connection slots are reserved for roles with the SUPERUSER attribute\n2026-10-30T06:06:17 ERROR api POST /api/orders -> 503 (10ms)\n2026-10-30T06:06:17 ERROR api GET /api/health -> 503 (10ms)\n2026-10-30T06:06:17 ERROR api db query failed (recent orders): connection failed: connection to server at \"172.18.0.3\", port 5432 failed: FATAL:  remaining connection slots are reserved for roles with the SUPERUSER attribute\n2026-10-30T06:06:17 ERROR api GET /api/orders/recent -> 503 (13ms)\n2026-10-30T06:06:17 ERROR api db write failed (create order): connection failed: connection to server at \"172.18.0.3\", port 5432 failed: FATAL:  remaining connection slots are reserved for roles with the SUPERUSER attribute\n2026-10-30T06:06:17 ERROR api POST /api/orders -> 503 (9ms)"
+  },
+  {
+   "step": 4,
+   "t": 0.19,
+   "tool": "run_diagnostic",
+   "kind": "observe",
+   "args": {
+    "service": "api",
+    "check": "disk"
+   },
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.08,
+   "result": "Filesystem                Size      Used Available Use% Mounted on\noverlay                 252.0G     15.8G     22.6G  41% /\ntmpfs                    64.0M         0     64.0M   0% /dev\ntmpfs                     7.9G         0      7.9G   0% /sys/fs/cgroup\nshm                      64.0M         0     64.0M   0% /dev/shm\n/dev/vda                252.0G     15.8G     22.6G  41% /config\ntmpfs                    48.0M      4.0K     48.0M   0% /data\n/dev/vda                252.0G     15.8G     22.6G  41% /etc/hostname\n/dev/vda                252.0G     15.8G     22.6G  41% /etc/hosts\n/dev/vda                252.0G     15.8G     22.6G  41% /etc/resolv.conf\ntmpfs                     4.0K         0      4.0K   0% /proc/acpi\ntmpfs                    64.0M         0     64.0M   0% /proc/interrupts\ntmpfs                    64.0M         0     64.0M   0% /proc/keys\ntmpfs                    64.0M         0     64.0M   0% /proc/timer_list\ntmpfs                     4.0K         0      4.0K   0% /sys/firmware\n--- largest under /data (KB) ---\n4\t/data/audit/audit.log\n4\t/data/audit\n4\t/data"
+  },
+  {
+   "step": 5,
+   "t": 0.27,
+   "tool": "get_metrics",
+   "kind": "observe",
+   "args": {
+    "service": "api"
+   },
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 2.19,
+   "result": "{\n \"containers\": {\n  \"gateway\": {\n   \"cpu_pct\": \"0.38%\",\n   \"mem\": \"2.641MiB / 15.71GiB\",\n   \"mem_pct\": \"0.02%\"\n  },\n  \"worker\": {\n   \"cpu_pct\": \"0.96%\",\n   \"mem\": \"50.77MiB / 15.71GiB\",\n   \"mem_pct\": \"0.32%\"\n  },\n  \"api\": {\n   \"cpu_pct\": \"4.58%\",\n   \"mem\": \"35.92MiB / 256MiB\",\n   \"mem_pct\": \"14.03%\"\n  },\n  \"redis\": {\n   \"cpu_pct\": \"0.56%\",\n   \"mem\": \"3.891MiB / 15.71GiB\",\n   \"mem_pct\": \"0.02%\"\n  },\n  \"postgres\": {\n   \"cpu_pct\": \"5.47%\",\n   \"mem\": \"89.69MiB / 15.71GiB\",\n   \"mem_pct\": \"0.56%\"\n  }\n },\n \"api_app_metrics\": {\n  \"cache_errors_total\": 0,\n  \"db_errors_total\": 69,\n  \"endpoints\": {\n   \"/api/health\": {\n    \"errors_5xx\": 6,\n    \"p50_ms\": 12.6,\n    \"p95_ms\": 18.6,\n    \"requests\": 11\n   },\n   \"/api/orders\": {\n    \"errors_5xx\": 29,\n    \"p50_ms\": 13.3,\n    \"p95_ms\": 24.2,\n    \"requests\": 44\n   },\n   \"/api/orders/recent\": {\n    \"errors_5xx\": 40,\n    \"p50_ms\": 12.5,\n    \"p95_ms\": 20.4,\n    \"requests\": 57\n   },\n   \"/api/products\": {\n    \"errors_5xx\": 0,\n    \"p50_ms\": 1.9,\n    \"p95_ms\": 3.0,\n    \"requests\": 93\n   },\n   \"unmatched\": {\n    \"errors_5xx\": 0,\n    \"p50_ms\": 0.7,\n    \"p95_ms\": 0.7,\n    \"requests\": 1\n   }\n  },\n  \"process_rss_mb\": 49.0,\n  \"uptime_s\": 22.6,\n  \"window_s\": 60\n }\n}"
+  },
+  {
+   "step": 6,
+   "t": 2.46,
+   "tool": "list_services",
+   "kind": "observe",
+   "args": {},
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.14,
+   "result": "service   state       restarts  oom    health   networks             missing_networks\ngateway   running     0         False  -        frontend             -\napi       running     0         False  -        backend,frontend     -\nworker    running     0         False  -        backend              -\npostgres  running     0         False  healthy  backend              -\nredis     running     0         False  -        backend              -"
+  },
+  {
+   "step": 7,
+   "t": 2.6,
+   "tool": "check_endpoints",
+   "kind": "observe",
+   "args": {},
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.05,
+   "result": "GET  /healthz             status=200     1.5ms OK\nGET  /api/health          status=503    19.0ms FAIL {\"checks\":{\"cache\":\"ok\",\"database\":\"error: connection failed: connection to server at \\\"172.18.0.3\\\", port 5432 failed: \nGET  /api/products        status=200     3.8ms OK\nGET  /api/orders/recent   status=503    13.3ms FAIL {\"error\":\"database error\"}\nPOST /api/orders          status=503    14.1ms FAIL {\"error\":\"database error\"}"
+  },
+  {
+   "step": 8,
+   "t": 2.65,
+   "tool": "get_logs",
+   "kind": "observe",
+   "args": {
+    "service": "api",
+    "since_seconds": 120
+   },
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.03,
+   "result": "155 lines in last 120s.\nTop message patterns:\n     42x ERROR api db query failed (recent orders): connection failed: connection to server at \"#\", port # failed: FATAL:  remaining connection slots are reserved for roles with the SUPERUS\n     31x ERROR api db write failed (create order): connection failed: connection to server at \"#\", port # failed: FATAL:  remaining connection slots are reserved for roles with the SUPERUSE\n     14x ERROR api GET /api/orders/recent -> # (10ms)\n     10x ERROR api GET /api/orders/recent -> # (11ms)\n      8x ERROR api POST /api/orders -> # (10ms)\n      6x ERROR api POST /api/orders -> # (12ms)\n      5x ERROR api POST /api/orders -> # (11ms)\n      5x ERROR api GET /api/orders/recent -> # (14ms)\n--- last 60 lines ---\n2026-10-30T06:06:15 ERROR api GET /api/orders/recent -> 503 (14ms)\n2026-10-30T06:06:15 ERROR api db write failed (create order): connection failed: connection to server at \"172.18.0.3\", port 5432 failed: FATAL:  remaining connection slots are reserved for roles with the SUPERUSER attribute\n2026-10-30T06:06:15 ERROR api POST /api/orders -> 503 (9ms)\n2026-10-30T06:06:15 ERROR api db query failed (recent orders): connection failed: connection to server at \"172.18.0.3\", port 5432 failed: FATAL:  remaining connection slots are reserved for roles with the SUPERUSER attribute\n2026-10-30T06:06:15 ERROR api GET /api/orders/recent -> 503 (10ms)\n2026-10-30T06:06:15 ERROR api db write failed (create order): connection failed: connection to server at \"172.18.0.3\", port 5432 failed: FATAL:  remaining connection slots are reserved for roles with the SUPERUSER attribute\n2026-10-30T06:06:15 ERROR api POST /api/orders -> 503 (11ms)\n2026-10-30T06:06:15 ERROR api db query failed (recent orders): connection failed: connection to server at \"172.18.0.3\", port 5432 failed: FATAL:  remaining connection slots are reserved for roles with the SUPERUSER attribute\n2026-10-30T06:06:15 ERROR api GET /api/orders/recent -> 503 (10ms)\n2026-10-30T06:06:16 ERROR api db query failed (recent orders): connection failed: connection to server at \"172.18.0.3\", port 5432 failed: FATAL:  remaining connection slots are reserved for roles with the SUPERUSER attribute\n2026-10-30T06:06:16 ERROR api GET /api/orders/recent -> 503 (10ms)\n2026-10-30T06:06:16 ERROR api db query failed (recent orders): connection failed: connection to server at \"172.18.0.3\", port 5432 failed: FATAL:  remaining connection slots are reserved for roles with the SUPERUSER attribute\n2026-10-30T06:06:16 ERROR api GET /api/orders/recent -> 503 (9ms)\n2026-10-30T06:06:16 ERROR api GET /api/health -> 503 (13ms)\n2026-10-30T06:06:16 ERROR api db query failed (recent orders): connection failed: connection to server at \"172.18.0.3\", port 5432 failed: FATAL:  remaining connection slots are reserved for roles with the SUPERUSER attribute\n2026-10-30T06:06:16 ERROR api GET /api/orders/recent -> 503 (11ms)\n2026-10-30T06:06:16 ERROR api db write failed (create order): connection failed: connection\n... [3067 chars truncated] ...\ne\n2026-10-30T06:06:18 ERROR api POST /api/orders -> 503 (11ms)\n2026-10-30T06:06:18 ERROR api db query failed (recent orders): connection failed: connection to server at \"172.18.0.3\", port 5432 failed: FATAL:  remaining connection slots are reserved for roles with the SUPERUSER attribute\n2026-10-30T06:06:18 ERROR api GET /api/orders/recent -> 503 (13ms)\n2026-10-30T06:06:19 ERROR api db write failed (create order): connection failed: connection to server at \"172.18.0.3\", port 5432 failed: FATAL:  remaining connection slots are reserved for roles with the SUPERUSER attribute\n2026-10-30T06:06:19 ERROR api POST /api/orders -> 503 (10ms)\n2026-10-30T06:06:19 ERROR api db write failed (create order): connection failed: connection to server at \"172.18.0.3\", port 5432 failed: FATAL:  remaining connection slots are reserved for roles with the SUPERUSER attribute\n2026-10-30T06:06:19 ERROR api POST /api/orders -> 503 (10ms)\n2026-10-30T06:06:19 ERROR api db query failed (recent orders): connection failed: connection to server at \"172.18.0.3\", port 5432 failed: FATAL:  remaining connection slots are reserved for roles with the SUPERUSER attribute\n2026-10-30T06:06:19 ERROR api GET /api/orders/recent -> 503 (11ms)\n2026-10-30T06:06:19 ERROR api db write failed (create order): connection failed: connection to server at \"172.18.0.3\", port 5432 failed: FATAL:  remaining connection slots are reserved for roles with the SUPERUSER attribute\n2026-10-30T06:06:19 ERROR api POST /api/orders -> 503 (12ms)\n2026-10-30T06:06:20 ERROR api db write failed (create order): connection failed: connection to server at \"172.18.0.3\", port 5432 failed: FATAL:  remaining connection slots are reserved for roles with the SUPERUSER attribute\n2026-10-30T06:06:20 ERROR api POST /api/orders -> 503 (18ms)\n2026-10-30T06:06:20 ERROR api db write failed (create order): connection failed: connection to server at \"172.18.0.3\", port 5432 failed: FATAL:  remaining connection slots are reserved for roles with the SUPERUSER attribute\n2026-10-30T06:06:20 ERROR api POST /api/orders -> 503 (12ms)\n2026-10-30T06:06:20 ERROR api GET /api/health -> 503 (15ms)\n2026-10-30T06:06:20 ERROR api db query failed (recent orders): connection failed: connection to server at \"172.18.0.3\", port 5432 failed: FATAL:  remaining connection slots are reserved for roles with the SUPERUSER attribute\n2026-10-30T06:06:20 ERROR api GET /api/orders/recent -> 503 (13ms)\n2026-10-30T06:06:20 ERROR api db query failed (recent orders): connection failed: connection to server at \"172.18.0.3\", port 5432 failed: FATAL:  remaining connection slots are reserved for roles with the SUPERUSER attribute\n2026-10-30T06:06:20 ERROR api GET /api/orders/recent -> 503 (11ms)\n2026-10-30T06:06:20 ERROR api db write failed (create order): connection failed: connection to server at \"172.18.0.3\", port 5432 failed: FATAL:  remaining connection slots are reserved for roles with the SUPERUSER attribute\n2026-10-30T06:06:20 ERROR api POST /api/orders -> 503 (12ms)"
+  },
+  {
+   "step": 9,
+   "t": 2.68,
+   "tool": "run_diagnostic",
+   "kind": "observe",
+   "args": {
+    "service": "api",
+    "check": "disk"
+   },
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.11,
+   "result": "Filesystem                Size      Used Available Use% Mounted on\noverlay                 252.0G     15.8G     22.6G  41% /\ntmpfs                    64.0M         0     64.0M   0% /dev\ntmpfs                     7.9G         0      7.9G   0% /sys/fs/cgroup\nshm                      64.0M         0     64.0M   0% /dev/shm\n/dev/vda                252.0G     15.8G     22.6G  41% /config\ntmpfs                    48.0M      4.0K     48.0M   0% /data\n/dev/vda                252.0G     15.8G     22.6G  41% /etc/hostname\n/dev/vda                252.0G     15.8G     22.6G  41% /etc/hosts\n/dev/vda                252.0G     15.8G     22.6G  41% /etc/resolv.conf\ntmpfs                     4.0K         0      4.0K   0% /proc/acpi\ntmpfs                    64.0M         0     64.0M   0% /proc/interrupts\ntmpfs                    64.0M         0     64.0M   0% /proc/keys\ntmpfs                    64.0M         0     64.0M   0% /proc/timer_list\ntmpfs                     4.0K         0      4.0K   0% /sys/firmware\n--- largest under /data (KB) ---\n4\t/data/audit/audit.log\n4\t/data/audit\n4\t/data"
+  },
+  {
+   "step": 10,
+   "t": 2.79,
+   "tool": "get_metrics",
+   "kind": "observe",
+   "args": {
+    "service": "api"
+   },
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 1.71,
+   "result": "{\n \"containers\": {\n  \"gateway\": {\n   \"cpu_pct\": \"0.39%\",\n   \"mem\": \"2.938MiB / 15.71GiB\",\n   \"mem_pct\": \"0.02%\"\n  },\n  \"worker\": {\n   \"cpu_pct\": \"1.26%\",\n   \"mem\": \"50.57MiB / 15.71GiB\",\n   \"mem_pct\": \"0.31%\"\n  },\n  \"api\": {\n   \"cpu_pct\": \"4.33%\",\n   \"mem\": \"35.94MiB / 256MiB\",\n   \"mem_pct\": \"14.04%\"\n  },\n  \"redis\": {\n   \"cpu_pct\": \"0.60%\",\n   \"mem\": \"3.641MiB / 15.71GiB\",\n   \"mem_pct\": \"0.02%\"\n  },\n  \"postgres\": {\n   \"cpu_pct\": \"2.67%\",\n   \"mem\": \"89.72MiB / 15.71GiB\",\n   \"mem_pct\": \"0.56%\"\n  }\n },\n \"api_app_metrics\": {\n  \"cache_errors_total\": 0,\n  \"db_errors_total\": 81,\n  \"endpoints\": {\n   \"/api/health\": {\n    \"errors_5xx\": 7,\n    \"p50_ms\": 13.9,\n    \"p95_ms\": 18.6,\n    \"requests\": 12\n   },\n   \"/api/orders\": {\n    \"errors_5xx\": 34,\n    \"p50_ms\": 12.5,\n    \"p95_ms\": 24.2,\n    \"requests\": 49\n   },\n   \"/api/orders/recent\": {\n    \"errors_5xx\": 47,\n    \"p50_ms\": 12.8,\n    \"p95_ms\": 19.6,\n    \"requests\": 64\n   },\n   \"/api/products\": {\n    \"errors_5xx\": 0,\n    \"p50_ms\": 1.9,\n    \"p95_ms\": 3.0,\n    \"requests\": 99\n   },\n   \"/metrics\": {\n    \"errors_5xx\": 0,\n    \"p50_ms\": 1.8,\n    \"p95_ms\": 1.8,\n    \"requests\": 1\n   },\n   \"unmatched\": {\n    \"errors_5xx\": 0,\n    \"p50_ms\": 0.7,\n    \"p95_ms\": 0.7,\n    \"requests\": 1\n   }\n  },\n  \"process_rss_mb\": 49.1,\n  \"uptime_s\": 24.6,\n  \"window_s\": 60\n }\n}"
+  },
+  {
+   "step": 11,
+   "t": 4.49,
+   "tool": "list_services",
+   "kind": "observe",
+   "args": {},
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.13,
+   "result": "service   state       restarts  oom    health   networks             missing_networks\ngateway   running     0         False  -        frontend             -\napi       running     0         False  -        backend,frontend     -\nworker    running     0         False  -        backend              -\npostgres  running     0         False  healthy  backend              -\nredis     running     0         False  -        backend              -"
+  },
+  {
+   "step": 12,
+   "t": 4.62,
+   "tool": "check_endpoints",
+   "kind": "observe",
+   "args": {},
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.05,
+   "result": "GET  /healthz             status=200     6.2ms OK\nGET  /api/health          status=503    13.5ms FAIL {\"checks\":{\"cache\":\"ok\",\"database\":\"error: connection failed: connection to server at \\\"172.18.0.3\\\", port 5432 failed: \nGET  /api/products        status=200     3.7ms OK\nGET  /api/orders/recent   status=503    11.6ms FAIL {\"error\":\"database error\"}\nPOST /api/orders          status=503    15.6ms FAIL {\"error\":\"database error\"}"
+  },
+  {
+   "step": 13,
+   "t": 4.67,
+   "tool": "get_logs",
+   "kind": "observe",
+   "args": {
+    "service": "api",
+    "since_seconds": 120
+   },
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.03,
+   "result": "176 lines in last 120s.\nTop message patterns:\n     48x ERROR api db query failed (recent orders): connection failed: connection to server at \"#\", port # failed: FATAL:  remaining connection slots are reserved for roles with the SUPERUS\n     35x ERROR api db write failed (create order): connection failed: connection to server at \"#\", port # failed: FATAL:  remaining connection slots are reserved for roles with the SUPERUSE\n     16x ERROR api GET /api/orders/recent -> # (10ms)\n     11x ERROR api GET /api/orders/recent -> # (11ms)\n      9x ERROR api POST /api/orders -> # (10ms)\n      8x ERROR api POST /api/orders -> # (12ms)\n      6x ERROR api GET /api/orders/recent -> # (14ms)\n      6x ERROR api GET /api/orders/recent -> # (13ms)\n--- last 60 lines ---\n2026-10-30T06:06:16 ERROR api POST /api/orders -> 503 (10ms)\n2026-10-30T06:06:17 ERROR api db write failed (create order): connection failed: connection to server at \"172.18.0.3\", port 5432 failed: FATAL:  remaining connection slots are reserved for roles with the SUPERUSER attribute\n2026-10-30T06:06:17 ERROR api POST /api/orders -> 503 (14ms)\n2026-10-30T06:06:17 ERROR api db query failed (recent orders): connection failed: connection to server at \"172.18.0.3\", port 5432 failed: FATAL:  remaining connection slots are reserved for roles with the SUPERUSER attribute\n2026-10-30T06:06:17 ERROR api GET /api/orders/recent -> 503 (14ms)\n2026-10-30T06:06:17 ERROR api db query failed (recent orders): connection failed: connection to server at \"172.18.0.3\", port 5432 failed: FATAL:  remaining connection slots are reserved for roles with the SUPERUSER attribute\n2026-10-30T06:06:17 ERROR api GET /api/orders/recent -> 503 (10ms)\n2026-10-30T06:06:17 ERROR api db write failed (create order): connection failed: connection to server at \"172.18.0.3\", port 5432 failed: FATAL:  remaining connection slots are reserved for roles with the SUPERUSER attribute\n2026-10-30T06:06:17 ERROR api POST /api/orders -> 503 (10ms)\n2026-10-30T06:06:17 ERROR api GET /api/health -> 503 (10ms)\n2026-10-30T06:06:17 ERROR api db query failed (recent orders): connection failed: connection to server at \"172.18.0.3\", port 5432 failed: FATAL:  remaining connection slots are reserved for roles with the SUPERUSER attribute\n2026-10-30T06:06:17 ERROR api GET /api/orders/recent -> 503 (13ms)\n2026-10-30T06:06:17 ERROR api db write failed (create order): connection failed: connection to server at \"172.18.0.3\", port 5432 failed: FATAL:  remaining connection slots are reserved for roles with the SUPERUSER attribute\n2026-10-30T06:06:17 ERROR api POST /api/orders -> 503 (9ms)\n2026-10-30T06:06:18 ERROR api db write failed (create order): connection failed: connection to server at \"172.18.0.3\", port 5432 failed: FATAL:  remaining connection slots are reserved for roles with the SUPERUSER attribute\n2026-10-30T06:06:18 ERROR api POST /api/orders -> 503 (13ms)\n2026-10-30T06:06:18 ERROR api db write failed (create order): connection failed: connection to server at\n... [3070 chars truncated] ...\n6:06:20 ERROR api POST /api/orders -> 503 (12ms)\n2026-10-30T06:06:20 ERROR api db query failed (recent orders): connection failed: connection to server at \"172.18.0.3\", port 5432 failed: FATAL:  remaining connection slots are reserved for roles with the SUPERUSER attribute\n2026-10-30T06:06:20 ERROR api GET /api/orders/recent -> 503 (15ms)\n2026-10-30T06:06:20 ERROR api db write failed (create order): connection failed: connection to server at \"172.18.0.3\", port 5432 failed: FATAL:  remaining connection slots are reserved for roles with the SUPERUSER attribute\n2026-10-30T06:06:20 ERROR api POST /api/orders -> 503 (12ms)\n2026-10-30T06:06:20 ERROR api db query failed (recent orders): connection failed: connection to server at \"172.18.0.3\", port 5432 failed: FATAL:  remaining connection slots are reserved for roles with the SUPERUSER attribute\n2026-10-30T06:06:20 ERROR api GET /api/orders/recent -> 503 (14ms)\n2026-10-30T06:06:21 ERROR api db query failed (recent orders): connection failed: connection to server at \"172.18.0.3\", port 5432 failed: FATAL:  remaining connection slots are reserved for roles with the SUPERUSER attribute\n2026-10-30T06:06:21 ERROR api GET /api/orders/recent -> 503 (10ms)\n2026-10-30T06:06:21 ERROR api db query failed (recent orders): connection failed: connection to server at \"172.18.0.3\", port 5432 failed: FATAL:  remaining connection slots are reserved for roles with the SUPERUSER attribute\n2026-10-30T06:06:21 ERROR api GET /api/orders/recent -> 503 (13ms)\n2026-10-30T06:06:21 ERROR api db write failed (create order): connection failed: connection to server at \"172.18.0.3\", port 5432 failed: FATAL:  remaining connection slots are reserved for roles with the SUPERUSER attribute\n2026-10-30T06:06:21 ERROR api POST /api/orders -> 503 (12ms)\n2026-10-30T06:06:21 ERROR api db query failed (recent orders): connection failed: connection to server at \"172.18.0.3\", port 5432 failed: FATAL:  remaining connection slots are reserved for roles with the SUPERUSER attribute\n2026-10-30T06:06:21 ERROR api GET /api/orders/recent -> 503 (11ms)\n2026-10-30T06:06:22 ERROR api db write failed (create order): connection failed: connection to server at \"172.18.0.3\", port 5432 failed: FATAL:  remaining connection slots are reserved for roles with the SUPERUSER attribute\n2026-10-30T06:06:22 ERROR api POST /api/orders -> 503 (10ms)\n2026-10-30T06:06:22 ERROR api GET /api/health -> 503 (11ms)\n2026-10-30T06:06:22 ERROR api db query failed (recent orders): connection failed: connection to server at \"172.18.0.3\", port 5432 failed: FATAL:  remaining connection slots are reserved for roles with the SUPERUSER attribute\n2026-10-30T06:06:22 ERROR api GET /api/orders/recent -> 503 (10ms)\n2026-10-30T06:06:22 ERROR api db write failed (create order): connection failed: connection to server at \"172.18.0.3\", port 5432 failed: FATAL:  remaining connection slots are reserved for roles with the SUPERUSER attribute\n2026-10-30T06:06:22 ERROR api POST /api/orders -> 503 (14ms)"
+  },
+  {
+   "step": 14,
+   "t": 4.71,
+   "tool": "run_diagnostic",
+   "kind": "observe",
+   "args": {
+    "service": "api",
+    "check": "disk"
+   },
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.08,
+   "result": "Filesystem                Size      Used Available Use% Mounted on\noverlay                 252.0G     15.8G     22.6G  41% /\ntmpfs                    64.0M         0     64.0M   0% /dev\ntmpfs                     7.9G         0      7.9G   0% /sys/fs/cgroup\nshm                      64.0M         0     64.0M   0% /dev/shm\n/dev/vda                252.0G     15.8G     22.6G  41% /config\ntmpfs                    48.0M      4.0K     48.0M   0% /data\n/dev/vda                252.0G     15.8G     22.6G  41% /etc/hostname\n/dev/vda                252.0G     15.8G     22.6G  41% /etc/hosts\n/dev/vda                252.0G     15.8G     22.6G  41% /etc/resolv.conf\ntmpfs                     4.0K         0      4.0K   0% /proc/acpi\ntmpfs                    64.0M         0     64.0M   0% /proc/interrupts\ntmpfs                    64.0M         0     64.0M   0% /proc/keys\ntmpfs                    64.0M         0     64.0M   0% /proc/timer_list\ntmpfs                     4.0K         0      4.0K   0% /sys/firmware\n--- largest under /data (KB) ---\n4\t/data/audit/audit.log\n4\t/data/audit\n4\t/data"
+  },
+  {
+   "step": 15,
+   "t": 4.79,
+   "tool": "get_metrics",
+   "kind": "observe",
+   "args": {
+    "service": "api"
+   },
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 1.73,
+   "result": "{\n \"containers\": {\n  \"gateway\": {\n   \"cpu_pct\": \"0.35%\",\n   \"mem\": \"2.812MiB / 15.71GiB\",\n   \"mem_pct\": \"0.02%\"\n  },\n  \"worker\": {\n   \"cpu_pct\": \"1.29%\",\n   \"mem\": \"50.59MiB / 15.71GiB\",\n   \"mem_pct\": \"0.31%\"\n  },\n  \"api\": {\n   \"cpu_pct\": \"4.01%\",\n   \"mem\": \"36.29MiB / 256MiB\",\n   \"mem_pct\": \"14.17%\"\n  },\n  \"redis\": {\n   \"cpu_pct\": \"0.61%\",\n   \"mem\": \"3.641MiB / 15.71GiB\",\n   \"mem_pct\": \"0.02%\"\n  },\n  \"postgres\": {\n   \"cpu_pct\": \"2.50%\",\n   \"mem\": \"89.81MiB / 15.71GiB\",\n   \"mem_pct\": \"0.56%\"\n  }\n },\n \"api_app_metrics\": {\n  \"cache_errors_total\": 0,\n  \"db_errors_total\": 88,\n  \"endpoints\": {\n   \"/api/health\": {\n    \"errors_5xx\": 8,\n    \"p50_ms\": 12.6,\n    \"p95_ms\": 18.6,\n    \"requests\": 13\n   },\n   \"/api/orders\": {\n    \"errors_5xx\": 36,\n    \"p50_ms\": 12.5,\n    \"p95_ms\": 24.2,\n    \"requests\": 51\n   },\n   \"/api/orders/recent\": {\n    \"errors_5xx\": 52,\n    \"p50_ms\": 12.5,\n    \"p95_ms\": 19.6,\n    \"requests\": 69\n   },\n   \"/api/products\": {\n    \"errors_5xx\": 0,\n    \"p50_ms\": 1.9,\n    \"p95_ms\": 2.9,\n    \"requests\": 110\n   },\n   \"/metrics\": {\n    \"errors_5xx\": 0,\n    \"p50_ms\": 1.8,\n    \"p95_ms\": 1.8,\n    \"requests\": 2\n   },\n   \"unmatched\": {\n    \"errors_5xx\": 0,\n    \"p50_ms\": 0.7,\n    \"p95_ms\": 0.7,\n    \"requests\": 1\n   }\n  },\n  \"process_rss_mb\": 49.1,\n  \"uptime_s\": 26.6,\n  \"window_s\": 60\n }\n}"
+  },
+  {
+   "step": 16,
+   "t": 6.52,
+   "tool": "verify_recovery",
+   "kind": "observe",
+   "args": {},
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 8.74,
+   "result": "{\n \"healthy\": false,\n \"probe_success_rate\": 0.3,\n \"probe_p95_ms\": 23.1,\n \"problems\": [\n  \"probe success 30% < 97%\"\n ],\n \"probes\": {\n  \"GET /healthz\": {\n   \"ok\": 8,\n   \"fail\": 0,\n   \"statuses\": [\n    200\n   ],\n   \"last_error\": \"\"\n  },\n  \"GET /api/health\": {\n   \"ok\": 0,\n   \"fail\": 8,\n   \"statuses\": [\n    503\n   ],\n   \"last_error\": \"{\\\"checks\\\":{\\\"cache\\\":\\\"ok\\\",\\\"database\\\":\\\"error: connection failed: connection to server at \\\\\\\"172.18.0.3\\\\\\\", port 5432 failed: FATAL:  remaining connection slots are r\"\n  },\n  \"GET /api/products\": {\n   \"ok\": 4,\n   \"fail\": 4,\n   \"statuses\": [\n    200,\n    503\n   ],\n   \"last_error\": \"{\\\"error\\\":\\\"database unavailable\\\"}\\n\"\n  },\n  \"GET /api/orders/recent\": {\n   \"ok\": 0,\n   \"fail\": 8,\n   \"statuses\": [\n    503\n   ],\n   \"last_error\": \"{\\\"error\\\":\\\"database error\\\"}\\n\"\n  },\n  \"POST /api/orders\": {\n   \"ok\": 0,\n   \"fail\": 8,\n   \"statuses\": [\n    503\n   ],\n   \"last_error\": \"{\\\"error\\\":\\\"database error\\\"}\\n\"\n  }\n }\n}"
+  },
+  {
+   "step": 17,
+   "t": 15.26,
+   "tool": "submit_report",
+   "kind": "final",
+   "args": {
+    "root_causes": [],
+    "summary": "runbook applied 0 fix(es)",
+    "recovered": false
+   },
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.0,
+   "result": "report submitted"
+  }
+ ],
+ "episode_seconds": 82.6
+}

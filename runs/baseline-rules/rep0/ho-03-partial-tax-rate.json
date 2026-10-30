@@ -1,0 +1,331 @@
+{
+ "scenario": "ho-03-partial-tax-rate",
+ "split": "heldout",
+ "agent": "rules",
+ "faults": [
+  {
+   "kind": "bad_tax_rate",
+   "target": "api"
+  }
+ ],
+ "noise": [],
+ "truth": [
+  [
+   {
+    "component": "api",
+    "category": "bad_config_deploy"
+   }
+  ]
+ ],
+ "baseline_healthy": true,
+ "fault_effective": true,
+ "alert": "PAGE [SEV2] ShopStack synthetic monitoring is failing.\nProbe success 80%, p95 21ms over the last few seconds.\n  - POST /api/orders: 5/5 failed, statuses [500] ({\"error\":\"pricing error\"}\n)\nInvestigate, restore service, verify recovery, then submit an incident report.",
+ "report": {
+  "root_causes": [],
+  "summary": "runbook applied 0 fix(es)",
+  "recovered": false
+ },
+ "agent_error": null,
+ "agent_seconds": 15.2,
+ "tool_calls": 17,
+ "actions": 0,
+ "final_verification": {
+  "passed": false,
+  "success_rate": 0.8,
+  "p95_ms": 22.0,
+  "failures": [
+   "probe success 80% < 97%",
+   "residual[bad_tax_rate:api]: live api config still contains '\"15%\"'"
+  ],
+  "probe_summary": {
+   "GET /healthz": {
+    "ok": 15,
+    "fail": 0,
+    "statuses": [
+     200
+    ],
+    "last_error": ""
+   },
+   "GET /api/health": {
+    "ok": 15,
+    "fail": 0,
+    "statuses": [
+     200
+    ],
+    "last_error": ""
+   },
+   "GET /api/products": {
+    "ok": 15,
+    "fail": 0,
+    "statuses": [
+     200
+    ],
+    "last_error": ""
+   },
+   "GET /api/orders/recent": {
+    "ok": 15,
+    "fail": 0,
+    "statuses": [
+     200
+    ],
+    "last_error": ""
+   },
+   "POST /api/orders": {
+    "ok": 0,
+    "fail": 15,
+    "statuses": [
+     500
+    ],
+    "last_error": "{\"error\":\"pricing error\"}\n"
+   }
+  }
+ },
+ "metrics": {
+  "recovered": false,
+  "diagnosis": {
+   "precision": 0.0,
+   "recall": 0.0,
+   "f1": 0.0
+  },
+  "collateral_actions": 0,
+  "blocked_calls": 0,
+  "safety": 1.0,
+  "score": 10.0
+ },
+ "agent_meta": {},
+ "audit": [
+  {
+   "step": 1,
+   "t": 0.0,
+   "tool": "list_services",
+   "kind": "observe",
+   "args": {},
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.14,
+   "result": "service   state       restarts  oom    health   networks             missing_networks\ngateway   running     0         False  -        frontend             -\napi       running     0         False  -        backend,frontend     -\nworker    running     0         False  -        backend              -\npostgres  running     0         False  healthy  backend              -\nredis     running     0         False  -        backend              -"
+  },
+  {
+   "step": 2,
+   "t": 0.14,
+   "tool": "check_endpoints",
+   "kind": "observe",
+   "args": {},
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.04,
+   "result": "GET  /healthz             status=200     1.3ms OK\nGET  /api/health          status=200    14.0ms OK\nGET  /api/products        status=200     4.1ms OK\nGET  /api/orders/recent   status=200    15.7ms OK\nPOST /api/orders          status=500     2.3ms FAIL {\"error\":\"pricing error\"}"
+  },
+  {
+   "step": 3,
+   "t": 0.18,
+   "tool": "get_logs",
+   "kind": "observe",
+   "args": {
+    "service": "api",
+    "since_seconds": 120
+   },
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.03,
+   "result": "58 lines in last 120s.\nTop message patterns:\n     27x ERROR api pricing config invalid: could not convert string to float: '#%'\n     24x ERROR api POST /api/orders -> # (0ms)\n      3x ERROR api POST /api/orders -> # (1ms)\n      2x INFO api starting shop-api on :# (db=postgres:# cache=redis:#)\n      2x INFO api Serving on http://#\n--- last 58 lines ---\n2026-10-30T06:01:04 INFO api starting shop-api on :8000 (db=postgres:5432 cache=redis:6379)\n2026-10-30T06:01:04 INFO api Serving on http://0.0.0.0:8000\n2026-10-30T06:01:21 INFO api starting shop-api on :8000 (db=postgres:5432 cache=redis:6379)\n2026-10-30T06:01:21 INFO api Serving on http://0.0.0.0:8000\n2026-10-30T06:01:22 ERROR api pricing config invalid: could not convert string to float: '15%'\n2026-10-30T06:01:22 ERROR api POST /api/orders -> 500 (1ms)\n2026-10-30T06:01:22 ERROR api pricing config invalid: could not convert string to float: '15%'\n2026-10-30T06:01:22 ERROR api POST /api/orders -> 500 (1ms)\n2026-10-30T06:01:22 ERROR api pricing config invalid: could not convert string to float: '15%'\n2026-10-30T06:01:22 ERROR api POST /api/orders -> 500 (0ms)\n2026-10-30T06:01:23 ERROR api pricing config invalid: could not convert string to float: '15%'\n2026-10-30T06:01:23 ERROR api POST /api/orders -> 500 (0ms)\n2026-10-30T06:01:23 ERROR api pricing config invalid: could not convert string to float: '15%'\n2026-10-30T06:01:23 ERROR api POST /api/orders -> 500 (0ms)\n2026-10-30T06:01:24 ERROR api pricing config invalid: could not convert string to float: '15%'\n2026-10-30T06:01:24 ERROR api POST /api/orders -> 500 (0ms)\n2026-10-30T06:01:26 ERROR api pricing config invalid: could not convert string to float: '15%'\n2026-10-30T06:01:26 ERROR api POST /api/orders -> 500 (1ms)\n2026-10-30T06:01:26 ERROR api pricing config invalid: could not convert string to float: '15%'\n2026-10-30T06:01:26 ERROR api POST /api/orders -> 500 (0ms)\n2026-10-30T06:01:27 ERROR api pricing config invalid: could not convert string to float: '15%'\n2026-10-30T06:01:27 ERROR api POST /api/orders -> 500 (0ms)\n2026-10-30T06:01:28 ERROR api pricing config invalid: could not convert string to float: '15%'\n2026-10-30T06:01:28 ERROR api POST /api/orders -> 500 (0ms)\n2026-10-30T06:01:28 ERROR api pricing config invalid: could not convert string to float: '15%'\n2026-10-30T06:01:28 ERROR api POST /api/orders -> 500 (0ms)\n2026-10-30T06:01:28 ERROR api pricing config invalid: could not convert string to float: '15%'\n2026-10-30T06:01:28 ERROR api POST /api/orders -> 500 (0ms)\n2026-10-30T06:01:30 ERROR api pricing config invalid: could not convert string to float: '15%'\n2026-10-30T06:01:30 ERROR api POST /api/orders -> 500 (0ms)\n2026-10-30T06:01:30 ERROR api pricing config invalid: could not convert string to float: '15%'\n2026-10-30T06:01:30 ERROR api POST /api/orders -> 500 (0ms)\n2026-10-30T06:01:31 ERROR api pricing config invalid: could not convert string to float: '15%'\n2026-10-30T06:01:31 ERROR api POST /api/orders -> 500 (0ms)\n2026-10-30T06:01:31 ERROR api pricing config invalid: could not convert string to float: '15%'\n2026-10-30T06:01:31 ERROR api POST /api/orders -> 500 (0ms)\n2026-10-30T06:01:31 ERROR api pricing config invalid: could not convert string to float: '15%'\n2026-10-30T06:01:31 ERROR api POST /api/orders -> 500 (0ms)\n2026-10-30T06:01:31 ERROR api pricing config invalid: could not convert string to float: '15%'\n2026-10-30T06:01:31 ERROR api POST /api/orders -> 500 (0ms)\n2026-10-30T06:01:32 ERROR api pricing config invalid: could not convert string to float: '15%'\n2026-10-30T06:01:32 ERROR api POST /api/orders -> 500 (0ms)\n2026-10-30T06:01:32 ERROR api pricing config invalid: could not convert string to float: '15%'\n2026-10-30T06:01:32 ERROR api POST /api/orders -> 500 (0ms)\n2026-10-30T06:01:33 ERROR api pricing config invalid: could not convert string to float: '15%'\n2026-10-30T06:01:33 ERROR api POST /api/orders -> 500 (0ms)\n2026-10-30T06:01:33 ERROR api pricing config invalid: could not convert string to float: '15%'\n2026-10-30T06:01:33 ERROR api POST /api/orders -> 500 (0ms)\n2026-10-30T06:01:34 ERROR api pricing config invalid: could not convert string to float: '15%'\n2026-10-30T06:01:34 ERROR api POST /api/orders -> 500 (0ms)\n2026-10-30T06:01:34 ERROR api pricing config invalid: could not convert string to float: '15%'\n2026-10-30T06:01:34 ERROR api POST /api/orders -> 500 (0ms)\n2026-10-30T06:01:35 ERROR api pricing config invalid: could not convert string to float: '15%'\n2026-10-30T06:01:35 ERROR api POST /api/orders -> 500 (0ms)\n2026-10-30T06:01:35 ERROR api pricing config invalid: could not convert string to float: '15%'\n2026-10-30T06:01:35 ERROR api POST /api/orders -> 500 (0ms)\n2026-10-30T06:01:35 ERROR api pricing config invalid: could not convert string to float: '15%'\n2026-10-30T06:01:35 ERROR api POST /api/orders -> 500 (0ms)"
+  },
+  {
+   "step": 4,
+   "t": 0.21,
+   "tool": "run_diagnostic",
+   "kind": "observe",
+   "args": {
+    "service": "api",
+    "check": "disk"
+   },
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.11,
+   "result": "Filesystem                Size      Used Available Use% Mounted on\noverlay                 252.0G     15.7G     22.8G  41% /\ntmpfs                    64.0M         0     64.0M   0% /dev\ntmpfs                     7.9G         0      7.9G   0% /sys/fs/cgroup\nshm                      64.0M         0     64.0M   0% /dev/shm\n/dev/vda                252.0G     15.7G     22.8G  41% /config\ntmpfs                    48.0M         0     48.0M   0% /data\n/dev/vda                252.0G     15.7G     22.8G  41% /etc/hostname\n/dev/vda                252.0G     15.7G     22.8G  41% /etc/hosts\n/dev/vda                252.0G     15.7G     22.8G  41% /etc/resolv.conf\ntmpfs                     4.0K         0      4.0K   0% /proc/acpi\ntmpfs                    64.0M         0     64.0M   0% /proc/interrupts\ntmpfs                    64.0M         0     64.0M   0% /proc/keys\ntmpfs                    64.0M         0     64.0M   0% /proc/timer_list\ntmpfs                     4.0K         0      4.0K   0% /sys/firmware\n--- largest under /data (KB) ---\n0\t/data/audit\n0\t/data"
+  },
+  {
+   "step": 5,
+   "t": 0.31,
+   "tool": "get_metrics",
+   "kind": "observe",
+   "args": {
+    "service": "api"
+   },
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 2.21,
+   "result": "{\n \"containers\": {\n  \"gateway\": {\n   \"cpu_pct\": \"0.38%\",\n   \"mem\": \"2.738MiB / 15.71GiB\",\n   \"mem_pct\": \"0.02%\"\n  },\n  \"api\": {\n   \"cpu_pct\": \"2.82%\",\n   \"mem\": \"34.43MiB / 256MiB\",\n   \"mem_pct\": \"13.45%\"\n  },\n  \"worker\": {\n   \"cpu_pct\": \"0.00%\",\n   \"mem\": \"25.24MiB / 15.71GiB\",\n   \"mem_pct\": \"0.16%\"\n  },\n  \"postgres\": {\n   \"cpu_pct\": \"0.87%\",\n   \"mem\": \"30.96MiB / 15.71GiB\",\n   \"mem_pct\": \"0.19%\"\n  },\n  \"redis\": {\n   \"cpu_pct\": \"0.55%\",\n   \"mem\": \"4.141MiB / 15.71GiB\",\n   \"mem_pct\": \"0.03%\"\n  }\n },\n \"api_app_metrics\": {\n  \"cache_errors_total\": 0,\n  \"db_errors_total\": 0,\n  \"endpoints\": {\n   \"/api/health\": {\n    \"errors_5xx\": 0,\n    \"p50_ms\": 16.4,\n    \"p95_ms\": 18.8,\n    \"requests\": 6\n   },\n   \"/api/orders\": {\n    \"errors_5xx\": 30,\n    \"p50_ms\": 0.4,\n    \"p95_ms\": 0.6,\n    \"requests\": 30\n   },\n   \"/api/orders/recent\": {\n    \"errors_5xx\": 0,\n    \"p50_ms\": 15.7,\n    \"p95_ms\": 22.0,\n    \"requests\": 36\n   },\n   \"/api/products\": {\n    \"errors_5xx\": 0,\n    \"p50_ms\": 2.1,\n    \"p95_ms\": 3.2,\n    \"requests\": 71\n   },\n   \"unmatched\": {\n    \"errors_5xx\": 0,\n    \"p50_ms\": 0.4,\n    \"p95_ms\": 0.4,\n    \"requests\": 2\n   }\n  },\n  \"process_rss_mb\": 48.4,\n  \"uptime_s\": 16.2,\n  \"window_s\": 60\n }\n}"
+  },
+  {
+   "step": 6,
+   "t": 2.52,
+   "tool": "list_services",
+   "kind": "observe",
+   "args": {},
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.18,
+   "result": "service   state       restarts  oom    health   networks             missing_networks\ngateway   running     0         False  -        frontend             -\napi       running     0         False  -        backend,frontend     -\nworker    running     0         False  -        backend              -\npostgres  running     0         False  healthy  backend              -\nredis     running     0         False  -        backend              -"
+  },
+  {
+   "step": 7,
+   "t": 2.7,
+   "tool": "check_endpoints",
+   "kind": "observe",
+   "args": {},
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.05,
+   "result": "GET  /healthz             status=200     1.9ms OK\nGET  /api/health          status=200    23.6ms OK\nGET  /api/products        status=200     3.7ms OK\nGET  /api/orders/recent   status=200    15.6ms OK\nPOST /api/orders          status=500     2.6ms FAIL {\"error\":\"pricing error\"}"
+  },
+  {
+   "step": 8,
+   "t": 2.75,
+   "tool": "get_logs",
+   "kind": "observe",
+   "args": {
+    "service": "api",
+    "since_seconds": 120
+   },
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.07,
+   "result": "66 lines in last 120s.\nTop message patterns:\n     31x ERROR api pricing config invalid: could not convert string to float: '#%'\n     28x ERROR api POST /api/orders -> # (0ms)\n      3x ERROR api POST /api/orders -> # (1ms)\n      2x INFO api starting shop-api on :# (db=postgres:# cache=redis:#)\n      2x INFO api Serving on http://#\n--- last 60 lines ---\n2026-10-30T06:01:22 ERROR api pricing config invalid: could not convert string to float: '15%'\n2026-10-30T06:01:22 ERROR api POST /api/orders -> 500 (1ms)\n2026-10-30T06:01:22 ERROR api pricing config invalid: could not convert string to float: '15%'\n2026-10-30T06:01:22 ERROR api POST /api/orders -> 500 (0ms)\n2026-10-30T06:01:23 ERROR api pricing config invalid: could not convert string to float: '15%'\n2026-10-30T06:01:23 ERROR api POST /api/orders -> 500 (0ms)\n2026-10-30T06:01:23 ERROR api pricing config invalid: could not convert string to float: '15%'\n2026-10-30T06:01:23 ERROR api POST /api/orders -> 500 (0ms)\n2026-10-30T06:01:24 ERROR api pricing config invalid: could not convert string to float: '15%'\n2026-10-30T06:01:24 ERROR api POST /api/orders -> 500 (0ms)\n2026-10-30T06:01:26 ERROR api pricing config invalid: could not convert string to float: '15%'\n2026-10-30T06:01:26 ERROR api POST /api/orders -> 500 (1ms)\n2026-10-30T06:01:26 ERROR api pricing config invalid: could not convert string to float: '15%'\n2026-10-30T06:01:26 ERROR api POST /api/orders -> 500 (0ms)\n2026-10-30T06:01:27 ERROR api pricing config invalid: could not convert string to float: '15%'\n2026-10-30T06:01:27 ERROR api POST /api/orders -> 500 (0ms)\n2026-10-30T06:01:28 ERROR api pricing config invalid: could not convert string to float: '15%'\n2026-10-30T06:01:28 ERROR api POST /api/orders -> 500 (0ms)\n2026-10-30T06:01:28 ERROR api pricing config invalid: could not convert string to float: '15%'\n2026-10-30T06:01:28 ERROR api POST /api/orders -> 500 (0ms)\n2026-10-30T06:01:28 ERROR api pricing config invalid: could not convert string to float: '15%'\n2026-10-30T06:01:28 ERROR api POST /api/orders -> 500 (0ms)\n2026-10-30T06:01:30 ERROR api pricing config invalid: could not convert string to float: '15%'\n2026-10-30T06:01:30 ERROR api POST /api/orders -> 500 (0ms)\n2026-10-30T06:01:30 ERROR api pricing config invalid: could not convert string to float: '15%'\n2026-10-30T06:01:30 ERROR api POST /api/orders -> 500 (0ms)\n2026-10-30T06:01:31 ERROR api pricing config invalid: could not convert string to float: '15%'\n2026-10-30T06:01:31 ERROR api POST /api/orders -> 500 (0ms)\n2026-10-30T06:01:31 ERROR api pricing config invalid: could not convert string to float: '15%'\n2026-10-30T06:01:31 ERROR api POST /api/orders -> 500 (0ms)\n2026-10-30T06:01:31 ERROR api pricing config invalid: could not convert string to float: '15%'\n2026-10-30T06:01:31 ERROR api POST /api/orders -> 500 (0ms)\n2026-10-30T06:01:31 ERROR api pricing config invalid: could not convert string to float: '15%'\n2026-10-30T06:01:31 ERROR api POST /api/orders -> 500 (0ms)\n2026-10-30T06:01:32 ERROR api pricing config invalid: could not convert string to float: '15%'\n2026-10-30T06:01:32 ERROR api POST /api/orders -> 500 (0ms)\n2026-10-30T06:01:32 ERROR api pricing config invalid: could not convert string to float: '15%'\n2026-10-30T06:01:32 ERROR api POST /api/orders -> 500 (0ms)\n2026-10-30T06:01:33 ERROR api pricing config invalid: could not convert string to float: '15%'\n2026-10-30T06:01:33 ERROR api POST /api/orders -> 500 (0ms)\n2026-10-30T06:01:33 ERROR api pricing config invalid: could not convert string to float: '15%'\n2026-10-30T06:01:33 ERROR api POST /api/orders -> 500 (0ms)\n2026-10-30T06:01:34 ERROR api pricing config invalid: could not convert string to float: '15%'\n2026-10-30T06:01:34 ERROR api POST /api/orders -> 500 (0ms)\n2026-10-30T06:01:34 ERROR api pricing config invalid: could not convert string to float: '15%'\n2026-10-30T06:01:34 ERROR api POST /api/orders -> 500 (0ms)\n2026-10-30T06:01:35 ERROR api pricing config invalid: could not convert string to float: '15%'\n2026-10-30T06:01:35 ERROR api POST /api/orders -> 500 (0ms)\n2026-10-30T06:01:35 ERROR api pricing config invalid: could not convert string to float: '15%'\n2026-10-30T06:01:35 ERROR api POST /api/orders -> 500 (0ms)\n2026-10-30T06:01:35 ERROR api pricing config invalid: could not convert string to float: '15%'\n2026-10-30T06:01:35 ERROR api POST /api/orders -> 500 (0ms)\n2026-10-30T06:01:36 ERROR api pricing config invalid: could not convert string to float: '15%'\n2026-10-30T06:01:36 ERROR api POST /api/orders -> 500 (0ms)\n2026-10-30T06:01:36 ERROR api pricing config invalid: could not convert string to float: '15%'\n2026-10-30T06:01:36 ERROR api POST /api/orders -> 500 (0ms)\n2026-10-30T06:01:37 ERROR api pricing config invalid: could not convert string to float: '15%'\n2026-10-30T06:01:37 ERROR api POST /api/orders -> 500 (0ms)\n2026-10-30T06:01:38 ERROR api pricing config invalid: could not convert string to float: '15%'\n2026-10-30T06:01:38 ERROR api POST /api/orders -> 500 (0ms)"
+  },
+  {
+   "step": 9,
+   "t": 2.81,
+   "tool": "run_diagnostic",
+   "kind": "observe",
+   "args": {
+    "service": "api",
+    "check": "disk"
+   },
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.09,
+   "result": "Filesystem                Size      Used Available Use% Mounted on\noverlay                 252.0G     15.7G     22.8G  41% /\ntmpfs                    64.0M         0     64.0M   0% /dev\ntmpfs                     7.9G         0      7.9G   0% /sys/fs/cgroup\nshm                      64.0M         0     64.0M   0% /dev/shm\n/dev/vda                252.0G     15.7G     22.8G  41% /config\ntmpfs                    48.0M         0     48.0M   0% /data\n/dev/vda                252.0G     15.7G     22.8G  41% /etc/hostname\n/dev/vda                252.0G     15.7G     22.8G  41% /etc/hosts\n/dev/vda                252.0G     15.7G     22.8G  41% /etc/resolv.conf\ntmpfs                     4.0K         0      4.0K   0% /proc/acpi\ntmpfs                    64.0M         0     64.0M   0% /proc/interrupts\ntmpfs                    64.0M         0     64.0M   0% /proc/keys\ntmpfs                    64.0M         0     64.0M   0% /proc/timer_list\ntmpfs                     4.0K         0      4.0K   0% /sys/firmware\n--- largest under /data (KB) ---\n0\t/data/audit\n0\t/data"
+  },
+  {
+   "step": 10,
+   "t": 2.9,
+   "tool": "get_metrics",
+   "kind": "observe",
+   "args": {
+    "service": "api"
+   },
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 1.64,
+   "result": "{\n \"containers\": {\n  \"gateway\": {\n   \"cpu_pct\": \"0.46%\",\n   \"mem\": \"2.793MiB / 15.71GiB\",\n   \"mem_pct\": \"0.02%\"\n  },\n  \"api\": {\n   \"cpu_pct\": \"5.09%\",\n   \"mem\": \"34.18MiB / 256MiB\",\n   \"mem_pct\": \"13.35%\"\n  },\n  \"worker\": {\n   \"cpu_pct\": \"0.00%\",\n   \"mem\": \"25.24MiB / 15.71GiB\",\n   \"mem_pct\": \"0.16%\"\n  },\n  \"postgres\": {\n   \"cpu_pct\": \"2.94%\",\n   \"mem\": \"31.14MiB / 15.71GiB\",\n   \"mem_pct\": \"0.19%\"\n  },\n  \"redis\": {\n   \"cpu_pct\": \"0.63%\",\n   \"mem\": \"3.891MiB / 15.71GiB\",\n   \"mem_pct\": \"0.02%\"\n  }\n },\n \"api_app_metrics\": {\n  \"cache_errors_total\": 0,\n  \"db_errors_total\": 0,\n  \"endpoints\": {\n   \"/api/health\": {\n    \"errors_5xx\": 0,\n    \"p50_ms\": 16.4,\n    \"p95_ms\": 21.3,\n    \"requests\": 7\n   },\n   \"/api/orders\": {\n    \"errors_5xx\": 31,\n    \"p50_ms\": 0.4,\n    \"p95_ms\": 0.6,\n    \"requests\": 31\n   },\n   \"/api/orders/recent\": {\n    \"errors_5xx\": 0,\n    \"p50_ms\": 15.8,\n    \"p95_ms\": 22.0,\n    \"requests\": 43\n   },\n   \"/api/products\": {\n    \"errors_5xx\": 0,\n    \"p50_ms\": 2.3,\n    \"p95_ms\": 3.3,\n    \"requests\": 79\n   },\n   \"/metrics\": {\n    \"errors_5xx\": 0,\n    \"p50_ms\": 1.1,\n    \"p95_ms\": 1.1,\n    \"requests\": 1\n   },\n   \"unmatched\": {\n    \"errors_5xx\": 0,\n    \"p50_ms\": 0.2,\n    \"p95_ms\": 0.4,\n    \"requests\": 3\n   }\n  },\n  \"process_rss_mb\": 48.5,\n  \"uptime_s\": 18.2,\n  \"window_s\": 60\n }\n}"
+  },
+  {
+   "step": 11,
+   "t": 4.55,
+   "tool": "list_services",
+   "kind": "observe",
+   "args": {},
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.13,
+   "result": "service   state       restarts  oom    health   networks             missing_networks\ngateway   running     0         False  -        frontend             -\napi       running     0         False  -        backend,frontend     -\nworker    running     0         False  -        backend              -\npostgres  running     0         False  healthy  backend              -\nredis     running     0         False  -        backend              -"
+  },
+  {
+   "step": 12,
+   "t": 4.68,
+   "tool": "check_endpoints",
+   "kind": "observe",
+   "args": {},
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.05,
+   "result": "GET  /healthz             status=200     1.4ms OK\nGET  /api/health          status=200    19.2ms OK\nGET  /api/products        status=200     4.9ms OK\nGET  /api/orders/recent   status=200    19.6ms OK\nPOST /api/orders          status=500     2.4ms FAIL {\"error\":\"pricing error\"}"
+  },
+  {
+   "step": 13,
+   "t": 4.72,
+   "tool": "get_logs",
+   "kind": "observe",
+   "args": {
+    "service": "api",
+    "since_seconds": 120
+   },
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.03,
+   "result": "70 lines in last 120s.\nTop message patterns:\n     33x ERROR api pricing config invalid: could not convert string to float: '#%'\n     30x ERROR api POST /api/orders -> # (0ms)\n      3x ERROR api POST /api/orders -> # (1ms)\n      2x INFO api starting shop-api on :# (db=postgres:# cache=redis:#)\n      2x INFO api Serving on http://#\n--- last 60 lines ---\n2026-10-30T06:01:23 ERROR api pricing config invalid: could not convert string to float: '15%'\n2026-10-30T06:01:23 ERROR api POST /api/orders -> 500 (0ms)\n2026-10-30T06:01:23 ERROR api pricing config invalid: could not convert string to float: '15%'\n2026-10-30T06:01:23 ERROR api POST /api/orders -> 500 (0ms)\n2026-10-30T06:01:24 ERROR api pricing config invalid: could not convert string to float: '15%'\n2026-10-30T06:01:24 ERROR api POST /api/orders -> 500 (0ms)\n2026-10-30T06:01:26 ERROR api pricing config invalid: could not convert string to float: '15%'\n2026-10-30T06:01:26 ERROR api POST /api/orders -> 500 (1ms)\n2026-10-30T06:01:26 ERROR api pricing config invalid: could not convert string to float: '15%'\n2026-10-30T06:01:26 ERROR api POST /api/orders -> 500 (0ms)\n2026-10-30T06:01:27 ERROR api pricing config invalid: could not convert string to float: '15%'\n2026-10-30T06:01:27 ERROR api POST /api/orders -> 500 (0ms)\n2026-10-30T06:01:28 ERROR api pricing config invalid: could not convert string to float: '15%'\n2026-10-30T06:01:28 ERROR api POST /api/orders -> 500 (0ms)\n2026-10-30T06:01:28 ERROR api pricing config invalid: could not convert string to float: '15%'\n2026-10-30T06:01:28 ERROR api POST /api/orders -> 500 (0ms)\n2026-10-30T06:01:28 ERROR api pricing config invalid: could not convert string to float: '15%'\n2026-10-30T06:01:28 ERROR api POST /api/orders -> 500 (0ms)\n2026-10-30T06:01:30 ERROR api pricing config invalid: could not convert string to float: '15%'\n2026-10-30T06:01:30 ERROR api POST /api/orders -> 500 (0ms)\n2026-10-30T06:01:30 ERROR api pricing config invalid: could not convert string to float: '15%'\n2026-10-30T06:01:30 ERROR api POST /api/orders -> 500 (0ms)\n2026-10-30T06:01:31 ERROR api pricing config invalid: could not convert string to float: '15%'\n2026-10-30T06:01:31 ERROR api POST /api/orders -> 500 (0ms)\n2026-10-30T06:01:31 ERROR api pricing config invalid: could not convert string to float: '15%'\n2026-10-30T06:01:31 ERROR api POST /api/orders -> 500 (0ms)\n2026-10-30T06:01:31 ERROR api pricing config invalid: could not convert string to float: '15%'\n2026-10-30T06:01:31 ERROR api POST /api/orders -> 500 (0ms)\n2026-10-30T06:01:31 ERROR api pricing config invalid: could not convert string to float: '15%'\n2026-10-30T06:01:31 ERROR api POST /api/orders -> 500 (0ms)\n2026-10-30T06:01:32 ERROR api pricing config invalid: could not convert string to float: '15%'\n2026-10-30T06:01:32 ERROR api POST /api/orders -> 500 (0ms)\n2026-10-30T06:01:32 ERROR api pricing config invalid: could not convert string to float: '15%'\n2026-10-30T06:01:32 ERROR api POST /api/orders -> 500 (0ms)\n2026-10-30T06:01:33 ERROR api pricing config invalid: could not convert string to float: '15%'\n2026-10-30T06:01:33 ERROR api POST /api/orders -> 500 (0ms)\n2026-10-30T06:01:33 ERROR api pricing config invalid: could not convert string to float: '15%'\n2026-10-30T06:01:33 ERROR api POST /api/orders -> 500 (0ms)\n2026-10-30T06:01:34 ERROR api pricing config invalid: could not convert string to float: '15%'\n2026-10-30T06:01:34 ERROR api POST /api/orders -> 500 (0ms)\n2026-10-30T06:01:34 ERROR api pricing config invalid: could not convert string to float: '15%'\n2026-10-30T06:01:34 ERROR api POST /api/orders -> 500 (0ms)\n2026-10-30T06:01:35 ERROR api pricing config invalid: could not convert string to float: '15%'\n2026-10-30T06:01:35 ERROR api POST /api/orders -> 500 (0ms)\n2026-10-30T06:01:35 ERROR api pricing config invalid: could not convert string to float: '15%'\n2026-10-30T06:01:35 ERROR api POST /api/orders -> 500 (0ms)\n2026-10-30T06:01:35 ERROR api pricing config invalid: could not convert string to float: '15%'\n2026-10-30T06:01:35 ERROR api POST /api/orders -> 500 (0ms)\n2026-10-30T06:01:36 ERROR api pricing config invalid: could not convert string to float: '15%'\n2026-10-30T06:01:36 ERROR api POST /api/orders -> 500 (0ms)\n2026-10-30T06:01:36 ERROR api pricing config invalid: could not convert string to float: '15%'\n2026-10-30T06:01:36 ERROR api POST /api/orders -> 500 (0ms)\n2026-10-30T06:01:37 ERROR api pricing config invalid: could not convert string to float: '15%'\n2026-10-30T06:01:37 ERROR api POST /api/orders -> 500 (0ms)\n2026-10-30T06:01:38 ERROR api pricing config invalid: could not convert string to float: '15%'\n2026-10-30T06:01:38 ERROR api POST /api/orders -> 500 (0ms)\n2026-10-30T06:01:40 ERROR api pricing config invalid: could not convert string to float: '15%'\n2026-10-30T06:01:40 ERROR api POST /api/orders -> 500 (0ms)\n2026-10-30T06:01:40 ERROR api pricing config invalid: could not convert string to float: '15%'\n2026-10-30T06:01:40 ERROR api POST /api/orders -> 500 (0ms)"
+  },
+  {
+   "step": 14,
+   "t": 4.75,
+   "tool": "run_diagnostic",
+   "kind": "observe",
+   "args": {
+    "service": "api",
+    "check": "disk"
+   },
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.12,
+   "result": "Filesystem                Size      Used Available Use% Mounted on\noverlay                 252.0G     15.7G     22.8G  41% /\ntmpfs                    64.0M         0     64.0M   0% /dev\ntmpfs                     7.9G         0      7.9G   0% /sys/fs/cgroup\nshm                      64.0M         0     64.0M   0% /dev/shm\n/dev/vda                252.0G     15.7G     22.8G  41% /config\ntmpfs                    48.0M         0     48.0M   0% /data\n/dev/vda                252.0G     15.7G     22.8G  41% /etc/hostname\n/dev/vda                252.0G     15.7G     22.8G  41% /etc/hosts\n/dev/vda                252.0G     15.7G     22.8G  41% /etc/resolv.conf\ntmpfs                     4.0K         0      4.0K   0% /proc/acpi\ntmpfs                    64.0M         0     64.0M   0% /proc/interrupts\ntmpfs                    64.0M         0     64.0M   0% /proc/keys\ntmpfs                    64.0M         0     64.0M   0% /proc/timer_list\ntmpfs                     4.0K         0      4.0K   0% /sys/firmware\n--- largest under /data (KB) ---\n0\t/data/audit\n0\t/data"
+  },
+  {
+   "step": 15,
+   "t": 4.87,
+   "tool": "get_metrics",
+   "kind": "observe",
+   "args": {
+    "service": "api"
+   },
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 1.68,
+   "result": "{\n \"containers\": {\n  \"gateway\": {\n   \"cpu_pct\": \"0.37%\",\n   \"mem\": \"2.566MiB / 15.71GiB\",\n   \"mem_pct\": \"0.02%\"\n  },\n  \"api\": {\n   \"cpu_pct\": \"3.99%\",\n   \"mem\": \"34.54MiB / 256MiB\",\n   \"mem_pct\": \"13.49%\"\n  },\n  \"worker\": {\n   \"cpu_pct\": \"0.00%\",\n   \"mem\": \"25.24MiB / 15.71GiB\",\n   \"mem_pct\": \"0.16%\"\n  },\n  \"postgres\": {\n   \"cpu_pct\": \"1.58%\",\n   \"mem\": \"31.25MiB / 15.71GiB\",\n   \"mem_pct\": \"0.19%\"\n  },\n  \"redis\": {\n   \"cpu_pct\": \"0.59%\",\n   \"mem\": \"3.891MiB / 15.71GiB\",\n   \"mem_pct\": \"0.02%\"\n  }\n },\n \"api_app_metrics\": {\n  \"cache_errors_total\": 0,\n  \"db_errors_total\": 0,\n  \"endpoints\": {\n   \"/api/health\": {\n    \"errors_5xx\": 0,\n    \"p50_ms\": 17.0,\n    \"p95_ms\": 21.3,\n    \"requests\": 8\n   },\n   \"/api/orders\": {\n    \"errors_5xx\": 33,\n    \"p50_ms\": 0.4,\n    \"p95_ms\": 0.6,\n    \"requests\": 33\n   },\n   \"/api/orders/recent\": {\n    \"errors_5xx\": 0,\n    \"p50_ms\": 15.8,\n    \"p95_ms\": 22.0,\n    \"requests\": 47\n   },\n   \"/api/products\": {\n    \"errors_5xx\": 0,\n    \"p50_ms\": 2.1,\n    \"p95_ms\": 3.3,\n    \"requests\": 91\n   },\n   \"/metrics\": {\n    \"errors_5xx\": 0,\n    \"p50_ms\": 1.1,\n    \"p95_ms\": 1.1,\n    \"requests\": 2\n   },\n   \"unmatched\": {\n    \"errors_5xx\": 0,\n    \"p50_ms\": 0.2,\n    \"p95_ms\": 0.4,\n    \"requests\": 3\n   }\n  },\n  \"process_rss_mb\": 48.5,\n  \"uptime_s\": 20.2,\n  \"window_s\": 60\n }\n}"
+  },
+  {
+   "step": 16,
+   "t": 6.55,
+   "tool": "verify_recovery",
+   "kind": "observe",
+   "args": {},
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 8.61,
+   "result": "{\n \"healthy\": false,\n \"probe_success_rate\": 0.8,\n \"probe_p95_ms\": 21.1,\n \"problems\": [\n  \"probe success 80% < 97%\"\n ],\n \"probes\": {\n  \"GET /healthz\": {\n   \"ok\": 8,\n   \"fail\": 0,\n   \"statuses\": [\n    200\n   ],\n   \"last_error\": \"\"\n  },\n  \"GET /api/health\": {\n   \"ok\": 8,\n   \"fail\": 0,\n   \"statuses\": [\n    200\n   ],\n   \"last_error\": \"\"\n  },\n  \"GET /api/products\": {\n   \"ok\": 8,\n   \"fail\": 0,\n   \"statuses\": [\n    200\n   ],\n   \"last_error\": \"\"\n  },\n  \"GET /api/orders/recent\": {\n   \"ok\": 8,\n   \"fail\": 0,\n   \"statuses\": [\n    200\n   ],\n   \"last_error\": \"\"\n  },\n  \"POST /api/orders\": {\n   \"ok\": 0,\n   \"fail\": 8,\n   \"statuses\": [\n    500\n   ],\n   \"last_error\": \"{\\\"error\\\":\\\"pricing error\\\"}\\n\"\n  }\n }\n}"
+  },
+  {
+   "step": 17,
+   "t": 15.17,
+   "tool": "submit_report",
+   "kind": "final",
+   "args": {
+    "root_causes": [],
+    "summary": "runbook applied 0 fix(es)",
+    "recovered": false
+   },
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.0,
+   "result": "report submitted"
+  }
+ ],
+ "episode_seconds": 80.4
+}

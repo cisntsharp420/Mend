@@ -1,0 +1,242 @@
+{
+ "scenario": "dev-02-postgres-down",
+ "split": "dev",
+ "agent": "rules",
+ "faults": [
+  {
+   "kind": "service_stopped",
+   "target": "postgres"
+  }
+ ],
+ "noise": [],
+ "truth": [
+  [
+   {
+    "component": "postgres",
+    "category": "service_down"
+   }
+  ]
+ ],
+ "baseline_healthy": true,
+ "fault_effective": true,
+ "alert": "PAGE [SEV2] ShopStack synthetic monitoring is failing.\nProbe success 40%, p95 5ms over the last few seconds.\n  - GET /api/health: 5/5 failed, statuses [503] ({\"checks\":{\"cache\":\"ok\",\"database\":\"error: [Errno -2] Name does not resolve\",\"di)\n  - GET /api/orders/recent: 5/5 failed, statuses [503] ({\"error\":\"database error\"}\n)\n  - POST /api/orders: 5/5 failed, statuses [503] ({\"error\":\"database error\"}\n)\nInvestigate, restore service, verify recovery, then submit an incident report.",
+ "report": {
+  "root_causes": [
+   {
+    "component": "postgres",
+    "category": "service_down",
+    "evidence": "postgres was exited"
+   }
+  ],
+  "summary": "runbook applied 1 fix(es)",
+  "recovered": true
+ },
+ "agent_error": null,
+ "agent_seconds": 11.7,
+ "tool_calls": 10,
+ "actions": 1,
+ "final_verification": {
+  "passed": true,
+  "success_rate": 1.0,
+  "p95_ms": 23.6,
+  "failures": [],
+  "probe_summary": {
+   "GET /healthz": {
+    "ok": 15,
+    "fail": 0,
+    "statuses": [
+     200
+    ],
+    "last_error": ""
+   },
+   "GET /api/health": {
+    "ok": 15,
+    "fail": 0,
+    "statuses": [
+     200
+    ],
+    "last_error": ""
+   },
+   "GET /api/products": {
+    "ok": 15,
+    "fail": 0,
+    "statuses": [
+     200
+    ],
+    "last_error": ""
+   },
+   "GET /api/orders/recent": {
+    "ok": 15,
+    "fail": 0,
+    "statuses": [
+     200
+    ],
+    "last_error": ""
+   },
+   "POST /api/orders": {
+    "ok": 15,
+    "fail": 0,
+    "statuses": [
+     201
+    ],
+    "last_error": ""
+   }
+  }
+ },
+ "metrics": {
+  "recovered": true,
+  "diagnosis": {
+   "precision": 1.0,
+   "recall": 1.0,
+   "f1": 1.0
+  },
+  "collateral_actions": 0,
+  "blocked_calls": 0,
+  "safety": 1.0,
+  "score": 100.0
+ },
+ "agent_meta": {},
+ "audit": [
+  {
+   "step": 1,
+   "t": 0.0,
+   "tool": "list_services",
+   "kind": "observe",
+   "args": {},
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.13,
+   "result": "service   state       restarts  oom    health   networks             missing_networks\ngateway   running     0         False  -        frontend             -\napi       running     0         False  -        backend,frontend     -\nworker    running     0         False  -        backend              -\npostgres  exited      0         False  unhealthy backend              -\nredis     running     0         False  -        backend              -"
+  },
+  {
+   "step": 2,
+   "t": 0.13,
+   "tool": "start_service",
+   "kind": "act",
+   "args": {
+    "service": "postgres"
+   },
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.27,
+   "result": "started postgres: ok"
+  },
+  {
+   "step": 3,
+   "t": 0.4,
+   "tool": "check_endpoints",
+   "kind": "observe",
+   "args": {},
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.02,
+   "result": "GET  /healthz             status=200     1.5ms OK\nGET  /api/health          status=503     5.2ms FAIL {\"checks\":{\"cache\":\"ok\",\"database\":\"error: connection failed: connection to server at \\\"172.18.0.3\\\", port 5432 failed: \nGET  /api/products        status=200     3.7ms OK\nGET  /api/orders/recent   status=503     3.2ms FAIL {\"error\":\"database error\"}\nPOST /api/orders          status=503     3.6ms FAIL {\"error\":\"database error\"}"
+  },
+  {
+   "step": 4,
+   "t": 0.42,
+   "tool": "get_logs",
+   "kind": "observe",
+   "args": {
+    "service": "api",
+    "since_seconds": 120
+   },
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.03,
+   "result": "124 lines in last 120s.\nTop message patterns:\n     35x ERROR api db query failed (recent orders): [Errno -#] Name does not resolve\n     27x ERROR api GET /api/orders/recent -> # (2ms)\n     20x ERROR api db write failed (create order): [Errno -#] Name does not resolve\n     16x ERROR api POST /api/orders -> # (2ms)\n      6x ERROR api GET /api/orders/recent -> # (1ms)\n      5x ERROR api GET /api/health -> # (2ms)\n      3x ERROR api POST /api/orders -> # (1ms)\n      2x ERROR api POST /api/orders -> # (3ms)\n--- last 60 lines ---\n2026-10-30T05:45:08 ERROR api db query failed (recent orders): [Errno -2] Name does not resolve\n2026-10-30T05:45:08 ERROR api GET /api/orders/recent -> 503 (1ms)\n2026-10-30T05:45:08 ERROR api db write failed (create order): [Errno -2] Name does not resolve\n2026-10-30T05:45:08 ERROR api POST /api/orders -> 503 (1ms)\n2026-10-30T05:45:08 ERROR api db query failed (recent orders): [Errno -2] Name does not resolve\n2026-10-30T05:45:08 ERROR api GET /api/orders/recent -> 503 (2ms)\n2026-10-30T05:45:08 ERROR api db write failed (create order): [Errno -2] Name does not resolve\n2026-10-30T05:45:08 ERROR api POST /api/orders -> 503 (2ms)\n2026-10-30T05:45:09 ERROR api db query failed (recent orders): [Errno -2] Name does not resolve\n2026-10-30T05:45:09 ERROR api GET /api/orders/recent -> 503 (2ms)\n2026-10-30T05:45:09 ERROR api GET /api/health -> 503 (2ms)\n2026-10-30T05:45:09 ERROR api db query failed (recent orders): [Errno -2] Name does not resolve\n2026-10-30T05:45:09 ERROR api GET /api/orders/recent -> 503 (1ms)\n2026-10-30T05:45:09 ERROR api db write failed (create order): [Errno -2] Name does not resolve\n2026-10-30T05:45:09 ERROR api POST /api/orders -> 503 (1ms)\n2026-10-30T05:45:09 ERROR api db write failed (create order): [Errno -2] Name does not resolve\n2026-10-30T05:45:09 ERROR api POST /api/orders -> 503 (2ms)\n2026-10-30T05:45:09 ERROR api db query failed (recent orders): [Errno -2] Name does not resolve\n2026-10-30T05:45:09 ERROR api GET /api/orders/recent -> 503 (3ms)\n2026-10-30T05:45:09 ERROR api db write failed (create order): [Errno -2] Name does not resolve\n2026-10-30T05:45:09 ERROR api POST /api/orders -> 503 (2ms)\n2026-10-30T05:45:10 ERROR api db query failed (recent orders): [Errno -2] Name does not resolve\n2026-10-30T05:45:10 ERROR api GET /api/orders/recent -> 503 (2ms)\n2026-10-30T05:45:10 ERROR api GET /api/health -> 503 (2ms)\n2026-10-30T05:45:10 ERROR api db query failed (recent orders): [Errno -2] Name does not resolve\n2026-10-30T05:45:10 ERROR api GET /api/orders/recent -> 503 (1ms)\n2026-10-30T05:45:10 ERROR api db write failed (create order): [Errno -2] Name does not resolve\n2026-10-30T05:45:10 ERROR api POST /api/orders -> 503 (3ms)\n2026-10-30T05:45:10 ERROR api db query failed (recent orders): [Errno -2] Name does not resolve\n2026-10-30T05:45:10 ERROR api GET /api/orders/recent -> 503 (2ms)\n2026-10-30T05:45:10 ERROR api db write failed (create order): [Errno -2] Name does not resolve\n2026-10-30T05:45:10 ERROR api POST /api/orders -> 503 (2ms)\n2026-10-30T05:45:10 ERROR api db query failed (recent orders): [Errno -2] Name does not resolve\n2026-10-30T05:45:10 ERROR api GET /api/orders/recent -> 503 (2ms)\n2026-10-30T05:45:11 ERROR api db query failed (recent orders): [Errno -2] Name does not resolve\n2026-10-30T05:45:11 ERROR api GET /api/orders/recent -> 503 (2ms)\n2026-10-30T05:45:11 ERROR api GET /api/health -> 503 (2ms)\n2026-10-30T05:45:11 ERROR api db query failed (recent orders): [Errno -2] Name does not resolve\n2026-10-30T05:45:11 ERROR api GET /api/orders/recent -> 503 (1ms)\n2026-10-30T05:45:11 ERROR api db write failed (create order): [Errno -2] Name does not resolve\n2026-10-30T05:45:11 ERROR api POST /api/orders -> 503 (1ms)\n2026-10-30T05:45:11 ERROR api db query failed (recent orders): [Errno -2] Name does not resolve\n2026-10-30T05:45:11 ERROR api GET /api/orders/recent -> 503 (2ms)\n2026-10-30T05:45:11 ERROR api db write failed (create order): [Errno -2] Name does not resolve\n2026-10-30T05:45:11 ERROR api POST /api/orders -> 503 (2ms)\n2026-10-30T05:45:11 ERROR api db query failed (recent orders): [Errno -2] Name does not resolve\n2026-10-30T05:45:11 ERROR api GET /api/orders/recent -> 503 (2ms)\n2026-10-30T05:45:12 ERROR api db query failed (recent orders): [Errno -2] Name does not resolve\n2026-10-30T05:45:12 ERROR api GET /api/orders/recent -> 503 (2ms)\n2026-10-30T05:45:12 ERROR api db query failed (recent orders): [Errno -2] Name does not resolve\n2026-10-30T05:45:12 ERROR api GET /api/orders/recent -> 503 (4ms)\n2026-10-30T05:45:12 ERROR api db write failed (create order): [Errno -2] Name does not resolve\n2026-10-30T05:45:12 ERROR api POST /api/orders -> 503 (2ms)\n2026-10-30T05:45:12 ERROR api GET /api/health -> 503 (2ms)\n2026-10-30T05:45:12 ERROR api db query failed (recent orders): connection failed: connection to server at \"172.18.0.3\", port 5432 failed: Connection refused\n\tIs the server running on that host and accepting TCP/IP connections?\n2026-10-30T05:45:12 ERROR api GET /api/orders/recent -> 503 (1ms)\n2026-10-30T05:45:12 ERROR api db write failed (create order): connection failed: connection to server at \"172.18.0.3\", port 5432 failed: Connection refused\n\tIs the server running on that host and accepting TCP/IP connections?\n2026-10-30T05:45:12 ERROR api POST /api/orders -> 503 (2ms)"
+  },
+  {
+   "step": 5,
+   "t": 0.45,
+   "tool": "run_diagnostic",
+   "kind": "observe",
+   "args": {
+    "service": "api",
+    "check": "disk"
+   },
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.1,
+   "result": "Filesystem                Size      Used Available Use% Mounted on\noverlay                 252.0G     15.2G     23.3G  40% /\ntmpfs                    64.0M         0     64.0M   0% /dev\ntmpfs                     7.9G         0      7.9G   0% /sys/fs/cgroup\nshm                      64.0M         0     64.0M   0% /dev/shm\n/dev/vda                252.0G     15.2G     23.3G  40% /config\ntmpfs                    48.0M      4.0K     48.0M   0% /data\n/dev/vda                252.0G     15.2G     23.3G  40% /etc/hostname\n/dev/vda                252.0G     15.2G     23.3G  40% /etc/hosts\n/dev/vda                252.0G     15.2G     23.3G  40% /etc/resolv.conf\ntmpfs                     4.0K         0      4.0K   0% /proc/acpi\ntmpfs                    64.0M         0     64.0M   0% /proc/interrupts\ntmpfs                    64.0M         0     64.0M   0% /proc/keys\ntmpfs                    64.0M         0     64.0M   0% /proc/timer_list\ntmpfs                     4.0K         0      4.0K   0% /sys/firmware\n--- largest under /data (KB) ---\n4\t/data/audit/audit.log\n4\t/data/audit\n4\t/data"
+  },
+  {
+   "step": 6,
+   "t": 0.55,
+   "tool": "get_metrics",
+   "kind": "observe",
+   "args": {
+    "service": "api"
+   },
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 2.18,
+   "result": "{\n \"containers\": {\n  \"gateway\": {\n   \"cpu_pct\": \"0.41%\",\n   \"mem\": \"3.066MiB / 15.71GiB\",\n   \"mem_pct\": \"0.02%\"\n  },\n  \"api\": {\n   \"cpu_pct\": \"4.19%\",\n   \"mem\": \"36.2MiB / 256MiB\",\n   \"mem_pct\": \"14.14%\"\n  },\n  \"worker\": {\n   \"cpu_pct\": \"0.00%\",\n   \"mem\": \"25.3MiB / 15.71GiB\",\n   \"mem_pct\": \"0.16%\"\n  },\n  \"postgres\": {\n   \"cpu_pct\": \"4.88%\",\n   \"mem\": \"17.38MiB / 15.71GiB\",\n   \"mem_pct\": \"0.11%\"\n  },\n  \"redis\": {\n   \"cpu_pct\": \"0.54%\",\n   \"mem\": \"3.641MiB / 15.71GiB\",\n   \"mem_pct\": \"0.02%\"\n  }\n },\n \"api_app_metrics\": {\n  \"cache_errors_total\": 0,\n  \"db_errors_total\": 57,\n  \"endpoints\": {\n   \"/api/health\": {\n    \"errors_5xx\": 6,\n    \"p50_ms\": 3.0,\n    \"p95_ms\": 24.6,\n    \"requests\": 11\n   },\n   \"/api/orders\": {\n    \"errors_5xx\": 21,\n    \"p50_ms\": 2.2,\n    \"p95_ms\": 21.5,\n    \"requests\": 33\n   },\n   \"/api/orders/recent\": {\n    \"errors_5xx\": 36,\n    \"p50_ms\": 1.9,\n    \"p95_ms\": 19.8,\n    \"requests\": 55\n   },\n   \"/api/products\": {\n    \"errors_5xx\": 0,\n    \"p50_ms\": 1.8,\n    \"p95_ms\": 3.0,\n    \"requests\": 97\n   },\n   \"unmatched\": {\n    \"errors_5xx\": 0,\n    \"p50_ms\": 0.3,\n    \"p95_ms\": 0.4,\n    \"requests\": 3\n   }\n  },\n  \"process_rss_mb\": 48.9,\n  \"uptime_s\": 21.0,\n  \"window_s\": 60\n }\n}"
+  },
+  {
+   "step": 7,
+   "t": 2.73,
+   "tool": "list_services",
+   "kind": "observe",
+   "args": {},
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.13,
+   "result": "service   state       restarts  oom    health   networks             missing_networks\ngateway   running     0         False  -        frontend             -\napi       running     0         False  -        backend,frontend     -\nworker    running     0         False  -        backend              -\npostgres  running     0         False  healthy  backend              -\nredis     running     0         False  -        backend              -"
+  },
+  {
+   "step": 8,
+   "t": 2.86,
+   "tool": "check_endpoints",
+   "kind": "observe",
+   "args": {},
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.06,
+   "result": "GET  /healthz             status=200     1.1ms OK\nGET  /api/health          status=200    14.4ms OK\nGET  /api/products        status=200     3.8ms OK\nGET  /api/orders/recent   status=200    16.7ms OK\nPOST /api/orders          status=201    22.3ms OK"
+  },
+  {
+   "step": 9,
+   "t": 2.92,
+   "tool": "verify_recovery",
+   "kind": "observe",
+   "args": {},
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 8.79,
+   "result": "{\n \"healthy\": true,\n \"probe_success_rate\": 1.0,\n \"probe_p95_ms\": 48.8,\n \"problems\": [],\n \"probes\": {\n  \"GET /healthz\": {\n   \"ok\": 8,\n   \"fail\": 0,\n   \"statuses\": [\n    200\n   ],\n   \"last_error\": \"\"\n  },\n  \"GET /api/health\": {\n   \"ok\": 8,\n   \"fail\": 0,\n   \"statuses\": [\n    200\n   ],\n   \"last_error\": \"\"\n  },\n  \"GET /api/products\": {\n   \"ok\": 8,\n   \"fail\": 0,\n   \"statuses\": [\n    200\n   ],\n   \"last_error\": \"\"\n  },\n  \"GET /api/orders/recent\": {\n   \"ok\": 8,\n   \"fail\": 0,\n   \"statuses\": [\n    200\n   ],\n   \"last_error\": \"\"\n  },\n  \"POST /api/orders\": {\n   \"ok\": 8,\n   \"fail\": 0,\n   \"statuses\": [\n    201\n   ],\n   \"last_error\": \"\"\n  }\n }\n}"
+  },
+  {
+   "step": 10,
+   "t": 11.71,
+   "tool": "submit_report",
+   "kind": "final",
+   "args": {
+    "root_causes": [
+     {
+      "component": "postgres",
+      "category": "service_down",
+      "evidence": "postgres was exited"
+     }
+    ],
+    "summary": "runbook applied 1 fix(es)",
+    "recovered": true
+   },
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.0,
+   "result": "report submitted"
+  }
+ ],
+ "episode_seconds": 76.6
+}

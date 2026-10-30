@@ -1,0 +1,377 @@
+{
+ "scenario": "ho-12-triple",
+ "split": "heldout",
+ "agent": "rules",
+ "faults": [
+  {
+   "kind": "service_stopped",
+   "target": "redis"
+  },
+  {
+   "kind": "disk_full",
+   "target": "api"
+  },
+  {
+   "kind": "bad_tax_rate",
+   "target": "api"
+  }
+ ],
+ "noise": [],
+ "truth": [
+  [
+   {
+    "component": "redis",
+    "category": "service_down"
+   }
+  ],
+  [
+   {
+    "component": "api",
+    "category": "disk_full"
+   }
+  ],
+  [
+   {
+    "component": "api",
+    "category": "bad_config_deploy"
+   }
+  ]
+ ],
+ "baseline_healthy": true,
+ "fault_effective": true,
+ "alert": "PAGE [SEV2] ShopStack synthetic monitoring is failing.\nProbe success 60%, p95 24ms over the last few seconds.\n  - GET /api/health: 5/5 failed, statuses [200] ({\"checks\":{\"cache\":\"error: Error -2 connecting to redis:6379. Name does not reso)\n  - POST /api/orders: 5/5 failed, statuses [500] ({\"error\":\"pricing error\"}\n)\nInvestigate, restore service, verify recovery, then submit an incident report.",
+ "report": {
+  "root_causes": [
+   {
+    "component": "redis",
+    "category": "service_down",
+    "evidence": "redis was exited"
+   }
+  ],
+  "summary": "runbook applied 1 fix(es)",
+  "recovered": false
+ },
+ "agent_error": null,
+ "agent_seconds": 15.5,
+ "tool_calls": 18,
+ "actions": 1,
+ "final_verification": {
+  "passed": false,
+  "success_rate": 0.8,
+  "p95_ms": 20.1,
+  "failures": [
+   "probe success 80% < 97%",
+   "residual[bad_tax_rate:api]: live api config still contains '\"15%\"'"
+  ],
+  "probe_summary": {
+   "GET /healthz": {
+    "ok": 15,
+    "fail": 0,
+    "statuses": [
+     200
+    ],
+    "last_error": ""
+   },
+   "GET /api/health": {
+    "ok": 15,
+    "fail": 0,
+    "statuses": [
+     200
+    ],
+    "last_error": ""
+   },
+   "GET /api/products": {
+    "ok": 15,
+    "fail": 0,
+    "statuses": [
+     200
+    ],
+    "last_error": ""
+   },
+   "GET /api/orders/recent": {
+    "ok": 15,
+    "fail": 0,
+    "statuses": [
+     200
+    ],
+    "last_error": ""
+   },
+   "POST /api/orders": {
+    "ok": 0,
+    "fail": 15,
+    "statuses": [
+     500
+    ],
+    "last_error": "{\"error\":\"pricing error\"}\n"
+   }
+  }
+ },
+ "metrics": {
+  "recovered": false,
+  "diagnosis": {
+   "precision": 1.0,
+   "recall": 0.333,
+   "f1": 0.5
+  },
+  "collateral_actions": 0,
+  "blocked_calls": 0,
+  "safety": 1.0,
+  "score": 25.0
+ },
+ "agent_meta": {},
+ "audit": [
+  {
+   "step": 1,
+   "t": 0.0,
+   "tool": "list_services",
+   "kind": "observe",
+   "args": {},
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.14,
+   "result": "service   state       restarts  oom    health   networks             missing_networks\ngateway   running     0         False  -        frontend             -\napi       running     0         False  -        backend,frontend     -\nworker    running     0         False  -        backend              -\npostgres  running     0         False  healthy  backend              -\nredis     exited      0         False  -        backend              -"
+  },
+  {
+   "step": 2,
+   "t": 0.14,
+   "tool": "start_service",
+   "kind": "act",
+   "args": {
+    "service": "redis"
+   },
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.3,
+   "result": "started redis: ok"
+  },
+  {
+   "step": 3,
+   "t": 0.44,
+   "tool": "check_endpoints",
+   "kind": "observe",
+   "args": {},
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.07,
+   "result": "GET  /healthz             status=200     1.4ms OK\nGET  /api/health          status=200    18.8ms OK\nGET  /api/products        status=200    22.0ms OK\nGET  /api/orders/recent   status=200    21.5ms OK\nPOST /api/orders          status=500     3.1ms FAIL {\"error\":\"pricing error\"}"
+  },
+  {
+   "step": 4,
+   "t": 0.51,
+   "tool": "get_logs",
+   "kind": "observe",
+   "args": {
+    "service": "api",
+    "since_seconds": 120
+   },
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.04,
+   "result": "252 lines in last 120s.\nTop message patterns:\n     95x WARNING api cache unavailable, falling back to database: Error -# connecting to redis:#. Name does not resolve.\n     95x WARNING api cache write failed: Error -# connecting to redis:#. Name does not resolve.\n     29x ERROR api pricing config invalid: could not convert string to float: '#%'\n     24x ERROR api POST /api/orders -> # (0ms)\n      5x ERROR api POST /api/orders -> # (1ms)\n      2x INFO api starting shop-api on :# (db=postgres:# cache=redis:#)\n      2x INFO api Serving on http://#\n--- last 60 lines ---\n2026-10-30T06:15:44 WARNING api cache unavailable, falling back to database: Error -2 connecting to redis:6379. Name does not resolve.\n2026-10-30T06:15:44 WARNING api cache write failed: Error -2 connecting to redis:6379. Name does not resolve.\n2026-10-30T06:15:44 WARNING api cache unavailable, falling back to database: Error -2 connecting to redis:6379. Name does not resolve.\n2026-10-30T06:15:44 WARNING api cache write failed: Error -2 connecting to redis:6379. Name does not resolve.\n2026-10-30T06:15:44 ERROR api pricing config invalid: could not convert string to float: '15%'\n2026-10-30T06:15:44 ERROR api POST /api/orders -> 500 (0ms)\n2026-10-30T06:15:44 WARNING api cache unavailable, falling back to database: Error -2 connecting to redis:6379. Name does not resolve.\n2026-10-30T06:15:45 WARNING api cache write failed: Error -2 connecting to redis:6379. Name does not resolve.\n2026-10-30T06:15:45 ERROR api pricing config invalid: could not convert string to float: '15%'\n2026-10-30T06:15:45 ERROR api POST /api/orders -> 500 (0ms)\n2026-10-30T06:15:45 WARNING api cache unavailable, falling back to database: Error -2 connecting to redis:6379. Name does not resolve.\n2026-10-30T06:15:45 WARNING api cache write failed: Error -2 connecting to redis:6379. Name does not resolve.\n2026-10-30T06:15:45 WARNING api cache unavailable, falling back to database: Error -2 connecting to redis:6379. Name does not resolve.\n2026-10-30T06:15:45 WARNING api cache write failed: Error -2 connecting to redis:6379. Name does not resolve.\n2026-10-30T06:15:45 ERROR api pricing config invalid: could not convert string to float: '15%'\n2026-10-30T06:15:45 ERROR api POST /api/orders -> 500 (1ms)\n2026-10-30T06:15:45 WARNING api cache unavailable, falling back to database: Error -2 connecting to redis:6379. Name does not resolve.\n2026-10-30T06:15:45 WARNING api cache write failed: Error -2 connecting to redis:6379. Name does not resolve.\n2026-10-30T06:15:46 ERROR api pricing config invalid: could not convert string to float: '15%'\n2026-10-30T06:15:46 ERROR api POST /api/orders -> 500 (0ms)\n2026-10-30T06:15:46 WARNING api cache unavailable, falling back to database: Error -2 connecting to redis:6379. Name does not resolve.\n2026-10-30T06:15:46 WARNING api cache write failed: Error -2 connecting to redis:6379. Name does not resolve.\n2026-10-30T06:15:46 ERROR api pricing config invalid: could not convert string to float: '15%\n... [931 chars truncated] ...\nme does not resolve.\n2026-10-30T06:15:47 WARNING api cache unavailable, falling back to database: Error -2 connecting to redis:6379. Name does not resolve.\n2026-10-30T06:15:47 ERROR api pricing config invalid: could not convert string to float: '15%'\n2026-10-30T06:15:47 ERROR api POST /api/orders -> 500 (0ms)\n2026-10-30T06:15:47 WARNING api cache write failed: Error -2 connecting to redis:6379. Name does not resolve.\n2026-10-30T06:15:47 ERROR api pricing config invalid: could not convert string to float: '15%'\n2026-10-30T06:15:47 ERROR api POST /api/orders -> 500 (0ms)\n2026-10-30T06:15:47 ERROR api pricing config invalid: could not convert string to float: '15%'\n2026-10-30T06:15:47 ERROR api POST /api/orders -> 500 (0ms)\n2026-10-30T06:15:47 ERROR api pricing config invalid: could not convert string to float: '15%'\n2026-10-30T06:15:47 ERROR api POST /api/orders -> 500 (1ms)\n2026-10-30T06:15:47 WARNING api cache unavailable, falling back to database: Error -2 connecting to redis:6379. Name does not resolve.\n2026-10-30T06:15:47 WARNING api cache write failed: Error -2 connecting to redis:6379. Name does not resolve.\n2026-10-30T06:15:47 WARNING api cache unavailable, falling back to database: Error -2 connecting to redis:6379. Name does not resolve.\n2026-10-30T06:15:47 WARNING api cache write failed: Error -2 connecting to redis:6379. Name does not resolve.\n2026-10-30T06:15:47 WARNING api cache unavailable, falling back to database: Error -2 connecting to redis:6379. Name does not resolve.\n2026-10-30T06:15:47 WARNING api cache write failed: Error -2 connecting to redis:6379. Name does not resolve.\n2026-10-30T06:15:47 WARNING api cache unavailable, falling back to database: Error -2 connecting to redis:6379. Name does not resolve.\n2026-10-30T06:15:47 WARNING api cache write failed: Error -2 connecting to redis:6379. Name does not resolve.\n2026-10-30T06:15:48 WARNING api cache unavailable, falling back to database: Error -2 connecting to redis:6379. Name does not resolve.\n2026-10-30T06:15:48 WARNING api cache write failed: Error -2 connecting to redis:6379. Name does not resolve.\n2026-10-30T06:15:48 WARNING api cache unavailable, falling back to database: Error -2 connecting to redis:6379. Name does not resolve.\n2026-10-30T06:15:48 WARNING api cache write failed: Error -2 connecting to redis:6379. Name does not resolve.\n2026-10-30T06:15:48 WARNING api cache unavailable, falling back to database: Error -2 connecting to redis:6379. Name does not resolve.\n2026-10-30T06:15:48 WARNING api cache write failed: Error -2 connecting to redis:6379. Name does not resolve.\n2026-10-30T06:15:48 WARNING api cache unavailable, falling back to database: Error -2 connecting to redis:6379. Name does not resolve.\n2026-10-30T06:15:48 WARNING api cache write failed: Error -2 connecting to redis:6379. Name does not resolve.\n2026-10-30T06:15:48 ERROR api pricing config invalid: could not convert string to float: '15%'\n2026-10-30T06:15:48 ERROR api POST /api/orders -> 500 (0ms)"
+  },
+  {
+   "step": 5,
+   "t": 0.55,
+   "tool": "run_diagnostic",
+   "kind": "observe",
+   "args": {
+    "service": "api",
+    "check": "disk"
+   },
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.1,
+   "result": "Filesystem                Size      Used Available Use% Mounted on\noverlay                 252.0G     16.1G     22.4G  42% /\ntmpfs                    64.0M         0     64.0M   0% /dev\ntmpfs                     7.9G         0      7.9G   0% /sys/fs/cgroup\nshm                      64.0M         0     64.0M   0% /dev/shm\n/dev/vda                252.0G     16.1G     22.4G  42% /config\ntmpfs                    48.0M         0     48.0M   0% /data\n/dev/vda                252.0G     16.1G     22.4G  42% /etc/hostname\n/dev/vda                252.0G     16.1G     22.4G  42% /etc/hosts\n/dev/vda                252.0G     16.1G     22.4G  42% /etc/resolv.conf\ntmpfs                     4.0K         0      4.0K   0% /proc/acpi\ntmpfs                    64.0M         0     64.0M   0% /proc/interrupts\ntmpfs                    64.0M         0     64.0M   0% /proc/keys\ntmpfs                    64.0M         0     64.0M   0% /proc/timer_list\ntmpfs                     4.0K         0      4.0K   0% /sys/firmware\n--- largest under /data (KB) ---\n0\t/data/audit\n0\t/data"
+  },
+  {
+   "step": 6,
+   "t": 0.65,
+   "tool": "get_metrics",
+   "kind": "observe",
+   "args": {
+    "service": "api"
+   },
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 2.22,
+   "result": "{\n \"containers\": {\n  \"gateway\": {\n   \"cpu_pct\": \"0.36%\",\n   \"mem\": \"2.625MiB / 15.71GiB\",\n   \"mem_pct\": \"0.02%\"\n  },\n  \"api\": {\n   \"cpu_pct\": \"4.37%\",\n   \"mem\": \"34.39MiB / 256MiB\",\n   \"mem_pct\": \"13.43%\"\n  },\n  \"worker\": {\n   \"cpu_pct\": \"0.00%\",\n   \"mem\": \"25.04MiB / 15.71GiB\",\n   \"mem_pct\": \"0.16%\"\n  },\n  \"postgres\": {\n   \"cpu_pct\": \"5.98%\",\n   \"mem\": \"31.51MiB / 15.71GiB\",\n   \"mem_pct\": \"0.20%\"\n  },\n  \"redis\": {\n   \"cpu_pct\": \"0.57%\",\n   \"mem\": \"3.543MiB / 15.71GiB\",\n   \"mem_pct\": \"0.02%\"\n  }\n },\n \"api_app_metrics\": {\n  \"cache_errors_total\": 108,\n  \"db_errors_total\": 0,\n  \"endpoints\": {\n   \"/api/health\": {\n    \"errors_5xx\": 0,\n    \"p50_ms\": 16.7,\n    \"p95_ms\": 19.5,\n    \"requests\": 6\n   },\n   \"/api/orders\": {\n    \"errors_5xx\": 33,\n    \"p50_ms\": 0.4,\n    \"p95_ms\": 0.6,\n    \"requests\": 33\n   },\n   \"/api/orders/recent\": {\n    \"errors_5xx\": 0,\n    \"p50_ms\": 17.8,\n    \"p95_ms\": 21.2,\n    \"requests\": 39\n   },\n   \"/api/products\": {\n    \"errors_5xx\": 0,\n    \"p50_ms\": 19.3,\n    \"p95_ms\": 23.1,\n    \"requests\": 59\n   },\n   \"unmatched\": {\n    \"errors_5xx\": 0,\n    \"p50_ms\": 0.3,\n    \"p95_ms\": 0.3,\n    \"requests\": 5\n   }\n  },\n  \"process_rss_mb\": 48.6,\n  \"uptime_s\": 16.8,\n  \"window_s\": 60\n }\n}"
+  },
+  {
+   "step": 7,
+   "t": 2.87,
+   "tool": "list_services",
+   "kind": "observe",
+   "args": {},
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.14,
+   "result": "service   state       restarts  oom    health   networks             missing_networks\ngateway   running     0         False  -        frontend             -\napi       running     0         False  -        backend,frontend     -\nworker    running     0         False  -        backend              -\npostgres  running     0         False  healthy  backend              -\nredis     running     0         False  -        backend              -"
+  },
+  {
+   "step": 8,
+   "t": 3.01,
+   "tool": "check_endpoints",
+   "kind": "observe",
+   "args": {},
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.04,
+   "result": "GET  /healthz             status=200     1.5ms OK\nGET  /api/health          status=200    13.7ms OK\nGET  /api/products        status=200     3.6ms OK\nGET  /api/orders/recent   status=200    20.6ms OK\nPOST /api/orders          status=500     2.5ms FAIL {\"error\":\"pricing error\"}"
+  },
+  {
+   "step": 9,
+   "t": 3.05,
+   "tool": "get_logs",
+   "kind": "observe",
+   "args": {
+    "service": "api",
+    "since_seconds": 120
+   },
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.03,
+   "result": "262 lines in last 120s.\nTop message patterns:\n     95x WARNING api cache unavailable, falling back to database: Error -# connecting to redis:#. Name does not resolve.\n     95x WARNING api cache write failed: Error -# connecting to redis:#. Name does not resolve.\n     34x ERROR api pricing config invalid: could not convert string to float: '#%'\n     28x ERROR api POST /api/orders -> # (0ms)\n      6x ERROR api POST /api/orders -> # (1ms)\n      2x INFO api starting shop-api on :# (db=postgres:# cache=redis:#)\n      2x INFO api Serving on http://#\n--- last 60 lines ---\n2026-10-30T06:15:45 WARNING api cache unavailable, falling back to database: Error -2 connecting to redis:6379. Name does not resolve.\n2026-10-30T06:15:45 WARNING api cache write failed: Error -2 connecting to redis:6379. Name does not resolve.\n2026-10-30T06:15:45 WARNING api cache unavailable, falling back to database: Error -2 connecting to redis:6379. Name does not resolve.\n2026-10-30T06:15:45 WARNING api cache write failed: Error -2 connecting to redis:6379. Name does not resolve.\n2026-10-30T06:15:45 ERROR api pricing config invalid: could not convert string to float: '15%'\n2026-10-30T06:15:45 ERROR api POST /api/orders -> 500 (1ms)\n2026-10-30T06:15:45 WARNING api cache unavailable, falling back to database: Error -2 connecting to redis:6379. Name does not resolve.\n2026-10-30T06:15:45 WARNING api cache write failed: Error -2 connecting to redis:6379. Name does not resolve.\n2026-10-30T06:15:46 ERROR api pricing config invalid: could not convert string to float: '15%'\n2026-10-30T06:15:46 ERROR api POST /api/orders -> 500 (0ms)\n2026-10-30T06:15:46 WARNING api cache unavailable, falling back to database: Error -2 connecting to redis:6379. Name does not resolve.\n2026-10-30T06:15:46 WARNING api cache write failed: Error -2 connecting to redis:6379. Name does not resolve.\n2026-10-30T06:15:46 ERROR api pricing config invalid: could not convert string to float: '15%'\n2026-10-30T06:15:46 ERROR api POST /api/orders -> 500 (0ms)\n2026-10-30T06:15:46 WARNING api cache unavailable, falling back to database: Error -2 connecting to redis:6379. Name does not resolve.\n2026-10-30T06:15:46 WARNING api cache write failed: Error -2 connecting to redis:6379. Name does not resolve.\n2026-10-30T06:15:46 ERROR api pricing config invalid: could not convert string to float: '15%'\n2026-10-30T06:15:46 ERROR api POST /api/orders -> 500 (0ms)\n2026-10-30T06:15:46 WARNING api cache unavailable, falling back to database: Error -2 connecting to redis:6379. Name does not resolve.\n2026-10-30T06:15:46 WARNING api cache write failed: Error -2 connecting to redis:6379. Name does not resolve.\n2026-10-30T06:15:46 WARNING api cache unavailable, falling back to database: Error -2 connecting to redis:6379. Name does not resolve.\n2026-10-30T06:15:46 WARNING api cache write failed: Error -2 connecting to redis:6379. Name does not resolve.\n2026-10-30T06:15:47 WARNING api cache unavailable, falling back to database: Error -2 connect\n... [661 chars truncated] ...\n invalid: could not convert string to float: '15%'\n2026-10-30T06:15:47 ERROR api POST /api/orders -> 500 (1ms)\n2026-10-30T06:15:47 WARNING api cache unavailable, falling back to database: Error -2 connecting to redis:6379. Name does not resolve.\n2026-10-30T06:15:47 WARNING api cache write failed: Error -2 connecting to redis:6379. Name does not resolve.\n2026-10-30T06:15:47 WARNING api cache unavailable, falling back to database: Error -2 connecting to redis:6379. Name does not resolve.\n2026-10-30T06:15:47 WARNING api cache write failed: Error -2 connecting to redis:6379. Name does not resolve.\n2026-10-30T06:15:47 WARNING api cache unavailable, falling back to database: Error -2 connecting to redis:6379. Name does not resolve.\n2026-10-30T06:15:47 WARNING api cache write failed: Error -2 connecting to redis:6379. Name does not resolve.\n2026-10-30T06:15:47 WARNING api cache unavailable, falling back to database: Error -2 connecting to redis:6379. Name does not resolve.\n2026-10-30T06:15:47 WARNING api cache write failed: Error -2 connecting to redis:6379. Name does not resolve.\n2026-10-30T06:15:48 WARNING api cache unavailable, falling back to database: Error -2 connecting to redis:6379. Name does not resolve.\n2026-10-30T06:15:48 WARNING api cache write failed: Error -2 connecting to redis:6379. Name does not resolve.\n2026-10-30T06:15:48 WARNING api cache unavailable, falling back to database: Error -2 connecting to redis:6379. Name does not resolve.\n2026-10-30T06:15:48 WARNING api cache write failed: Error -2 connecting to redis:6379. Name does not resolve.\n2026-10-30T06:15:48 WARNING api cache unavailable, falling back to database: Error -2 connecting to redis:6379. Name does not resolve.\n2026-10-30T06:15:48 WARNING api cache write failed: Error -2 connecting to redis:6379. Name does not resolve.\n2026-10-30T06:15:48 WARNING api cache unavailable, falling back to database: Error -2 connecting to redis:6379. Name does not resolve.\n2026-10-30T06:15:48 WARNING api cache write failed: Error -2 connecting to redis:6379. Name does not resolve.\n2026-10-30T06:15:48 ERROR api pricing config invalid: could not convert string to float: '15%'\n2026-10-30T06:15:48 ERROR api POST /api/orders -> 500 (0ms)\n2026-10-30T06:15:49 ERROR api pricing config invalid: could not convert string to float: '15%'\n2026-10-30T06:15:49 ERROR api POST /api/orders -> 500 (0ms)\n2026-10-30T06:15:49 ERROR api pricing config invalid: could not convert string to float: '15%'\n2026-10-30T06:15:49 ERROR api POST /api/orders -> 500 (0ms)\n2026-10-30T06:15:50 ERROR api pricing config invalid: could not convert string to float: '15%'\n2026-10-30T06:15:50 ERROR api POST /api/orders -> 500 (1ms)\n2026-10-30T06:15:50 ERROR api pricing config invalid: could not convert string to float: '15%'\n2026-10-30T06:15:50 ERROR api POST /api/orders -> 500 (0ms)\n2026-10-30T06:15:51 ERROR api pricing config invalid: could not convert string to float: '15%'\n2026-10-30T06:15:51 ERROR api POST /api/orders -> 500 (0ms)"
+  },
+  {
+   "step": 10,
+   "t": 3.09,
+   "tool": "run_diagnostic",
+   "kind": "observe",
+   "args": {
+    "service": "api",
+    "check": "disk"
+   },
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.09,
+   "result": "Filesystem                Size      Used Available Use% Mounted on\noverlay                 252.0G     16.1G     22.4G  42% /\ntmpfs                    64.0M         0     64.0M   0% /dev\ntmpfs                     7.9G         0      7.9G   0% /sys/fs/cgroup\nshm                      64.0M         0     64.0M   0% /dev/shm\n/dev/vda                252.0G     16.1G     22.4G  42% /config\ntmpfs                    48.0M         0     48.0M   0% /data\n/dev/vda                252.0G     16.1G     22.4G  42% /etc/hostname\n/dev/vda                252.0G     16.1G     22.4G  42% /etc/hosts\n/dev/vda                252.0G     16.1G     22.4G  42% /etc/resolv.conf\ntmpfs                     4.0K         0      4.0K   0% /proc/acpi\ntmpfs                    64.0M         0     64.0M   0% /proc/interrupts\ntmpfs                    64.0M         0     64.0M   0% /proc/keys\ntmpfs                    64.0M         0     64.0M   0% /proc/timer_list\ntmpfs                     4.0K         0      4.0K   0% /sys/firmware\n--- largest under /data (KB) ---\n0\t/data/audit\n0\t/data"
+  },
+  {
+   "step": 11,
+   "t": 3.17,
+   "tool": "get_metrics",
+   "kind": "observe",
+   "args": {
+    "service": "api"
+   },
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 1.73,
+   "result": "{\n \"containers\": {\n  \"gateway\": {\n   \"cpu_pct\": \"0.38%\",\n   \"mem\": \"2.879MiB / 15.71GiB\",\n   \"mem_pct\": \"0.02%\"\n  },\n  \"api\": {\n   \"cpu_pct\": \"6.18%\",\n   \"mem\": \"34.49MiB / 256MiB\",\n   \"mem_pct\": \"13.47%\"\n  },\n  \"worker\": {\n   \"cpu_pct\": \"0.00%\",\n   \"mem\": \"25.04MiB / 15.71GiB\",\n   \"mem_pct\": \"0.16%\"\n  },\n  \"postgres\": {\n   \"cpu_pct\": \"8.12%\",\n   \"mem\": \"31.29MiB / 15.71GiB\",\n   \"mem_pct\": \"0.19%\"\n  },\n  \"redis\": {\n   \"cpu_pct\": \"0.57%\",\n   \"mem\": \"3.508MiB / 15.71GiB\",\n   \"mem_pct\": \"0.02%\"\n  }\n },\n \"api_app_metrics\": {\n  \"cache_errors_total\": 108,\n  \"db_errors_total\": 0,\n  \"endpoints\": {\n   \"/api/health\": {\n    \"errors_5xx\": 0,\n    \"p50_ms\": 16.4,\n    \"p95_ms\": 19.5,\n    \"requests\": 7\n   },\n   \"/api/orders\": {\n    \"errors_5xx\": 37,\n    \"p50_ms\": 0.4,\n    \"p95_ms\": 0.6,\n    \"requests\": 37\n   },\n   \"/api/orders/recent\": {\n    \"errors_5xx\": 0,\n    \"p50_ms\": 18.0,\n    \"p95_ms\": 20.5,\n    \"requests\": 47\n   },\n   \"/api/products\": {\n    \"errors_5xx\": 0,\n    \"p50_ms\": 18.7,\n    \"p95_ms\": 22.9,\n    \"requests\": 65\n   },\n   \"/metrics\": {\n    \"errors_5xx\": 0,\n    \"p50_ms\": 0.8,\n    \"p95_ms\": 0.8,\n    \"requests\": 1\n   },\n   \"unmatched\": {\n    \"errors_5xx\": 0,\n    \"p50_ms\": 0.3,\n    \"p95_ms\": 0.3,\n    \"requests\": 5\n   }\n  },\n  \"process_rss_mb\": 48.6,\n  \"uptime_s\": 18.8,\n  \"window_s\": 60\n }\n}"
+  },
+  {
+   "step": 12,
+   "t": 4.9,
+   "tool": "list_services",
+   "kind": "observe",
+   "args": {},
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.15,
+   "result": "service   state       restarts  oom    health   networks             missing_networks\ngateway   running     0         False  -        frontend             -\napi       running     0         False  -        backend,frontend     -\nworker    running     0         False  -        backend              -\npostgres  running     0         False  healthy  backend              -\nredis     running     0         False  -        backend              -"
+  },
+  {
+   "step": 13,
+   "t": 5.05,
+   "tool": "check_endpoints",
+   "kind": "observe",
+   "args": {},
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.04,
+   "result": "GET  /healthz             status=200     1.3ms OK\nGET  /api/health          status=200    14.7ms OK\nGET  /api/products        status=200     4.4ms OK\nGET  /api/orders/recent   status=200    16.1ms OK\nPOST /api/orders          status=500     2.3ms FAIL {\"error\":\"pricing error\"}"
+  },
+  {
+   "step": 14,
+   "t": 5.09,
+   "tool": "get_logs",
+   "kind": "observe",
+   "args": {
+    "service": "api",
+    "since_seconds": 120
+   },
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.03,
+   "result": "270 lines in last 120s.\nTop message patterns:\n     95x WARNING api cache unavailable, falling back to database: Error -# connecting to redis:#. Name does not resolve.\n     95x WARNING api cache write failed: Error -# connecting to redis:#. Name does not resolve.\n     38x ERROR api pricing config invalid: could not convert string to float: '#%'\n     32x ERROR api POST /api/orders -> # (0ms)\n      6x ERROR api POST /api/orders -> # (1ms)\n      2x INFO api starting shop-api on :# (db=postgres:# cache=redis:#)\n      2x INFO api Serving on http://#\n--- last 60 lines ---\n2026-10-30T06:15:46 ERROR api pricing config invalid: could not convert string to float: '15%'\n2026-10-30T06:15:46 ERROR api POST /api/orders -> 500 (0ms)\n2026-10-30T06:15:46 WARNING api cache unavailable, falling back to database: Error -2 connecting to redis:6379. Name does not resolve.\n2026-10-30T06:15:46 WARNING api cache write failed: Error -2 connecting to redis:6379. Name does not resolve.\n2026-10-30T06:15:46 ERROR api pricing config invalid: could not convert string to float: '15%'\n2026-10-30T06:15:46 ERROR api POST /api/orders -> 500 (0ms)\n2026-10-30T06:15:46 WARNING api cache unavailable, falling back to database: Error -2 connecting to redis:6379. Name does not resolve.\n2026-10-30T06:15:46 WARNING api cache write failed: Error -2 connecting to redis:6379. Name does not resolve.\n2026-10-30T06:15:46 ERROR api pricing config invalid: could not convert string to float: '15%'\n2026-10-30T06:15:46 ERROR api POST /api/orders -> 500 (0ms)\n2026-10-30T06:15:46 WARNING api cache unavailable, falling back to database: Error -2 connecting to redis:6379. Name does not resolve.\n2026-10-30T06:15:46 WARNING api cache write failed: Error -2 connecting to redis:6379. Name does not resolve.\n2026-10-30T06:15:46 WARNING api cache unavailable, falling back to database: Error -2 connecting to redis:6379. Name does not resolve.\n2026-10-30T06:15:46 WARNING api cache write failed: Error -2 connecting to redis:6379. Name does not resolve.\n2026-10-30T06:15:47 WARNING api cache unavailable, falling back to database: Error -2 connecting to redis:6379. Name does not resolve.\n2026-10-30T06:15:47 ERROR api pricing config invalid: could not convert string to float: '15%'\n2026-10-30T06:15:47 ERROR api POST /api/orders -> 500 (0ms)\n2026-10-30T06:15:47 WARNING api cache write failed: Error -2 connecting to redis:6379. Name does not resolve.\n2026-10-30T06:15:47 ERROR api pricing config invalid: could not convert string to float: '15%'\n2026-10-30T06:15:47 ERROR api POST /api/orders -> 500 (0ms)\n2026-10-30T06:15:47 ERROR api pricing config invalid: could not convert string to float: '15%'\n2026-10-30T06:15:47 ERROR api POST /api/orders -> 500 (0ms)\n2026-10-30T06:15:47 ERROR api pricing config invalid: could not convert string to float: '15%'\n2026-10-30T06:15:47 ERROR api POST /api/orders -> 500 (1ms)\n2026-10-30T06:15:47 WARNING api cache unavailable, falling back to database: Error -2 connecting to redis:6379. Name d\n... [391 chars truncated] ...\n WARNING api cache unavailable, falling back to database: Error -2 connecting to redis:6379. Name does not resolve.\n2026-10-30T06:15:47 WARNING api cache write failed: Error -2 connecting to redis:6379. Name does not resolve.\n2026-10-30T06:15:47 WARNING api cache unavailable, falling back to database: Error -2 connecting to redis:6379. Name does not resolve.\n2026-10-30T06:15:47 WARNING api cache write failed: Error -2 connecting to redis:6379. Name does not resolve.\n2026-10-30T06:15:48 WARNING api cache unavailable, falling back to database: Error -2 connecting to redis:6379. Name does not resolve.\n2026-10-30T06:15:48 WARNING api cache write failed: Error -2 connecting to redis:6379. Name does not resolve.\n2026-10-30T06:15:48 WARNING api cache unavailable, falling back to database: Error -2 connecting to redis:6379. Name does not resolve.\n2026-10-30T06:15:48 WARNING api cache write failed: Error -2 connecting to redis:6379. Name does not resolve.\n2026-10-30T06:15:48 WARNING api cache unavailable, falling back to database: Error -2 connecting to redis:6379. Name does not resolve.\n2026-10-30T06:15:48 WARNING api cache write failed: Error -2 connecting to redis:6379. Name does not resolve.\n2026-10-30T06:15:48 WARNING api cache unavailable, falling back to database: Error -2 connecting to redis:6379. Name does not resolve.\n2026-10-30T06:15:48 WARNING api cache write failed: Error -2 connecting to redis:6379. Name does not resolve.\n2026-10-30T06:15:48 ERROR api pricing config invalid: could not convert string to float: '15%'\n2026-10-30T06:15:48 ERROR api POST /api/orders -> 500 (0ms)\n2026-10-30T06:15:49 ERROR api pricing config invalid: could not convert string to float: '15%'\n2026-10-30T06:15:49 ERROR api POST /api/orders -> 500 (0ms)\n2026-10-30T06:15:49 ERROR api pricing config invalid: could not convert string to float: '15%'\n2026-10-30T06:15:49 ERROR api POST /api/orders -> 500 (0ms)\n2026-10-30T06:15:50 ERROR api pricing config invalid: could not convert string to float: '15%'\n2026-10-30T06:15:50 ERROR api POST /api/orders -> 500 (1ms)\n2026-10-30T06:15:50 ERROR api pricing config invalid: could not convert string to float: '15%'\n2026-10-30T06:15:50 ERROR api POST /api/orders -> 500 (0ms)\n2026-10-30T06:15:51 ERROR api pricing config invalid: could not convert string to float: '15%'\n2026-10-30T06:15:51 ERROR api POST /api/orders -> 500 (0ms)\n2026-10-30T06:15:52 ERROR api pricing config invalid: could not convert string to float: '15%'\n2026-10-30T06:15:52 ERROR api POST /api/orders -> 500 (0ms)\n2026-10-30T06:15:52 ERROR api pricing config invalid: could not convert string to float: '15%'\n2026-10-30T06:15:52 ERROR api POST /api/orders -> 500 (0ms)\n2026-10-30T06:15:52 ERROR api pricing config invalid: could not convert string to float: '15%'\n2026-10-30T06:15:52 ERROR api POST /api/orders -> 500 (0ms)\n2026-10-30T06:15:53 ERROR api pricing config invalid: could not convert string to float: '15%'\n2026-10-30T06:15:53 ERROR api POST /api/orders -> 500 (0ms)"
+  },
+  {
+   "step": 15,
+   "t": 5.12,
+   "tool": "run_diagnostic",
+   "kind": "observe",
+   "args": {
+    "service": "api",
+    "check": "disk"
+   },
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.08,
+   "result": "Filesystem                Size      Used Available Use% Mounted on\noverlay                 252.0G     16.1G     22.4G  42% /\ntmpfs                    64.0M         0     64.0M   0% /dev\ntmpfs                     7.9G         0      7.9G   0% /sys/fs/cgroup\nshm                      64.0M         0     64.0M   0% /dev/shm\n/dev/vda                252.0G     16.1G     22.4G  42% /config\ntmpfs                    48.0M         0     48.0M   0% /data\n/dev/vda                252.0G     16.1G     22.4G  42% /etc/hostname\n/dev/vda                252.0G     16.1G     22.4G  42% /etc/hosts\n/dev/vda                252.0G     16.1G     22.4G  42% /etc/resolv.conf\ntmpfs                     4.0K         0      4.0K   0% /proc/acpi\ntmpfs                    64.0M         0     64.0M   0% /proc/interrupts\ntmpfs                    64.0M         0     64.0M   0% /proc/keys\ntmpfs                    64.0M         0     64.0M   0% /proc/timer_list\ntmpfs                     4.0K         0      4.0K   0% /sys/firmware\n--- largest under /data (KB) ---\n0\t/data/audit\n0\t/data"
+  },
+  {
+   "step": 16,
+   "t": 5.21,
+   "tool": "get_metrics",
+   "kind": "observe",
+   "args": {
+    "service": "api"
+   },
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 1.7,
+   "result": "{\n \"containers\": {\n  \"gateway\": {\n   \"cpu_pct\": \"0.40%\",\n   \"mem\": \"2.492MiB / 15.71GiB\",\n   \"mem_pct\": \"0.02%\"\n  },\n  \"api\": {\n   \"cpu_pct\": \"3.47%\",\n   \"mem\": \"34.4MiB / 256MiB\",\n   \"mem_pct\": \"13.44%\"\n  },\n  \"worker\": {\n   \"cpu_pct\": \"0.78%\",\n   \"mem\": \"25.29MiB / 15.71GiB\",\n   \"mem_pct\": \"0.16%\"\n  },\n  \"postgres\": {\n   \"cpu_pct\": \"6.33%\",\n   \"mem\": \"31.35MiB / 15.71GiB\",\n   \"mem_pct\": \"0.19%\"\n  },\n  \"redis\": {\n   \"cpu_pct\": \"0.56%\",\n   \"mem\": \"3.758MiB / 15.71GiB\",\n   \"mem_pct\": \"0.02%\"\n  }\n },\n \"api_app_metrics\": {\n  \"cache_errors_total\": 108,\n  \"db_errors_total\": 0,\n  \"endpoints\": {\n   \"/api/health\": {\n    \"errors_5xx\": 0,\n    \"p50_ms\": 16.4,\n    \"p95_ms\": 19.5,\n    \"requests\": 8\n   },\n   \"/api/orders\": {\n    \"errors_5xx\": 42,\n    \"p50_ms\": 0.4,\n    \"p95_ms\": 0.6,\n    \"requests\": 42\n   },\n   \"/api/orders/recent\": {\n    \"errors_5xx\": 0,\n    \"p50_ms\": 17.5,\n    \"p95_ms\": 20.5,\n    \"requests\": 51\n   },\n   \"/api/products\": {\n    \"errors_5xx\": 0,\n    \"p50_ms\": 18.1,\n    \"p95_ms\": 22.9,\n    \"requests\": 73\n   },\n   \"/metrics\": {\n    \"errors_5xx\": 0,\n    \"p50_ms\": 0.8,\n    \"p95_ms\": 0.8,\n    \"requests\": 2\n   },\n   \"unmatched\": {\n    \"errors_5xx\": 0,\n    \"p50_ms\": 0.3,\n    \"p95_ms\": 0.6,\n    \"requests\": 6\n   }\n  },\n  \"process_rss_mb\": 48.6,\n  \"uptime_s\": 20.8,\n  \"window_s\": 60\n }\n}"
+  },
+  {
+   "step": 17,
+   "t": 6.9,
+   "tool": "verify_recovery",
+   "kind": "observe",
+   "args": {},
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 8.6,
+   "result": "{\n \"healthy\": false,\n \"probe_success_rate\": 0.8,\n \"probe_p95_ms\": 20.8,\n \"problems\": [\n  \"probe success 80% < 97%\"\n ],\n \"probes\": {\n  \"GET /healthz\": {\n   \"ok\": 8,\n   \"fail\": 0,\n   \"statuses\": [\n    200\n   ],\n   \"last_error\": \"\"\n  },\n  \"GET /api/health\": {\n   \"ok\": 8,\n   \"fail\": 0,\n   \"statuses\": [\n    200\n   ],\n   \"last_error\": \"\"\n  },\n  \"GET /api/products\": {\n   \"ok\": 8,\n   \"fail\": 0,\n   \"statuses\": [\n    200\n   ],\n   \"last_error\": \"\"\n  },\n  \"GET /api/orders/recent\": {\n   \"ok\": 8,\n   \"fail\": 0,\n   \"statuses\": [\n    200\n   ],\n   \"last_error\": \"\"\n  },\n  \"POST /api/orders\": {\n   \"ok\": 0,\n   \"fail\": 8,\n   \"statuses\": [\n    500\n   ],\n   \"last_error\": \"{\\\"error\\\":\\\"pricing error\\\"}\\n\"\n  }\n }\n}"
+  },
+  {
+   "step": 18,
+   "t": 15.5,
+   "tool": "submit_report",
+   "kind": "final",
+   "args": {
+    "root_causes": [
+     {
+      "component": "redis",
+      "category": "service_down",
+      "evidence": "redis was exited"
+     }
+    ],
+    "summary": "runbook applied 1 fix(es)",
+    "recovered": false
+   },
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.0,
+   "result": "report submitted"
+  }
+ ],
+ "episode_seconds": 95.6
+}

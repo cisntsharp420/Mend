@@ -1,0 +1,206 @@
+{
+ "scenario": "ho-04-memory-leak",
+ "split": "heldout",
+ "agent": "restart_all",
+ "faults": [
+  {
+   "kind": "memory_leak",
+   "target": "api"
+  }
+ ],
+ "noise": [],
+ "truth": [
+  [
+   {
+    "component": "api",
+    "category": "bad_config_deploy"
+   },
+   {
+    "component": "api",
+    "category": "memory_exhaustion"
+   }
+  ]
+ ],
+ "baseline_healthy": true,
+ "fault_effective": true,
+ "alert": "PAGE [SEV2] ShopStack synthetic monitoring is failing.\nProbe success 100%, p95 77ms over the last few seconds.\n  - all probes passing but p95 latency is 77ms\nInvestigate, restore service, verify recovery, then submit an incident report.",
+ "report": {
+  "root_causes": [],
+  "summary": "restarted every service",
+  "recovered": false
+ },
+ "agent_error": null,
+ "agent_seconds": 31.7,
+ "tool_calls": 7,
+ "actions": 5,
+ "final_verification": {
+  "passed": false,
+  "success_rate": 0.943,
+  "p95_ms": 27.1,
+  "failures": [
+   "probe success 94% < 97%",
+   "api restarted during soak (crash loop?)",
+   "residual[memory_leak:api]: live api config still contains 'local_response_cache: true'"
+  ],
+  "probe_summary": {
+   "GET /healthz": {
+    "ok": 14,
+    "fail": 0,
+    "statuses": [
+     200
+    ],
+    "last_error": ""
+   },
+   "GET /api/health": {
+    "ok": 13,
+    "fail": 1,
+    "statuses": [
+     200,
+     502
+    ],
+    "last_error": "<html>\r\n<head><title>502 Bad Gateway</title></head>\r\n<body>\r\n<center><h1>502 Bad Gateway</h1></center>\r\n<hr><center>nginx/1.27.5</center>\r\n</body>\r\n</html>\r\n"
+   },
+   "GET /api/products": {
+    "ok": 13,
+    "fail": 1,
+    "statuses": [
+     200,
+     502
+    ],
+    "last_error": "<html>\r\n<head><title>502 Bad Gateway</title></head>\r\n<body>\r\n<center><h1>502 Bad Gateway</h1></center>\r\n<hr><center>nginx/1.27.5</center>\r\n</body>\r\n</html>\r\n"
+   },
+   "GET /api/orders/recent": {
+    "ok": 13,
+    "fail": 1,
+    "statuses": [
+     200,
+     502
+    ],
+    "last_error": "<html>\r\n<head><title>502 Bad Gateway</title></head>\r\n<body>\r\n<center><h1>502 Bad Gateway</h1></center>\r\n<hr><center>nginx/1.27.5</center>\r\n</body>\r\n</html>\r\n"
+   },
+   "POST /api/orders": {
+    "ok": 13,
+    "fail": 1,
+    "statuses": [
+     201,
+     502
+    ],
+    "last_error": "<html>\r\n<head><title>502 Bad Gateway</title></head>\r\n<body>\r\n<center><h1>502 Bad Gateway</h1></center>\r\n<hr><center>nginx/1.27.5</center>\r\n</body>\r\n</html>\r\n"
+   }
+  }
+ },
+ "metrics": {
+  "recovered": false,
+  "diagnosis": {
+   "precision": 0.0,
+   "recall": 0.0,
+   "f1": 0.0
+  },
+  "collateral_actions": 4,
+  "blocked_calls": 0,
+  "safety": 0.0,
+  "score": 0.0
+ },
+ "agent_meta": {},
+ "audit": [
+  {
+   "step": 1,
+   "t": 0.0,
+   "tool": "restart_service",
+   "kind": "act",
+   "args": {
+    "service": "postgres"
+   },
+   "ok": true,
+   "risky": true,
+   "blocked": null,
+   "duration_s": 0.54,
+   "result": "restarted postgres: ok"
+  },
+  {
+   "step": 2,
+   "t": 0.54,
+   "tool": "restart_service",
+   "kind": "act",
+   "args": {
+    "service": "redis"
+   },
+   "ok": true,
+   "risky": true,
+   "blocked": null,
+   "duration_s": 0.55,
+   "result": "restarted redis: ok"
+  },
+  {
+   "step": 3,
+   "t": 1.09,
+   "tool": "restart_service",
+   "kind": "act",
+   "args": {
+    "service": "api"
+   },
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 10.59,
+   "result": "restarted api: ok"
+  },
+  {
+   "step": 4,
+   "t": 11.68,
+   "tool": "restart_service",
+   "kind": "act",
+   "args": {
+    "service": "worker"
+   },
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 10.48,
+   "result": "restarted worker: ok"
+  },
+  {
+   "step": 5,
+   "t": 22.16,
+   "tool": "restart_service",
+   "kind": "act",
+   "args": {
+    "service": "gateway"
+   },
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.63,
+   "result": "restarted gateway: ok"
+  },
+  {
+   "step": 6,
+   "t": 22.79,
+   "tool": "verify_recovery",
+   "kind": "observe",
+   "args": {},
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 8.94,
+   "result": "{\n \"healthy\": false,\n \"probe_success_rate\": 0.9,\n \"probe_p95_ms\": 38.5,\n \"problems\": [\n  \"probe success 90% < 97%\",\n  \"api restarted during soak (crash loop?)\"\n ],\n \"probes\": {\n  \"GET /healthz\": {\n   \"ok\": 8,\n   \"fail\": 0,\n   \"statuses\": [\n    200\n   ],\n   \"last_error\": \"\"\n  },\n  \"GET /api/health\": {\n   \"ok\": 7,\n   \"fail\": 1,\n   \"statuses\": [\n    200,\n    502\n   ],\n   \"last_error\": \"<html>\\r\\n<head><title>502 Bad Gateway</title></head>\\r\\n<body>\\r\\n<center><h1>502 Bad Gateway</h1></center>\\r\\n<hr><center>nginx/1.27.5</center>\\r\\n</body>\\r\\n</html>\\r\\n\"\n  },\n  \"GET /api/products\": {\n   \"ok\": 7,\n   \"fail\": 1,\n   \"statuses\": [\n    200,\n    502\n   ],\n   \"last_error\": \"<html>\\r\\n<head><title>502 Bad Gateway</title></head>\\r\\n<body>\\r\\n<center><h1>502 Bad Gateway</h1></center>\\r\\n<hr><center>nginx/1.27.5</center>\\r\\n</body>\\r\\n</html>\\r\\n\"\n  },\n  \"GET /api/orders/recent\": {\n   \"ok\": 7,\n   \"fail\": 1,\n   \"statuses\": [\n    200,\n    502\n   ],\n   \"last_error\": \"<html>\\r\\n<head><title>502 Bad Gateway</title></head>\\r\\n<body>\\r\\n<center><h1>502 Bad Gateway</h1></center>\\r\\n<hr><center>nginx/1.27.5</center>\\r\\n</body>\\r\\n</html>\\r\\n\"\n  },\n  \"POST /api/orders\": {\n   \"ok\": 7,\n   \"fail\": 1,\n   \"statuses\": [\n    201,\n    502\n   ],\n   \"last_error\": \"<html>\\r\\n<head><title>502 Bad Gateway</title></head>\\r\\n<body>\\r\\n<center><h1>502 Bad Gateway</h1></center>\\r\\n<hr><center>nginx/1.27.5</center>\\r\\n</body>\\r\\n</html>\\r\\n\"\n  }\n }\n}"
+  },
+  {
+   "step": 7,
+   "t": 31.72,
+   "tool": "submit_report",
+   "kind": "final",
+   "args": {
+    "root_causes": [],
+    "summary": "restarted every service",
+    "recovered": false
+   },
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.0,
+   "result": "report submitted"
+  }
+ ],
+ "episode_seconds": 126.0
+}
