@@ -63,3 +63,14 @@ def test_row_includes_recommendations():
                    "report": {**REC["report"], "recommendations": ["rotate secrets via a vault"]}}
     r2 = row(unrecovered)
     assert r2["fix_status"] == "still needed" and r2["agent_recommendations"] == "rotate secrets via a vault"
+
+
+def test_single_incident_pdf_skips_cover_and_overview(tmp_path):
+    pytest.importorskip("reportlab")
+    PdfReader = pytest.importorskip("pypdf").PdfReader
+    full, one = tmp_path / "full.pdf", tmp_path / "one.pdf"
+    write_pdf([REC], full, "full report")
+    write_pdf([REC], one, "one incident", single=True)
+    pages = lambda p: len(PdfReader(str(p)).pages)  # noqa: E731
+    assert pages(one) < pages(full)
+    assert "INCIDENT REPORT" in PdfReader(str(one)).pages[0].extract_text().upper()

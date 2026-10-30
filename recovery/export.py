@@ -134,7 +134,8 @@ def _register_fonts() -> tuple[str, str, str, str]:
     return "Mend-Display", "Mend-Body", "Mend-Body-Bold", "Mend-Mono"
 
 
-def write_pdf(recs: list[dict], path: Path, title: str) -> None:
+def write_pdf(recs: list[dict], path: Path, title: str, single: bool = False) -> None:
+    """Full report (cover, overview, one page per incident) or, with single=True, just the incident pages."""
     try:
         from reportlab.lib import colors
         from reportlab.lib.pagesizes import A4
@@ -224,7 +225,7 @@ def write_pdf(recs: list[dict], path: Path, title: str) -> None:
     by = {sp: [r for r in rows if r["split"] == sp] for sp in ("dev", "heldout")}
     pct = lambda rs: f"{sum(r['recovered'] == 'yes' for r in rs) / len(rs):.0%}" if rs else "–"  # noqa: E731
     avg = lambda rs: f"{sum(r['score'] for r in rs) / len(rs):.0f}" if rs else "–"  # noqa: E731
-    story = [Spacer(1, 30 * mm),
+    story = [] if single else [Spacer(1, 30 * mm),
              P(up("Incident recovery report"), "eyebrow"), Spacer(1, 3 * mm),
              P(up(names), "cover"), Spacer(1, 3 * mm),
              P(escape(DESCRIPTIONS.get(agents[0], "")[:1].upper() + DESCRIPTIONS.get(agents[0], "")[1:]) + "."
@@ -255,7 +256,10 @@ def write_pdf(recs: list[dict], path: Path, title: str) -> None:
                          P(res, "cell"), f"{r['score']:.0f}", P(escape(r["reported_root_causes"] or "none"), "cellmono")])
     ov = table(overview, [width * f for f in (.33, .1, .2, .07, .3)], right_from=3)
     ov.setStyle(TableStyle([("ALIGN", (4, 0), (4, -1), "LEFT")]))
-    story.append(ov)
+    if single:
+        story = [P(up(f"Incident report · {names}"), "eyebrow"), Spacer(1, 4 * mm)]
+    else:
+        story.append(ov)
 
     # ---------------------------------------------------------------- one page per incident
     for rec, r in zip(recs, rows):
@@ -273,7 +277,7 @@ def write_pdf(recs: list[dict], path: Path, title: str) -> None:
         head.setStyle(TableStyle([("VALIGN", (0, 0), (-1, -1), "BOTTOM"), ("ALIGN", (1, 0), (1, 0), "RIGHT"),
                                   ("LEFTPADDING", (0, 0), (-1, -1), 0), ("RIGHTPADDING", (0, 0), (-1, -1), 0),
                                   ("LINEBELOW", (0, 0), (-1, 0), .6, C["line"]), ("BOTTOMPADDING", (0, 0), (-1, -1), 8)]))
-        story += [PageBreak(), head,
+        story += ([] if single and len(story) == 2 else [PageBreak()]) + [head,
                   h2("Pager alert the agent received"),
                   box(Preformatted(rec["alert"].strip(), st["mono"], maxLineLength=104), rule=C["bad"])]
 
@@ -364,10 +368,14 @@ def write_pdf(recs: list[dict], path: Path, title: str) -> None:
 
     doc = SimpleDocTemplate(str(path), pagesize=A4, title=title, author="Mend · Agentic Recovery benchmark",
                             leftMargin=margin, rightMargin=margin, topMargin=20 * mm, bottomMargin=19 * mm)
-    doc.build(story, onFirstPage=lambda c, d: background(c, True), onLaterPages=lambda c, d: background(c, False))
+    doc.build(story, onFirstPage=lambda c, d: background(c, not single), onLaterPages=lambda c, d: background(c, False))
 
 
-def export(tags: list[str], out: Path, pdf: bool = True) -> list[Path]:
+def incident_title(rec: dict) -> str:
+    return f"Mend incident report: {rec['scenario']} · {display_name(rec['agent'])}"
+
+
+def export(tags: list[str], out: Path, pdf: bool = True, per_incident: bool = False) -> list[Path]:
     out.mkdir(parents=True, exist_ok=True)
     written, every = [], []
     for tag in tags:
@@ -378,6 +386,12 @@ def export(tags: list[str], out: Path, pdf: bool = True) -> list[Path]:
         if pdf:
             write_pdf(recs, out / f"{tag}.pdf", f"Mend incident report: {display_name(recs[0]['agent'])}")
             written.append(out / f"{tag}.pdf")
+        if pdf and per_incident:
+            (out / tag).mkdir(exist_ok=True)
+            for rec in recs:
+                f = out / tag / f"{rec['scenario']}{'' if rec['_repeat'] == 0 else '-rep' + str(rec['_repeat'])}.pdf"
+                write_pdf([rec], f, incident_title(rec), single=True)
+                written.append(f)
     if len(tags) > 1:
         write_csv(every, out / "all_episodes.csv")
         written.append(out / "all_episodes.csv")

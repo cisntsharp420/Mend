@@ -145,7 +145,8 @@ python -m recovery export baseline-noop baseline-restart_all baseline-rules   # 
 score breakdown, true vs reported root causes, evidence, actions taken, verifier numbers) and
 `<tag>.pdf` (a summary page, then one page per incident with the pager alert, ground truth,
 the agent's report, every tool call, the verification result, and recommendations), plus
-`all_episodes.csv`. Recommendations give the immediate fix (marked done or still needed) and how to
+`all_episodes.csv`. Add `--per-incident` to also write a short PDF per incident
+(`<tag>/<scenario>.pdf`), the same file the web app's "Download this incident" button gives. Recommendations give the immediate fix (marked done or still needed) and how to
 prevent a repeat, from a remediation playbook for each fault type (`recovery/playbook.py`); an
 agent can add its own through the optional `recommendations` field of `submit_report`.
 

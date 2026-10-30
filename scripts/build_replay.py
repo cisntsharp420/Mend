@@ -82,6 +82,11 @@ def reports(tags: list[str]) -> dict:
             try:
                 export.write_pdf(recs, pdf_path, f"Mend incident report: {display_name(recs[0]['agent'])}")
                 entry["pdf"] = base64.b64encode(pdf_path.read_bytes()).decode()
+                entry["incidents"] = {}
+                for rec in recs:   # the short one-incident reports behind "Download this incident"
+                    one = Path(tmp) / f"{tag}-{rec['scenario']}.pdf"
+                    export.write_pdf([rec], one, export.incident_title(rec), single=True)
+                    entry["incidents"][rec["scenario"]] = base64.b64encode(one.read_bytes()).decode()
             except SystemExit:   # reportlab not installed: ship the CSV only
                 pass
             out["runs"][recs[0]["agent"]] = entry

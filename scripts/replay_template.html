@@ -194,6 +194,9 @@ main.page { display: grid; gap: 28px; padding-block: 8px 64px }
 .advice .adv-label { font-weight: 700; font-size: .92rem }
 .advice .badge { margin-top: 0 }
 
+.one-dl { display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: center; font-size: .84rem; color: var(--muted) }
+.one-dl .ext { font: 700 .62rem var(--f-display); letter-spacing: .1em }
+
 footer.site { border-top: 1px solid var(--line); color: var(--muted); font-size: .84rem }
 footer.site .inner { padding-block: 24px 36px; display: flex; flex-wrap: wrap; gap: 10px 32px; justify-content: space-between }
 footer.site p { margin: 0; max-width: 78ch }
@@ -362,6 +365,9 @@ function renderIncident() {
       <div><span class="chip ${s.split}">${s.split === "dev" ? "dev" : "held-out"}</span><div class="id">${esc(s.id)}</div></div>
       <div class="agents" role="group" aria-label="Agent">${agentBtns}</div>
     </div>
+    ${DATA.reports?.runs?.[state.agent]?.incidents?.[s.id] ? `<div class="one-dl">
+      <button type="button" class="pill lime" id="dl-one"><span class="ext">PDF</span>Download this incident</button>
+      <span id="one-msg" role="status" aria-live="polite">${esc(s.id)} · ${esc(NAME(state.agent))}</span></div>` : ""}
     <div class="grid2">
       <section class="card pager"><h3>Pager alert the agent received</h3><pre>${esc(run.alert)}</pre></section>
       <section class="card truth"><h3>What was actually broken (hidden from the agent)</h3>
@@ -432,9 +438,15 @@ function renderReports() {
   $("#dl-csv .lbl").textContent = `Spreadsheet: ${NAME(state.agent)}`;
 }
 
-function say(text, err = false) { const m = $("#dl-msg"); m.textContent = text; m.classList.toggle("err", err); }
+let msgEl = null;
+function say(text, err = false) {
+  const m = msgEl || $("#dl-msg");
+  if (m.id === "one-msg" && !text) return;
+  m.textContent = text; m.classList.toggle("err", err); m.style.color = err ? "var(--bad)" : "";
+}
 
 async function offer(filename, data, button) {
+  msgEl = button.id === "dl-one" ? $("#one-msg") : null;
   button.disabled = true; say("");
   try {
     if (window.claude?.use) {
@@ -463,6 +475,7 @@ document.addEventListener("click", e => {
   const r = DATA.reports?.runs?.[state.agent];
   if (t.id === "dl-pdf" && r?.pdf) offer(`mend-report-${SLUG(state.agent)}.pdf`, pdfBlob(r.pdf), t);
   else if (t.id === "dl-csv" && r) offer(`mend-report-${SLUG(state.agent)}.csv`, csvBlob(r.csv), t);
+  else if (t.id === "dl-one" && r?.incidents?.[state.id]) offer(`mend-${state.id}-${SLUG(state.agent)}.pdf`, pdfBlob(r.incidents[state.id]), t);
   else if (t.id === "dl-all" && DATA.reports) offer("mend-report-all-agents.csv", csvBlob(DATA.reports.all_csv), t);
 });
 

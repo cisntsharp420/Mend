@@ -127,7 +127,7 @@ def cmd_report(a):
 
 def cmd_export(a):
     from .export import export
-    for f in export(a.tags, Path(a.out), pdf=not a.csv_only):
+    for f in export(a.tags, Path(a.out), pdf=not a.csv_only, per_incident=a.per_incident):
         print(f"wrote {f.relative_to(ROOT) if f.is_relative_to(ROOT) else f}")
 
 
@@ -164,6 +164,8 @@ def main(argv=None):
     ex.add_argument("tags", nargs="+")
     ex.add_argument("--out", default=str(ROOT / "docs" / "reports"), help="output folder")
     ex.add_argument("--csv-only", action="store_true", help="skip the PDF (no reportlab needed)")
+    ex.add_argument("--per-incident", action="store_true", help="also write one short PDF per incident, "
+                    "under <out>/<tag>/<scenario>.pdf")
     ex.set_defaults(fn=cmd_export)
     a = p.parse_args(argv)
     a.fn(a)
