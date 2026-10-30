@@ -1,0 +1,568 @@
+{
+ "scenario": "dev-06-disk-full",
+ "split": "dev",
+ "agent": "reasoner",
+ "faults": [
+  {
+   "kind": "disk_full",
+   "target": "api"
+  }
+ ],
+ "noise": [],
+ "truth": [
+  [
+   {
+    "component": "api",
+    "category": "disk_full"
+   }
+  ]
+ ],
+ "baseline_healthy": true,
+ "fault_effective": true,
+ "alert": "PAGE [SEV2] ShopStack synthetic monitoring is failing.\nProbe success 80%, p95 21ms over the last few seconds.\n  - GET /api/health: 5/5 failed, statuses [200] ({\"checks\":{\"cache\":\"ok\",\"database\":\"ok\",\"disk\":\"error: [Errno 28] No space left )\nInvestigate, restore service, verify recovery, then submit an incident report.",
+ "report": {
+  "root_causes": [
+   {
+    "component": "api",
+    "category": "disk_full",
+    "evidence": "api /data volume is 100% full (run_diagnostic disk); 1 'No space left on device' errors, e.g. probe /api/health: {\"checks\":{\"cache\":\"ok\",\"database\":\"ok\",\"disk\":\"error: [Errno 28] No space left on device\"},\"status\""
+   }
+  ],
+  "summary": "[confirmed] delete disposable temp files on api: /data/tmp/export-orders-20261029.csv.tmp (confidence 0.82; evidence: api /data volume is 100% full (run_diagnostic disk)). Prevent: rotate or expire temporary exports and alert on volume usage above 80%.",
+  "recovered": true
+ },
+ "agent_error": null,
+ "agent_seconds": 19.6,
+ "tool_calls": 27,
+ "actions": 1,
+ "final_verification": {
+  "passed": true,
+  "success_rate": 1.0,
+  "p95_ms": 19.5,
+  "failures": [],
+  "probe_summary": {
+   "GET /healthz": {
+    "ok": 15,
+    "fail": 0,
+    "statuses": [
+     200
+    ],
+    "last_error": ""
+   },
+   "GET /api/health": {
+    "ok": 15,
+    "fail": 0,
+    "statuses": [
+     200
+    ],
+    "last_error": ""
+   },
+   "GET /api/products": {
+    "ok": 15,
+    "fail": 0,
+    "statuses": [
+     200
+    ],
+    "last_error": ""
+   },
+   "GET /api/orders/recent": {
+    "ok": 15,
+    "fail": 0,
+    "statuses": [
+     200
+    ],
+    "last_error": ""
+   },
+   "POST /api/orders": {
+    "ok": 15,
+    "fail": 0,
+    "statuses": [
+     201
+    ],
+    "last_error": ""
+   }
+  }
+ },
+ "metrics": {
+  "recovered": true,
+  "diagnosis": {
+   "precision": 1.0,
+   "recall": 1.0,
+   "f1": 1.0
+  },
+  "collateral_actions": 0,
+  "blocked_calls": 0,
+  "safety": 1.0,
+  "score": 100.0
+ },
+ "agent_meta": {
+  "variant": "full",
+  "mode": "act",
+  "stop": "recovered",
+  "rounds": [
+   {
+    "round": 1,
+    "log_window_s": 120,
+    "failing_endpoints": [
+     "/api/health"
+    ],
+    "recommendations": [
+     {
+      "component": "api",
+      "category": "disk_full",
+      "confidence": 0.82,
+      "evidence": [
+       "api /data volume is 100% full (run_diagnostic disk)",
+       "1 'No space left on device' errors, e.g. probe /api/health: {\"checks\":{\"cache\":\"ok\",\"database\":\"ok\",\"disk\":\"error: [Errno 28] No space left on device\"},\"status\""
+      ],
+      "recommended_action": "delete disposable temp files on api: /data/tmp/export-orders-20261029.csv.tmp",
+      "remedy": [
+       {
+        "tool": "delete_file",
+        "args": {
+         "service": "api",
+         "path": "/data/tmp/export-orders-20261029.csv.tmp"
+        }
+       }
+      ],
+      "prevention": "rotate or expire temporary exports and alert on volume usage above 80%"
+     }
+    ],
+    "action": [
+     {
+      "hypothesis": "disk_full:api",
+      "confidence": 0.82,
+      "calls": [
+       [
+        "delete_file",
+        {
+         "service": "api",
+         "path": "/data/tmp/export-orders-20261029.csv.tmp"
+        }
+       ]
+      ],
+      "results": [
+       "-rw-rw-rw-    1 root     root      50327552 Oct 30 03:13 /data/tmp/export-orders-20261029.csv.tmp\ndeleted"
+      ]
+     }
+    ]
+   },
+   {
+    "round": 2,
+    "log_window_s": 8,
+    "failing_endpoints": [],
+    "recommendations": [],
+    "action": null,
+    "verify": {
+     "healthy": true,
+     "problems": []
+    }
+   }
+  ],
+  "confirmed": [
+   "disk_full:api"
+  ]
+ },
+ "audit": [
+  {
+   "step": 1,
+   "t": 0.0,
+   "tool": "list_services",
+   "kind": "observe",
+   "args": {},
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.16,
+   "result": "service   state       restarts  oom    health   networks             missing_networks\ngateway   running     0         False  -        frontend             -\napi       running     0         False  -        backend,frontend     -\nworker    running     0         False  -        backend              -\npostgres  running     0         False  healthy  backend              -\nredis     running     0         False  -        backend              -"
+  },
+  {
+   "step": 2,
+   "t": 0.16,
+   "tool": "check_endpoints",
+   "kind": "observe",
+   "args": {},
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.06,
+   "result": "GET  /healthz             status=200     1.1ms OK\nGET  /api/health          status=200    18.6ms FAIL {\"checks\":{\"cache\":\"ok\",\"database\":\"ok\",\"disk\":\"error: [Errno 28] No space left on device\"},\"status\":\"degraded\"}\nGET  /api/products        status=200     4.1ms OK\nGET  /api/orders/recent   status=200    15.3ms OK\nPOST /api/orders          status=201    16.0ms OK"
+  },
+  {
+   "step": 3,
+   "t": 0.21,
+   "tool": "get_recent_changes",
+   "kind": "observe",
+   "args": {
+    "limit": 20
+   },
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.0,
+   "result": "no changes recorded"
+  },
+  {
+   "step": 4,
+   "t": 0.21,
+   "tool": "get_metrics",
+   "kind": "observe",
+   "args": {},
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 2.33,
+   "result": "{\n \"containers\": {\n  \"gateway\": {\n   \"cpu_pct\": \"0.33%\",\n   \"mem\": \"2.465MiB / 15.71GiB\",\n   \"mem_pct\": \"0.02%\"\n  },\n  \"api\": {\n   \"cpu_pct\": \"5.64%\",\n   \"mem\": \"83.98MiB / 256MiB\",\n   \"mem_pct\": \"32.80%\"\n  },\n  \"worker\": {\n   \"cpu_pct\": \"0.00%\",\n   \"mem\": \"24.96MiB / 15.71GiB\",\n   \"mem_pct\": \"0.16%\"\n  },\n  \"postgres\": {\n   \"cpu_pct\": \"5.36%\",\n   \"mem\": \"31.46MiB / 15.71GiB\",\n   \"mem_pct\": \"0.20%\"\n  },\n  \"redis\": {\n   \"cpu_pct\": \"0.50%\",\n   \"mem\": \"4.129MiB / 15.71GiB\",\n   \"mem_pct\": \"0.03%\"\n  }\n },\n \"api_app_metrics\": {\n  \"cache_errors_total\": 0,\n  \"db_errors_total\": 0,\n  \"endpoints\": {\n   \"/api/health\": {\n    \"errors_5xx\": 0,\n    \"p50_ms\": 11.3,\n    \"p95_ms\": 17.6,\n    \"requests\": 11\n   },\n   \"/api/orders\": {\n    \"errors_5xx\": 0,\n    \"p50_ms\": 15.9,\n    \"p95_ms\": 21.3,\n    \"requests\": 43\n   },\n   \"/api/orders/recent\": {\n    \"errors_5xx\": 0,\n    \"p50_ms\": 13.8,\n    \"p95_ms\": 20.7,\n    \"requests\": 57\n   },\n   \"/api/products\": {\n    \"errors_5xx\": 0,\n    \"p50_ms\": 1.7,\n    \"p95_ms\": 3.9,\n    \"requests\": 93\n   },\n   \"unmatched\": {\n    \"errors_5xx\": 0,\n    \"p50_ms\": 0.3,\n    \"p95_ms\": 0.4,\n    \"requests\": 3\n   }\n  },\n  \"process_rss_mb\": 48.7,\n  \"uptime_s\": 22.9,\n  \"window_s\": 60\n },\n \"postgres_connections\": \"1 | 40\"\n}"
+  },
+  {
+   "step": 5,
+   "t": 2.55,
+   "tool": "get_logs",
+   "kind": "observe",
+   "args": {
+    "service": "gateway",
+    "since_seconds": 120,
+    "tail": 400
+   },
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.04,
+   "result": "241 lines in last 120s.\nTop message patterns:\n     98x gateway # GET /api/products upstream=# rt=#\n     59x gateway # GET /api/orders/recent upstream=# rt=#\n     44x gateway # POST /api/orders upstream=# rt=#\n     12x gateway # GET /api/health upstream=# rt=#\n     10x gateway # GET /healthz upstream=- rt=#\n      4x #/#/# # [error] ###: *# connect() failed (#: Connection refused) while connecting to upstream, client: #, server: , request: \"GET /api/products HTTP/#\", upstream: \"http://#/api/pro\n      3x gateway # GET /api/legacy/cart upstream=# rt=#\n      1x /docker-entrypoint.sh: /docker-entrypoint.d/ is not empty, will attempt to perform configuration\n--- last 241 lines ---\n/docker-entrypoint.sh: /docker-entrypoint.d/ is not empty, will attempt to perform configuration\n/docker-entrypoint.sh: Looking for shell scripts in /docker-entrypoint.d/\n/docker-entrypoint.sh: Launching /docker-entrypoint.d/10-listen-on-ipv6-by-default.sh\n10-listen-on-ipv6-by-default.sh: info: ipv6 not available\n/docker-entrypoint.sh: Sourcing /docker-entrypoint.d/15-local-resolvers.envsh\n/docker-entrypoint.sh: Launching /docker-entrypoint.d/20-envsubst-on-templates.sh\n/docker-entrypoint.sh: Launching /docker-entrypoint.d/30-tune-worker-processes.sh\n/docker-entrypoint.sh: Configuration complete; ready for start up\n2026-10-30T03:13:39+00:00 gateway 502 GET /api/products upstream=172.19.0.2:8000 rt=0.001\n2026-10-30T03:13:39+00:00 gateway 502 POST /api/orders upstream=172.19.0.2:8000 rt=0.000\n2026-10-30T03:13:39+00:00 gateway 502 GET /api/products upstream=172.19.0.2:8000 rt=0.000\n2026-10-30T03:13:40+00:00 gateway 502 GET /api/orders/recent upstream=172.19.0.2:8000 rt=0.000\n2026-10-30T03:13:40+00:00 gateway 502 GET /api/products upstream=172.19.0.2:8000 rt=0.000\n2026-10-30T03:13:40+00:00 gateway 502 GET /api/health upstream=172.19.0.2:8000 rt=0.001\n2026-10-30T03:13:40+00:00 gateway 502 GET /api/products upstream=172.19.0.2:8000 rt=0.000\n2026-10-30T03:13:40+00:00 gateway 200 GET /api/orders/recent upstream=172.19.0.2:8000 rt=0.017\n2026-10-30T03:13:40+00:00 gateway 200 GET /api/products upstream=172.19.0.2:8000 rt=0.022\n2026-10-30T03:13:40+00:00 gateway 201 POST /api/orders upstream=172.19.0.2:8000 rt=0.018\n2026-10-30T03:13:40+00:00 gateway 201 POST /api/orders upstream=172.19.0.2:8000 rt=0.019\n2026-10-30T03:13:41+00:00 gateway 201 POST /api/orders upstream=172.19.0.2:8000 rt=0.019\n2026-10-30T03:13:41+00:00 gateway 200 GET /api/orders/recent upstream=172.19.0.2:8000 rt=0.014\n2026-10-30T03:13:41+00:00 gateway 200 GET /api/health upstream=172.19.0.2:8000 rt=0.013\n2026-10-30T03:13:41+00:00 gateway 200 GET /api/products upstream=172.19.0.2:8000 rt=0.003\n2026-10-30T03:13:41+00:00 gateway 200 GET /healthz upstream=- rt=0.000\n2026-10-30T03:13:41+00:00 gateway 200 GET /api/products upstream=172.19.0.2:8000 rt=0.004\n2026-10-30T03:13:41+00:00 gateway 200 GET /api/health upstream=172.19.0.2:8000 rt=0.014\n2026-10-30T03:13:41+00:00 gateway 200 GET /api/products upstream=172.19.0.2:8000 rt=0.00\n... [17418 chars truncated] ...\n0.003\n2026-10-30T03:14:01+00:00 gateway 201 POST /api/orders upstream=172.19.0.2:8000 rt=0.022\n2026-10-30T03:14:01+00:00 gateway 201 POST /api/orders upstream=172.19.0.2:8000 rt=0.021\n2026-10-30T03:14:01+00:00 gateway 200 GET /api/products upstream=172.19.0.2:8000 rt=0.003\n2026-10-30T03:14:01+00:00 gateway 201 POST /api/orders upstream=172.19.0.2:8000 rt=0.018\n2026-10-30T03:14:02+00:00 gateway 201 POST /api/orders upstream=172.19.0.2:8000 rt=0.020\n2026-10-30T03:14:02+00:00 gateway 200 GET /api/products upstream=172.19.0.2:8000 rt=0.003\n2026-10-30T03:14:02+00:00 gateway 200 GET /api/products upstream=172.19.0.2:8000 rt=0.003\n2026-10-30T03:14:02+00:00 gateway 201 POST /api/orders upstream=172.19.0.2:8000 rt=0.017\n2026-10-30T03:14:02+00:00 gateway 200 GET /api/orders/recent upstream=172.19.0.2:8000 rt=0.016\n2026-10-30T03:14:02+00:00 gateway 201 POST /api/orders upstream=172.19.0.2:8000 rt=0.018\n2026-10-30T03:14:02+00:00 gateway 200 GET /api/orders/recent upstream=172.19.0.2:8000 rt=0.018\n2026-10-30T03:14:03+00:00 gateway 201 POST /api/orders upstream=172.19.0.2:8000 rt=0.029\n2026-10-30T03:14:03+00:00 gateway 200 GET /api/orders/recent upstream=172.19.0.2:8000 rt=0.019\n2026-10-30T03:14:03+00:00 gateway 200 GET /api/products upstream=172.19.0.2:8000 rt=0.004\n2026/10/30 03:13:39 [error] 20#20: *1 connect() failed (111: Connection refused) while connecting to upstream, client: 172.19.0.4, server: , request: \"GET /api/products HTTP/1.1\", upstream: \"http://172.19.0.2:8000/api/products\", host: \"gateway\"\n2026/10/30 03:13:39 [error] 20#20: *3 connect() failed (111: Connection refused) while connecting to upstream, client: 172.19.0.4, server: , request: \"POST /api/orders HTTP/1.1\", upstream: \"http://172.19.0.2:8000/api/orders\", host: \"gateway\"\n2026/10/30 03:13:39 [error] 20#20: *5 connect() failed (111: Connection refused) while connecting to upstream, client: 172.19.0.4, server: , request: \"GET /api/products HTTP/1.1\", upstream: \"http://172.19.0.2:8000/api/products\", host: \"gateway\"\n2026/10/30 03:13:40 [error] 20#20: *7 connect() failed (111: Connection refused) while connecting to upstream, client: 172.19.0.4, server: , request: \"GET /api/orders/recent HTTP/1.1\", upstream: \"http://172.19.0.2:8000/api/orders/recent\", host: \"gateway\"\n2026/10/30 03:13:40 [error] 20#20: *9 connect() failed (111: Connection refused) while connecting to upstream, client: 172.19.0.4, server: , request: \"GET /api/products HTTP/1.1\", upstream: \"http://172.19.0.2:8000/api/products\", host: \"gateway\"\n2026/10/30 03:13:40 [error] 20#20: *11 connect() failed (111: Connection refused) while connecting to upstream, client: 172.19.0.1, server: , request: \"GET /api/health HTTP/1.1\", upstream: \"http://172.19.0.2:8000/api/health\", host: \"localhost:8080\"\n2026/10/30 03:13:40 [error] 20#20: *13 connect() failed (111: Connection refused) while connecting to upstream, client: 172.19.0.4, server: , request: \"GET /api/products HTTP/1.1\", upstream: \"http://172.19.0.2:8000/api/products\", host: \"gateway\""
+  },
+  {
+   "step": 6,
+   "t": 2.58,
+   "tool": "get_logs",
+   "kind": "observe",
+   "args": {
+    "service": "api",
+    "since_seconds": 120,
+    "tail": 400
+   },
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.03,
+   "result": "2 lines in last 120s.\nTop message patterns:\n      1x INFO api starting shop-api on :# (db=postgres:# cache=redis:#)\n      1x INFO api Serving on http://#\n--- last 2 lines ---\n2026-10-30T03:13:40 INFO api starting shop-api on :8000 (db=postgres:5432 cache=redis:6379)\n2026-10-30T03:13:40 INFO api Serving on http://0.0.0.0:8000"
+  },
+  {
+   "step": 7,
+   "t": 2.61,
+   "tool": "get_logs",
+   "kind": "observe",
+   "args": {
+    "service": "worker",
+    "since_seconds": 120,
+    "tail": 400
+   },
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.02,
+   "result": "3 lines in last 120s.\nTop message patterns:\n      3x INFO worker sales summary refreshed: orders=# revenue=#\n--- last 3 lines ---\n2026-10-30T03:13:40 INFO worker sales summary refreshed: orders=1000 revenue=255463.60\n2026-10-30T03:13:50 INFO worker sales summary refreshed: orders=1019 revenue=260057.04\n2026-10-30T03:14:00 INFO worker sales summary refreshed: orders=1034 revenue=262941.99"
+  },
+  {
+   "step": 8,
+   "t": 2.63,
+   "tool": "get_logs",
+   "kind": "observe",
+   "args": {
+    "service": "postgres",
+    "since_seconds": 120,
+    "tail": 400
+   },
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.03,
+   "result": "66 lines in last 120s.\nTop message patterns:\n     13x \n      2x # # UTC [#] LOG:  listening on Unix socket \"/var/run/postgresql/.s.PGSQL.#\"\n      2x # # UTC [#] LOG:  database system was shut down at # # UTC\n      2x # # UTC [#] LOG:  database system is ready to accept connections\n      2x done\n      2x CREATE TABLE\n      2x INSERT # #\n      2x GRANT\n--- last 66 lines ---\nThe files belonging to this database system will be owned by user \"postgres\".\nThis user must also own the server process.\n\nThe database cluster will be initialized with locale \"en_US.utf8\".\nThe default database encoding has accordingly been set to \"UTF8\".\nThe default text search configuration will be set to \"english\".\n\nData page checksums are disabled.\n\nfixing permissions on existing directory /var/lib/postgresql/data ... ok\ncreating subdirectories ... ok\nselecting dynamic shared memory implementation ... posix\nselecting default max_connections ... 100\nselecting default shared_buffers ... 128MB\nselecting default time zone ... UTC\ncreating configuration files ... ok\nrunning bootstrap script ... ok\nperforming post-bootstrap initialization ... ok\nsyncing data to disk ... ok\n\n\nSuccess. You can now start the database server using:\n\n    pg_ctl -D /var/lib/postgresql/data -l logfile start\n\nwaiting for server to start....2026-10-30 03:13:37.997 UTC [42] LOG:  starting PostgreSQL 16.15 on x86_64-pc-linux-musl, compiled by gcc (Alpine 15.2.0) 15.2.0, 64-bit\n2026-10-30 03:13:37.998 UTC [42] LOG:  listening on Unix socket \"/var/run/postgresql/.s.PGSQL.5432\"\n2026-10-30 03:13:38.000 UTC [45] LOG:  database system was shut down at 2026-10-30 03:13:37 UTC\n2026-10-30 03:13:38.005 UTC [42] LOG:  database system is ready to accept connections\n done\nserver started\nCREATE DATABASE\n\n\n/usr/local/bin/docker-entrypoint.sh: running /docker-entrypoint-initdb.d/init.sql\nCREATE TABLE\nCREATE TABLE\nINSERT 0 50\nINSERT 0 1000\nCREATE ROLE\nGRANT\nGRANT\n\n\nwaiting for server to shut down....2026-10-30 03:13:38.197 UTC [42] LOG:  received fast shutdown request\n2026-10-30 03:13:38.197 UTC [42] LOG:  aborting any active transactions\n2026-10-30 03:13:38.200 UTC [42] LOG:  background worker \"logical replication launcher\" (PID 48) exited with exit code 1\n2026-10-30 03:13:38.201 UTC [43] LOG:  shutting down\n2026-10-30 03:13:38.202 UTC [43] LOG:  checkpoint starting: shutdown immediate\n2026-10-30 03:13:38.238 UTC [43] LOG:  checkpoint complete: wrote 964 buffers (5.9%); 0 WAL file(s) added, 0 removed, 0 recycled; write=0.011 s, sync=0.024 s, total=0.037 s; sync files=317, longest=0.010 s, average=0.001 s; distance=4493 kB, estimate=4493 kB; lsn=0/195A8A8, redo lsn=0/195A8A8\n2026-10-30 03:13:38.244 UTC [42] LOG:  database system is shut down\n done\nserver stopped\n\nPostgreSQL init process complete; ready for start up.\n\nsh: locale: not found\n2026-10-30 03:13:37.437 UTC [36] WARNING:  no usable system locales were found\ninitdb: warning: enabling \"trust\" authentication for local connections\ninitdb: hint: You can change this by editing pg_hba.conf or using the option -A, or --auth-local and --auth-host, the next time you run initdb.\n2026-10-30 03:13:38.319 UTC [1] LOG:  starting PostgreSQL 16.15 on x86_64-pc-linux-musl, compiled by gcc (Alpine 15.2.0) 15.2.0, 64-bit\n2026-10-30 03:13:38.319 UTC [1] LOG:  listening on IPv4 address \"0.0.0.0\", port 5432\n2026-10-30 03:13:38.319 UTC [1] LOG:  could not create IPv6 socket for address \"::\": Address family not supported by protocol\n2026-10-30 03:13:38.320 UTC [1] LOG:  listening on Unix socket \"/var/run/postgresql/.s.PGSQL.5432\"\n2026-10-30 03:13:38.323 UTC [60] LOG:  database system was shut down at 2026-10-30 03:13:38 UTC\n2026-10-30 03:13:38.327 UTC [1] LOG:  database system is ready to accept connections"
+  },
+  {
+   "step": 9,
+   "t": 2.66,
+   "tool": "get_logs",
+   "kind": "observe",
+   "args": {
+    "service": "redis",
+    "since_seconds": 120,
+    "tail": 400
+   },
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.03,
+   "result": "9 lines in last 120s.\nTop message patterns:\n      1x #C # Oct # # # WARNING Memory overcommit must be enabled! Without it, a background save or replication may fail under low memory condition. Being disabled, it can also cause failur\n      1x #C # Oct # # * oO0OoO0OoO0Oo Redis is starting oO0OoO0OoO0Oo\n      1x #C # Oct # # * Redis version=#, bits=#, commit=#, modified=#, pid=#, just started\n      1x #C # Oct # # # Warning: no config file specified, using the default config. In order to specify a config file use redis-server /path/to/redis.conf\n      1x #M # Oct # # * monotonic clock: POSIX clock_gettime\n      1x #M # Oct # # * Running mode=standalone, port=#.\n      1x #M # Oct # # # Warning: Could not create server TCP listening socket ::*:#: unable to bind socket, errno: #\n      1x #M # Oct # # * Server initialized\n--- last 9 lines ---\n1:C 30 Oct 2026 03:13:37.096 # WARNING Memory overcommit must be enabled! Without it, a background save or replication may fail under low memory condition. Being disabled, it can also cause failures without low memory condition, see https://github.com/jemalloc/jemalloc/issues/1328. To fix this issue\n1:C 30 Oct 2026 03:13:37.096 * oO0OoO0OoO0Oo Redis is starting oO0OoO0OoO0Oo\n1:C 30 Oct 2026 03:13:37.096 * Redis version=7.4.12, bits=64, commit=00000000, modified=0, pid=1, just started\n1:C 30 Oct 2026 03:13:37.096 # Warning: no config file specified, using the default config. In order to specify a config file use redis-server /path/to/redis.conf\n1:M 30 Oct 2026 03:13:37.097 * monotonic clock: POSIX clock_gettime\n1:M 30 Oct 2026 03:13:37.098 * Running mode=standalone, port=6379.\n1:M 30 Oct 2026 03:13:37.098 # Warning: Could not create server TCP listening socket ::*:6379: unable to bind socket, errno: 97\n1:M 30 Oct 2026 03:13:37.098 * Server initialized\n1:M 30 Oct 2026 03:13:37.098 * Ready to accept connections tcp"
+  },
+  {
+   "step": 10,
+   "t": 2.69,
+   "tool": "run_diagnostic",
+   "kind": "observe",
+   "args": {
+    "service": "api",
+    "check": "disk"
+   },
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.08,
+   "result": "Filesystem                Size      Used Available Use% Mounted on\noverlay                 252.0G     11.0G     27.5G  28% /\ntmpfs                    64.0M         0     64.0M   0% /dev\ntmpfs                     7.9G         0      7.9G   0% /sys/fs/cgroup\nshm                      64.0M         0     64.0M   0% /dev/shm\n/dev/vda                252.0G     11.0G     27.5G  28% /config\ntmpfs                    48.0M     48.0M         0 100% /data\n/dev/vda                252.0G     11.0G     27.5G  28% /etc/hostname\n/dev/vda                252.0G     11.0G     27.5G  28% /etc/hosts\n/dev/vda                252.0G     11.0G     27.5G  28% /etc/resolv.conf\ntmpfs                     4.0K         0      4.0K   0% /proc/acpi\ntmpfs                    64.0M         0     64.0M   0% /proc/interrupts\ntmpfs                    64.0M         0     64.0M   0% /proc/keys\ntmpfs                    64.0M         0     64.0M   0% /proc/timer_list\ntmpfs                     4.0K         0      4.0K   0% /sys/firmware\n--- largest under /data (KB) ---\n49152\t/data\n49148\t/data/tmp/export-orders-20261029.csv.tmp\n49148\t/data/tmp\n4\t/data/audit/audit.log\n4\t/data/audit\n0\t/data/audit/.health-140366180170552\n0\t/data/audit/.health-140366174866232\n0\t/data/audit/.health-140366170573624\n0\t/data/audit/.health-140366169496376\n0\t/data/audit/.health-140366167341880\n0\t/data/audit/.health-140366166264632"
+  },
+  {
+   "step": 11,
+   "t": 2.77,
+   "tool": "run_diagnostic",
+   "kind": "observe",
+   "args": {
+    "service": "worker",
+    "check": "disk"
+   },
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.08,
+   "result": "Filesystem                Size      Used Available Use% Mounted on\noverlay                 252.0G     11.0G     27.5G  28% /\ntmpfs                    64.0M         0     64.0M   0% /dev\ntmpfs                     7.9G         0      7.9G   0% /sys/fs/cgroup\nshm                      64.0M         0     64.0M   0% /dev/shm\n/dev/vda                252.0G     11.0G     27.5G  28% /config\n/dev/vda                252.0G     11.0G     27.5G  28% /etc/hostname\n/dev/vda                252.0G     11.0G     27.5G  28% /etc/hosts\n/dev/vda                252.0G     11.0G     27.5G  28% /etc/resolv.conf\ntmpfs                     4.0K         0      4.0K   0% /proc/acpi\ntmpfs                    64.0M         0     64.0M   0% /proc/interrupts\ntmpfs                    64.0M         0     64.0M   0% /proc/keys\ntmpfs                    64.0M         0     64.0M   0% /proc/timer_list\ntmpfs                     4.0K         0      4.0K   0% /sys/firmware\n--- largest under /data (KB) ---"
+  },
+  {
+   "step": 12,
+   "t": 2.85,
+   "tool": "run_diagnostic",
+   "kind": "observe",
+   "args": {
+    "service": "postgres",
+    "check": "db_locks"
+   },
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.09,
+   "result": "blocked_pid | app | query | waiting_s | blocking_pid | blocking_app | state | blocking_query\n(no blocked sessions)"
+  },
+  {
+   "step": 13,
+   "t": 2.94,
+   "tool": "delete_file",
+   "kind": "act",
+   "args": {
+    "service": "api",
+    "path": "/data/tmp/export-orders-20261029.csv.tmp"
+   },
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.08,
+   "result": "-rw-rw-rw-    1 root     root      50327552 Oct 30 03:13 /data/tmp/export-orders-20261029.csv.tmp\ndeleted"
+  },
+  {
+   "step": 14,
+   "t": 8.03,
+   "tool": "list_services",
+   "kind": "observe",
+   "args": {},
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.12,
+   "result": "service   state       restarts  oom    health   networks             missing_networks\ngateway   running     0         False  -        frontend             -\napi       running     0         False  -        backend,frontend     -\nworker    running     0         False  -        backend              -\npostgres  running     0         False  healthy  backend              -\nredis     running     0         False  -        backend              -"
+  },
+  {
+   "step": 15,
+   "t": 8.15,
+   "tool": "check_endpoints",
+   "kind": "observe",
+   "args": {},
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.05,
+   "result": "GET  /healthz             status=200     1.2ms OK\nGET  /api/health          status=200    13.8ms OK\nGET  /api/products        status=200     3.6ms OK\nGET  /api/orders/recent   status=200    14.3ms OK\nPOST /api/orders          status=201    21.9ms OK"
+  },
+  {
+   "step": 16,
+   "t": 8.2,
+   "tool": "get_recent_changes",
+   "kind": "observe",
+   "args": {
+    "limit": 20
+   },
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.0,
+   "result": "no changes recorded"
+  },
+  {
+   "step": 17,
+   "t": 8.2,
+   "tool": "get_metrics",
+   "kind": "observe",
+   "args": {},
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 2.26,
+   "result": "{\n \"containers\": {\n  \"gateway\": {\n   \"cpu_pct\": \"0.39%\",\n   \"mem\": \"2.613MiB / 15.71GiB\",\n   \"mem_pct\": \"0.02%\"\n  },\n  \"api\": {\n   \"cpu_pct\": \"6.51%\",\n   \"mem\": \"36.21MiB / 256MiB\",\n   \"mem_pct\": \"14.15%\"\n  },\n  \"worker\": {\n   \"cpu_pct\": \"1.17%\",\n   \"mem\": \"25.32MiB / 15.71GiB\",\n   \"mem_pct\": \"0.16%\"\n  },\n  \"postgres\": {\n   \"cpu_pct\": \"4.48%\",\n   \"mem\": \"31.68MiB / 15.71GiB\",\n   \"mem_pct\": \"0.20%\"\n  },\n  \"redis\": {\n   \"cpu_pct\": \"0.64%\",\n   \"mem\": \"3.895MiB / 15.71GiB\",\n   \"mem_pct\": \"0.02%\"\n  }\n },\n \"api_app_metrics\": {\n  \"cache_errors_total\": 0,\n  \"db_errors_total\": 0,\n  \"endpoints\": {\n   \"/api/health\": {\n    \"errors_5xx\": 0,\n    \"p50_ms\": 11.4,\n    \"p95_ms\": 17.6,\n    \"requests\": 12\n   },\n   \"/api/orders\": {\n    \"errors_5xx\": 0,\n    \"p50_ms\": 16.1,\n    \"p95_ms\": 21.8,\n    \"requests\": 55\n   },\n   \"/api/orders/recent\": {\n    \"errors_5xx\": 0,\n    \"p50_ms\": 13.9,\n    \"p95_ms\": 20.7,\n    \"requests\": 74\n   },\n   \"/api/products\": {\n    \"errors_5xx\": 0,\n    \"p50_ms\": 1.8,\n    \"p95_ms\": 2.8,\n    \"requests\": 125\n   },\n   \"/metrics\": {\n    \"errors_5xx\": 0,\n    \"p50_ms\": 1.0,\n    \"p95_ms\": 1.0,\n    \"requests\": 1\n   },\n   \"unmatched\": {\n    \"errors_5xx\": 0,\n    \"p50_ms\": 0.3,\n    \"p95_ms\": 0.4,\n    \"requests\": 3\n   }\n  },\n  \"process_rss_mb\": 48.7,\n  \"uptime_s\": 30.8,\n  \"window_s\": 60\n },\n \"postgres_connections\": \"1 | 40\"\n}"
+  },
+  {
+   "step": 18,
+   "t": 10.46,
+   "tool": "get_logs",
+   "kind": "observe",
+   "args": {
+    "service": "gateway",
+    "since_seconds": 8,
+    "tail": 400
+   },
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.03,
+   "result": "65 lines in last 8s.\nTop message patterns:\n     32x gateway # GET /api/products upstream=# rt=#\n     18x gateway # GET /api/orders/recent upstream=# rt=#\n     13x gateway # POST /api/orders upstream=# rt=#\n      1x gateway # GET /healthz upstream=- rt=#\n      1x gateway # GET /api/health upstream=# rt=#\n--- last 65 lines ---\n2026-10-30T03:14:03+00:00 gateway 201 POST /api/orders upstream=172.19.0.2:8000 rt=0.029\n2026-10-30T03:14:03+00:00 gateway 200 GET /api/orders/recent upstream=172.19.0.2:8000 rt=0.019\n2026-10-30T03:14:03+00:00 gateway 200 GET /api/products upstream=172.19.0.2:8000 rt=0.004\n2026-10-30T03:14:03+00:00 gateway 200 GET /api/products upstream=172.19.0.2:8000 rt=0.003\n2026-10-30T03:14:03+00:00 gateway 201 POST /api/orders upstream=172.19.0.2:8000 rt=0.017\n2026-10-30T03:14:03+00:00 gateway 200 GET /api/products upstream=172.19.0.2:8000 rt=0.003\n2026-10-30T03:14:03+00:00 gateway 200 GET /api/products upstream=172.19.0.2:8000 rt=0.003\n2026-10-30T03:14:04+00:00 gateway 200 GET /api/products upstream=172.19.0.2:8000 rt=0.003\n2026-10-30T03:14:04+00:00 gateway 200 GET /api/products upstream=172.19.0.2:8000 rt=0.002\n2026-10-30T03:14:04+00:00 gateway 200 GET /api/products upstream=172.19.0.2:8000 rt=0.003\n2026-10-30T03:14:04+00:00 gateway 200 GET /api/orders/recent upstream=172.19.0.2:8000 rt=0.015\n2026-10-30T03:14:04+00:00 gateway 200 GET /api/products upstream=172.19.0.2:8000 rt=0.003\n2026-10-30T03:14:04+00:00 gateway 200 GET /api/orders/recent upstream=172.19.0.2:8000 rt=0.018\n2026-10-30T03:14:04+00:00 gateway 200 GET /api/orders/recent upstream=172.19.0.2:8000 rt=0.015\n2026-10-30T03:14:04+00:00 gateway 200 GET /api/products upstream=172.19.0.2:8000 rt=0.004\n2026-10-30T03:14:05+00:00 gateway 200 GET /api/orders/recent upstream=172.19.0.2:8000 rt=0.019\n2026-10-30T03:14:05+00:00 gateway 200 GET /api/products upstream=172.19.0.2:8000 rt=0.003\n2026-10-30T03:14:05+00:00 gateway 200 GET /api/products upstream=172.19.0.2:8000 rt=0.003\n2026-10-30T03:14:05+00:00 gateway 200 GET /api/orders/recent upstream=172.19.0.2:8000 rt=0.021\n2026-10-30T03:14:05+00:00 gateway 200 GET /api/orders/recent upstream=172.19.0.2:8000 rt=0.015\n2026-10-30T03:14:05+00:00 gateway 200 GET /api/products upstream=172.19.0.2:8000 rt=0.004\n2026-10-30T03:14:05+00:00 gateway 200 GET /api/products upstream=172.19.0.2:8000 rt=0.004\n2026-10-30T03:14:06+00:00 gateway 200 GET /api/products upstream=172.19.0.2:8000 rt=0.003\n2026-10-30T03:14:06+00:00 gateway 200 GET /api/products upstream=172.19.0.2:8000 rt=0.003\n2026-10-30T03:14:06+00:00 gateway 200 GET /api/orders/recent upstream=172.19.0.2:8000 rt=0.016\n2026-10-30T03:14:06+00:00 gateway 200 GET /api/products upstream=172.19.0.2:8000 rt=0.004\n2026-10-30T03:14:06+00:00 gateway 201 POST /api/orders upstream=172.19.0.2:8000 rt=0.018\n2026-10-30T03:14:06+00:00 gateway 200 GET /api/products upstream=172.19.0.2:8000 rt=0.003\n2026-10-30T03:14:06+00:00 gateway 201 POST /api/orders upstream=172.19.0.2:8000 rt=0.022\n2026-10-30T03:14:07+00:00 g\n... [232 chars truncated] ...\n2:8000 rt=0.004\n2026-10-30T03:14:07+00:00 gateway 201 POST /api/orders upstream=172.19.0.2:8000 rt=0.019\n2026-10-30T03:14:07+00:00 gateway 200 GET /api/orders/recent upstream=172.19.0.2:8000 rt=0.020\n2026-10-30T03:14:07+00:00 gateway 200 GET /api/products upstream=172.19.0.2:8000 rt=0.003\n2026-10-30T03:14:07+00:00 gateway 200 GET /api/products upstream=172.19.0.2:8000 rt=0.003\n2026-10-30T03:14:07+00:00 gateway 200 GET /api/products upstream=172.19.0.2:8000 rt=0.003\n2026-10-30T03:14:08+00:00 gateway 201 POST /api/orders upstream=172.19.0.2:8000 rt=0.019\n2026-10-30T03:14:08+00:00 gateway 200 GET /api/orders/recent upstream=172.19.0.2:8000 rt=0.016\n2026-10-30T03:14:08+00:00 gateway 200 GET /api/orders/recent upstream=172.19.0.2:8000 rt=0.018\n2026-10-30T03:14:08+00:00 gateway 201 POST /api/orders upstream=172.19.0.2:8000 rt=0.019\n2026-10-30T03:14:08+00:00 gateway 200 GET /api/orders/recent upstream=172.19.0.2:8000 rt=0.016\n2026-10-30T03:14:08+00:00 gateway 201 POST /api/orders upstream=172.19.0.2:8000 rt=0.018\n2026-10-30T03:14:08+00:00 gateway 200 GET /healthz upstream=- rt=0.000\n2026-10-30T03:14:08+00:00 gateway 200 GET /api/health upstream=172.19.0.2:8000 rt=0.013\n2026-10-30T03:14:08+00:00 gateway 200 GET /api/products upstream=172.19.0.2:8000 rt=0.002\n2026-10-30T03:14:08+00:00 gateway 200 GET /api/orders/recent upstream=172.19.0.2:8000 rt=0.014\n2026-10-30T03:14:08+00:00 gateway 201 POST /api/orders upstream=172.19.0.2:8000 rt=0.022\n2026-10-30T03:14:08+00:00 gateway 201 POST /api/orders upstream=172.19.0.2:8000 rt=0.024\n2026-10-30T03:14:09+00:00 gateway 200 GET /api/products upstream=172.19.0.2:8000 rt=0.003\n2026-10-30T03:14:09+00:00 gateway 200 GET /api/products upstream=172.19.0.2:8000 rt=0.004\n2026-10-30T03:14:09+00:00 gateway 200 GET /api/products upstream=172.19.0.2:8000 rt=0.003\n2026-10-30T03:14:09+00:00 gateway 201 POST /api/orders upstream=172.19.0.2:8000 rt=0.018\n2026-10-30T03:14:09+00:00 gateway 200 GET /api/products upstream=172.19.0.2:8000 rt=0.004\n2026-10-30T03:14:09+00:00 gateway 201 POST /api/orders upstream=172.19.0.2:8000 rt=0.018\n2026-10-30T03:14:09+00:00 gateway 200 GET /api/orders/recent upstream=172.19.0.2:8000 rt=0.015\n2026-10-30T03:14:10+00:00 gateway 200 GET /api/orders/recent upstream=172.19.0.2:8000 rt=0.015\n2026-10-30T03:14:10+00:00 gateway 201 POST /api/orders upstream=172.19.0.2:8000 rt=0.022\n2026-10-30T03:14:10+00:00 gateway 200 GET /api/products upstream=172.19.0.2:8000 rt=0.003\n2026-10-30T03:14:10+00:00 gateway 200 GET /api/products upstream=172.19.0.2:8000 rt=0.004\n2026-10-30T03:14:10+00:00 gateway 200 GET /api/products upstream=172.19.0.2:8000 rt=0.020\n2026-10-30T03:14:10+00:00 gateway 200 GET /api/products upstream=172.19.0.2:8000 rt=0.003\n2026-10-30T03:14:10+00:00 gateway 200 GET /api/products upstream=172.19.0.2:8000 rt=0.003\n2026-10-30T03:14:11+00:00 gateway 200 GET /api/orders/recent upstream=172.19.0.2:8000 rt=0.021\n2026-10-30T03:14:11+00:00 gateway 200 GET /api/orders/recent upstream=172.19.0.2:8000 rt=0.016"
+  },
+  {
+   "step": 19,
+   "t": 10.49,
+   "tool": "get_logs",
+   "kind": "observe",
+   "args": {
+    "service": "api",
+    "since_seconds": 8,
+    "tail": 400
+   },
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.03,
+   "result": "0 lines in last 8s.\nTop message patterns:\n\n--- last 0 lines ---\n"
+  },
+  {
+   "step": 20,
+   "t": 10.52,
+   "tool": "get_logs",
+   "kind": "observe",
+   "args": {
+    "service": "worker",
+    "since_seconds": 8,
+    "tail": 400
+   },
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.03,
+   "result": "1 lines in last 8s.\nTop message patterns:\n      1x INFO worker sales summary refreshed: orders=# revenue=#\n--- last 1 lines ---\n2026-10-30T03:14:10 INFO worker sales summary refreshed: orders=1054 revenue=267672.99"
+  },
+  {
+   "step": 21,
+   "t": 10.54,
+   "tool": "get_logs",
+   "kind": "observe",
+   "args": {
+    "service": "postgres",
+    "since_seconds": 8,
+    "tail": 400
+   },
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.03,
+   "result": "0 lines in last 8s.\nTop message patterns:\n\n--- last 0 lines ---\n"
+  },
+  {
+   "step": 22,
+   "t": 10.57,
+   "tool": "get_logs",
+   "kind": "observe",
+   "args": {
+    "service": "redis",
+    "since_seconds": 8,
+    "tail": 400
+   },
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.03,
+   "result": "0 lines in last 8s.\nTop message patterns:\n\n--- last 0 lines ---\n"
+  },
+  {
+   "step": 23,
+   "t": 10.6,
+   "tool": "run_diagnostic",
+   "kind": "observe",
+   "args": {
+    "service": "api",
+    "check": "disk"
+   },
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.1,
+   "result": "Filesystem                Size      Used Available Use% Mounted on\noverlay                 252.0G     11.0G     27.5G  28% /\ntmpfs                    64.0M         0     64.0M   0% /dev\ntmpfs                     7.9G         0      7.9G   0% /sys/fs/cgroup\nshm                      64.0M         0     64.0M   0% /dev/shm\n/dev/vda                252.0G     11.0G     27.5G  28% /config\ntmpfs                    48.0M      4.0K     48.0M   0% /data\n/dev/vda                252.0G     11.0G     27.5G  28% /etc/hostname\n/dev/vda                252.0G     11.0G     27.5G  28% /etc/hosts\n/dev/vda                252.0G     11.0G     27.5G  28% /etc/resolv.conf\ntmpfs                     4.0K         0      4.0K   0% /proc/acpi\ntmpfs                    64.0M         0     64.0M   0% /proc/interrupts\ntmpfs                    64.0M         0     64.0M   0% /proc/keys\ntmpfs                    64.0M         0     64.0M   0% /proc/timer_list\ntmpfs                     4.0K         0      4.0K   0% /sys/firmware\n--- largest under /data (KB) ---\n4\t/data/audit/audit.log\n4\t/data/audit\n4\t/data\n0\t/data/tmp\n0\t/data/audit/.health-140366180170552\n0\t/data/audit/.health-140366174866232\n0\t/data/audit/.health-140366169496376\n0\t/data/audit/.health-140366167341880\n0\t/data/audit/.health-140366166264632"
+  },
+  {
+   "step": 24,
+   "t": 10.7,
+   "tool": "run_diagnostic",
+   "kind": "observe",
+   "args": {
+    "service": "worker",
+    "check": "disk"
+   },
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.1,
+   "result": "Filesystem                Size      Used Available Use% Mounted on\noverlay                 252.0G     11.0G     27.5G  28% /\ntmpfs                    64.0M         0     64.0M   0% /dev\ntmpfs                     7.9G         0      7.9G   0% /sys/fs/cgroup\nshm                      64.0M         0     64.0M   0% /dev/shm\n/dev/vda                252.0G     11.0G     27.5G  28% /config\n/dev/vda                252.0G     11.0G     27.5G  28% /etc/hostname\n/dev/vda                252.0G     11.0G     27.5G  28% /etc/hosts\n/dev/vda                252.0G     11.0G     27.5G  28% /etc/resolv.conf\ntmpfs                     4.0K         0      4.0K   0% /proc/acpi\ntmpfs                    64.0M         0     64.0M   0% /proc/interrupts\ntmpfs                    64.0M         0     64.0M   0% /proc/keys\ntmpfs                    64.0M         0     64.0M   0% /proc/timer_list\ntmpfs                     4.0K         0      4.0K   0% /sys/firmware\n--- largest under /data (KB) ---"
+  },
+  {
+   "step": 25,
+   "t": 10.8,
+   "tool": "run_diagnostic",
+   "kind": "observe",
+   "args": {
+    "service": "postgres",
+    "check": "db_locks"
+   },
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.1,
+   "result": "blocked_pid | app | query | waiting_s | blocking_pid | blocking_app | state | blocking_query\n(no blocked sessions)"
+  },
+  {
+   "step": 26,
+   "t": 10.9,
+   "tool": "verify_recovery",
+   "kind": "observe",
+   "args": {},
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 8.72,
+   "result": "{\n \"healthy\": true,\n \"probe_success_rate\": 1.0,\n \"probe_p95_ms\": 22.1,\n \"problems\": [],\n \"probes\": {\n  \"GET /healthz\": {\n   \"ok\": 8,\n   \"fail\": 0,\n   \"statuses\": [\n    200\n   ],\n   \"last_error\": \"\"\n  },\n  \"GET /api/health\": {\n   \"ok\": 8,\n   \"fail\": 0,\n   \"statuses\": [\n    200\n   ],\n   \"last_error\": \"\"\n  },\n  \"GET /api/products\": {\n   \"ok\": 8,\n   \"fail\": 0,\n   \"statuses\": [\n    200\n   ],\n   \"last_error\": \"\"\n  },\n  \"GET /api/orders/recent\": {\n   \"ok\": 8,\n   \"fail\": 0,\n   \"statuses\": [\n    200\n   ],\n   \"last_error\": \"\"\n  },\n  \"POST /api/orders\": {\n   \"ok\": 8,\n   \"fail\": 0,\n   \"statuses\": [\n    201\n   ],\n   \"last_error\": \"\"\n  }\n }\n}"
+  },
+  {
+   "step": 27,
+   "t": 19.62,
+   "tool": "submit_report",
+   "kind": "final",
+   "args": {
+    "root_causes": [
+     {
+      "component": "api",
+      "category": "disk_full",
+      "evidence": "api /data volume is 100% full (run_diagnostic disk); 1 'No space left on device' errors, e.g. probe /api/health: {\"checks\":{\"cache\":\"ok\",\"database\":\"ok\",\"disk\":\"error: [Errno 28] No space left on device\"},\"status\""
+     }
+    ],
+    "recovered": true,
+    "summary": "[confirmed] delete disposable temp files on api: /data/tmp/export-orders-20261029.csv.tmp (confidence 0.82; evidence: api /data volume is 100% full (run_diagnostic disk)). Prevent: rotate or expire temporary exports and alert on volume usage above 80%."
+   },
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.0,
+   "result": "report submitted"
+  }
+ ],
+ "episode_seconds": 86.0
+}

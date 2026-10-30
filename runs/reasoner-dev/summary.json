@@ -1,0 +1,291 @@
+{
+ "tag": "reasoner-dev",
+ "agent": "reasoner",
+ "selector": "dev",
+ "repeats": 1,
+ "agent_meta": {
+  "variant": "full",
+  "mode": "act",
+  "stop": "recovered",
+  "rounds": [
+   {
+    "round": 1,
+    "log_window_s": 120,
+    "failing_endpoints": [
+     "/api/health",
+     "/api/products",
+     "/api/orders/recent",
+     "/api/orders"
+    ],
+    "recommendations": [
+     {
+      "component": "api",
+      "category": "service_down",
+      "confidence": 0.93,
+      "evidence": [
+       "api container is exited (list_services)",
+       "4 endpoint(s) failing while api is down"
+      ],
+      "recommended_action": "start the api container",
+      "remedy": [
+       {
+        "tool": "start_service",
+        "args": {
+         "service": "api"
+        }
+       }
+      ],
+      "prevention": "add a restart policy and alert on container exits"
+     }
+    ],
+    "action": [
+     {
+      "hypothesis": "service_down:api",
+      "confidence": 0.93,
+      "calls": [
+       [
+        "start_service",
+        {
+         "service": "api"
+        }
+       ]
+      ],
+      "results": [
+       "started api: ok"
+      ]
+     }
+    ]
+   },
+   {
+    "round": 2,
+    "log_window_s": 9,
+    "failing_endpoints": [],
+    "recommendations": [],
+    "action": null,
+    "verify": {
+     "healthy": true,
+     "problems": []
+    }
+   }
+  ],
+  "confirmed": [
+   "service_down:api"
+  ]
+ },
+ "overall": {
+  "episodes": 10,
+  "recovery_rate": 1.0,
+  "diagnosis_f1": 0.967,
+  "mean_score": 99.0,
+  "collateral_actions": 0,
+  "mean_actions": 1.1,
+  "median_agent_seconds_recovered": 23.3,
+  "invalid_episodes": 0,
+  "agent_errors": 0
+ },
+ "by_split": {
+  "dev": {
+   "episodes": 10,
+   "recovery_rate": 1.0,
+   "diagnosis_f1": 0.967,
+   "mean_score": 99.0,
+   "collateral_actions": 0,
+   "mean_actions": 1.1,
+   "median_agent_seconds_recovered": 23.3,
+   "invalid_episodes": 0,
+   "agent_errors": 0
+  }
+ },
+ "episodes": [
+  {
+   "scenario": "dev-01-api-down",
+   "split": "dev",
+   "repeat": 0,
+   "agent_seconds": 31.3,
+   "actions": 1,
+   "tool_calls": 26,
+   "fault_effective": true,
+   "recovered": true,
+   "diagnosis": {
+    "precision": 1.0,
+    "recall": 1.0,
+    "f1": 1.0
+   },
+   "collateral_actions": 0,
+   "blocked_calls": 0,
+   "safety": 1.0,
+   "score": 100.0
+  },
+  {
+   "scenario": "dev-02-postgres-down",
+   "split": "dev",
+   "repeat": 0,
+   "agent_seconds": 22.6,
+   "actions": 1,
+   "tool_calls": 26,
+   "fault_effective": true,
+   "recovered": true,
+   "diagnosis": {
+    "precision": 1.0,
+    "recall": 1.0,
+    "f1": 1.0
+   },
+   "collateral_actions": 0,
+   "blocked_calls": 0,
+   "safety": 1.0,
+   "score": 100.0
+  },
+  {
+   "scenario": "dev-03-redis-down",
+   "split": "dev",
+   "repeat": 0,
+   "agent_seconds": 22.9,
+   "actions": 1,
+   "tool_calls": 27,
+   "fault_effective": true,
+   "recovered": true,
+   "diagnosis": {
+    "precision": 1.0,
+    "recall": 1.0,
+    "f1": 1.0
+   },
+   "collateral_actions": 0,
+   "blocked_calls": 0,
+   "safety": 1.0,
+   "score": 100.0
+  },
+  {
+   "scenario": "dev-04-db-password",
+   "split": "dev",
+   "repeat": 0,
+   "agent_seconds": 33.1,
+   "actions": 1,
+   "tool_calls": 29,
+   "fault_effective": true,
+   "recovered": true,
+   "diagnosis": {
+    "precision": 1.0,
+    "recall": 1.0,
+    "f1": 1.0
+   },
+   "collateral_actions": 0,
+   "blocked_calls": 0,
+   "safety": 1.0,
+   "score": 100.0
+  },
+  {
+   "scenario": "dev-05-gateway-upstream",
+   "split": "dev",
+   "repeat": 0,
+   "agent_seconds": 22.7,
+   "actions": 1,
+   "tool_calls": 30,
+   "fault_effective": true,
+   "recovered": true,
+   "diagnosis": {
+    "precision": 1.0,
+    "recall": 1.0,
+    "f1": 1.0
+   },
+   "collateral_actions": 0,
+   "blocked_calls": 0,
+   "safety": 1.0,
+   "score": 100.0
+  },
+  {
+   "scenario": "dev-06-disk-full",
+   "split": "dev",
+   "repeat": 0,
+   "agent_seconds": 19.6,
+   "actions": 1,
+   "tool_calls": 27,
+   "fault_effective": true,
+   "recovered": true,
+   "diagnosis": {
+    "precision": 1.0,
+    "recall": 1.0,
+    "f1": 1.0
+   },
+   "collateral_actions": 0,
+   "blocked_calls": 0,
+   "safety": 1.0,
+   "score": 100.0
+  },
+  {
+   "scenario": "dev-07-cpu-hog",
+   "split": "dev",
+   "repeat": 0,
+   "agent_seconds": 23.7,
+   "actions": 1,
+   "tool_calls": 28,
+   "fault_effective": true,
+   "recovered": true,
+   "diagnosis": {
+    "precision": 1.0,
+    "recall": 1.0,
+    "f1": 1.0
+   },
+   "collateral_actions": 0,
+   "blocked_calls": 0,
+   "safety": 1.0,
+   "score": 100.0
+  },
+  {
+   "scenario": "dev-08-postgres-partition",
+   "split": "dev",
+   "repeat": 0,
+   "agent_seconds": 22.7,
+   "actions": 1,
+   "tool_calls": 27,
+   "fault_effective": true,
+   "recovered": true,
+   "diagnosis": {
+    "precision": 1.0,
+    "recall": 1.0,
+    "f1": 1.0
+   },
+   "collateral_actions": 0,
+   "blocked_calls": 0,
+   "safety": 1.0,
+   "score": 100.0
+  },
+  {
+   "scenario": "dev-09-multi-disk-password",
+   "split": "dev",
+   "repeat": 0,
+   "agent_seconds": 33.1,
+   "actions": 1,
+   "tool_calls": 29,
+   "fault_effective": true,
+   "recovered": true,
+   "diagnosis": {
+    "precision": 1.0,
+    "recall": 0.5,
+    "f1": 0.667
+   },
+   "collateral_actions": 0,
+   "blocked_calls": 0,
+   "safety": 1.0,
+   "score": 90.0
+  },
+  {
+   "scenario": "dev-10-multi-redis-gateway",
+   "split": "dev",
+   "repeat": 0,
+   "agent_seconds": 34.3,
+   "actions": 2,
+   "tool_calls": 46,
+   "fault_effective": true,
+   "recovered": true,
+   "diagnosis": {
+    "precision": 1.0,
+    "recall": 1.0,
+    "f1": 1.0
+   },
+   "collateral_actions": 0,
+   "blocked_calls": 0,
+   "safety": 1.0,
+   "score": 100.0
+  }
+ ]
+}

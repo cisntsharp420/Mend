@@ -1,0 +1,559 @@
+{
+ "tag": "reasoner-heldout",
+ "agent": "reasoner",
+ "selector": "heldout",
+ "repeats": 2,
+ "agent_meta": {
+  "variant": "full",
+  "mode": "act",
+  "stop": "recovered",
+  "rounds": [
+   {
+    "round": 1,
+    "log_window_s": 120,
+    "failing_endpoints": [
+     "/api/health",
+     "/api/orders/recent",
+     "/api/orders"
+    ],
+    "recommendations": [
+     {
+      "component": "api",
+      "category": "bad_config_deploy",
+      "confidence": 0.764,
+      "evidence": [
+       "33 log line(s) on api: a hostname does not resolve, e.g. probe /api/health: {\"checks\":{\"cache\":\"ok\",\"database\":\"error: [Errno -2] Name does not resolve\",\"disk\":\"ok\"},\"status\":\"",
+       "v2 changed host (get_config diff), matching the errors",
+       "api was deployed 0.4 min ago: v2 'point api at new primary database endpoint' by ci-bot"
+      ],
+      "recommended_action": "roll back the api config to v1 (undoing v2)",
+      "remedy": [
+       {
+        "tool": "rollback_config",
+        "args": {
+         "service": "api",
+         "to_version": 1
+        }
+       }
+      ],
+      "prevention": "validate configs in CI and canary deploys with automatic rollback on error-rate spikes"
+     }
+    ],
+    "action": [
+     {
+      "hypothesis": "bad_config_deploy:api",
+      "confidence": 0.764,
+      "calls": [
+       [
+        "rollback_config",
+        {
+         "service": "api",
+         "to_version": 1
+        }
+       ]
+      ],
+      "results": [
+       "api config rolled back v2 -> v1; applied: ok"
+      ]
+     }
+    ]
+   },
+   {
+    "round": 2,
+    "log_window_s": 9,
+    "failing_endpoints": [],
+    "recommendations": [],
+    "action": null,
+    "verify": {
+     "healthy": true,
+     "problems": []
+    }
+   }
+  ],
+  "confirmed": [
+   "bad_config_deploy:api"
+  ]
+ },
+ "overall": {
+  "episodes": 24,
+  "recovery_rate": 0.958,
+  "diagnosis_f1": 0.969,
+  "mean_score": 96.6,
+  "collateral_actions": 0,
+  "mean_actions": 1.5,
+  "median_agent_seconds_recovered": 33.1,
+  "invalid_episodes": 0,
+  "agent_errors": 0
+ },
+ "by_split": {
+  "heldout": {
+   "episodes": 24,
+   "recovery_rate": 0.958,
+   "diagnosis_f1": 0.969,
+   "mean_score": 96.6,
+   "collateral_actions": 0,
+   "mean_actions": 1.5,
+   "median_agent_seconds_recovered": 33.1,
+   "invalid_episodes": 0,
+   "agent_errors": 0
+  }
+ },
+ "episodes": [
+  {
+   "scenario": "ho-01-db-host-dns",
+   "split": "heldout",
+   "repeat": 0,
+   "agent_seconds": 33.3,
+   "actions": 1,
+   "tool_calls": 29,
+   "fault_effective": true,
+   "recovered": true,
+   "diagnosis": {
+    "precision": 1.0,
+    "recall": 1.0,
+    "f1": 1.0
+   },
+   "collateral_actions": 0,
+   "blocked_calls": 0,
+   "safety": 1.0,
+   "score": 100.0
+  },
+  {
+   "scenario": "ho-02-crashloop",
+   "split": "heldout",
+   "repeat": 0,
+   "agent_seconds": 30.9,
+   "actions": 1,
+   "tool_calls": 28,
+   "fault_effective": true,
+   "recovered": true,
+   "diagnosis": {
+    "precision": 1.0,
+    "recall": 1.0,
+    "f1": 1.0
+   },
+   "collateral_actions": 0,
+   "blocked_calls": 0,
+   "safety": 1.0,
+   "score": 100.0
+  },
+  {
+   "scenario": "ho-03-partial-tax-rate",
+   "split": "heldout",
+   "repeat": 0,
+   "agent_seconds": 33.1,
+   "actions": 1,
+   "tool_calls": 29,
+   "fault_effective": true,
+   "recovered": true,
+   "diagnosis": {
+    "precision": 1.0,
+    "recall": 1.0,
+    "f1": 1.0
+   },
+   "collateral_actions": 0,
+   "blocked_calls": 0,
+   "safety": 1.0,
+   "score": 100.0
+  },
+  {
+   "scenario": "ho-04-memory-leak",
+   "split": "heldout",
+   "repeat": 0,
+   "agent_seconds": 33.3,
+   "actions": 1,
+   "tool_calls": 29,
+   "fault_effective": true,
+   "recovered": true,
+   "diagnosis": {
+    "precision": 1.0,
+    "recall": 1.0,
+    "f1": 1.0
+   },
+   "collateral_actions": 0,
+   "blocked_calls": 0,
+   "safety": 1.0,
+   "score": 100.0
+  },
+  {
+   "scenario": "ho-05-db-lock",
+   "split": "heldout",
+   "repeat": 0,
+   "agent_seconds": 23.7,
+   "actions": 1,
+   "tool_calls": 27,
+   "fault_effective": true,
+   "recovered": true,
+   "diagnosis": {
+    "precision": 1.0,
+    "recall": 1.0,
+    "f1": 1.0
+   },
+   "collateral_actions": 0,
+   "blocked_calls": 0,
+   "safety": 1.0,
+   "score": 100.0
+  },
+  {
+   "scenario": "ho-06-conn-exhaustion",
+   "split": "heldout",
+   "repeat": 0,
+   "agent_seconds": 20.2,
+   "actions": 2,
+   "tool_calls": 31,
+   "fault_effective": true,
+   "recovered": true,
+   "diagnosis": {
+    "precision": 1.0,
+    "recall": 1.0,
+    "f1": 1.0
+   },
+   "collateral_actions": 0,
+   "blocked_calls": 0,
+   "safety": 1.0,
+   "score": 100.0
+  },
+  {
+   "scenario": "ho-07-redis-partition",
+   "split": "heldout",
+   "repeat": 0,
+   "agent_seconds": 22.7,
+   "actions": 1,
+   "tool_calls": 27,
+   "fault_effective": true,
+   "recovered": true,
+   "diagnosis": {
+    "precision": 1.0,
+    "recall": 1.0,
+    "f1": 1.0
+   },
+   "collateral_actions": 0,
+   "blocked_calls": 0,
+   "safety": 1.0,
+   "score": 100.0
+  },
+  {
+   "scenario": "ho-08-rollback-trap",
+   "split": "heldout",
+   "repeat": 0,
+   "agent_seconds": 33.2,
+   "actions": 1,
+   "tool_calls": 30,
+   "fault_effective": true,
+   "recovered": true,
+   "diagnosis": {
+    "precision": 1.0,
+    "recall": 1.0,
+    "f1": 1.0
+   },
+   "collateral_actions": 0,
+   "blocked_calls": 0,
+   "safety": 1.0,
+   "score": 100.0
+  },
+  {
+   "scenario": "ho-09-lock-behind-gateway",
+   "split": "heldout",
+   "repeat": 0,
+   "agent_seconds": 34.9,
+   "actions": 2,
+   "tool_calls": 43,
+   "fault_effective": true,
+   "recovered": true,
+   "diagnosis": {
+    "precision": 1.0,
+    "recall": 1.0,
+    "f1": 1.0
+   },
+   "collateral_actions": 0,
+   "blocked_calls": 0,
+   "safety": 1.0,
+   "score": 100.0
+  },
+  {
+   "scenario": "ho-10-cpu-and-redis-partition",
+   "split": "heldout",
+   "repeat": 0,
+   "agent_seconds": 44.5,
+   "actions": 2,
+   "tool_calls": 45,
+   "fault_effective": true,
+   "recovered": true,
+   "diagnosis": {
+    "precision": 1.0,
+    "recall": 1.0,
+    "f1": 1.0
+   },
+   "collateral_actions": 0,
+   "blocked_calls": 0,
+   "safety": 1.0,
+   "score": 100.0
+  },
+  {
+   "scenario": "ho-11-conn-leak-and-dns",
+   "split": "heldout",
+   "repeat": 0,
+   "agent_seconds": 41.9,
+   "actions": 3,
+   "tool_calls": 48,
+   "fault_effective": true,
+   "recovered": true,
+   "diagnosis": {
+    "precision": 1.0,
+    "recall": 1.0,
+    "f1": 1.0
+   },
+   "collateral_actions": 0,
+   "blocked_calls": 0,
+   "safety": 1.0,
+   "score": 100.0
+  },
+  {
+   "scenario": "ho-12-triple",
+   "split": "heldout",
+   "repeat": 0,
+   "agent_seconds": 44.2,
+   "actions": 2,
+   "tool_calls": 44,
+   "fault_effective": true,
+   "recovered": true,
+   "diagnosis": {
+    "precision": 1.0,
+    "recall": 0.667,
+    "f1": 0.8
+   },
+   "collateral_actions": 0,
+   "blocked_calls": 0,
+   "safety": 1.0,
+   "score": 94.0
+  },
+  {
+   "scenario": "ho-01-db-host-dns",
+   "split": "heldout",
+   "repeat": 1,
+   "agent_seconds": 33.1,
+   "actions": 1,
+   "tool_calls": 29,
+   "fault_effective": true,
+   "recovered": true,
+   "diagnosis": {
+    "precision": 1.0,
+    "recall": 1.0,
+    "f1": 1.0
+   },
+   "collateral_actions": 0,
+   "blocked_calls": 0,
+   "safety": 1.0,
+   "score": 100.0
+  },
+  {
+   "scenario": "ho-02-crashloop",
+   "split": "heldout",
+   "repeat": 1,
+   "agent_seconds": 30.9,
+   "actions": 1,
+   "tool_calls": 28,
+   "fault_effective": true,
+   "recovered": true,
+   "diagnosis": {
+    "precision": 1.0,
+    "recall": 1.0,
+    "f1": 1.0
+   },
+   "collateral_actions": 0,
+   "blocked_calls": 0,
+   "safety": 1.0,
+   "score": 100.0
+  },
+  {
+   "scenario": "ho-03-partial-tax-rate",
+   "split": "heldout",
+   "repeat": 1,
+   "agent_seconds": 33.1,
+   "actions": 1,
+   "tool_calls": 29,
+   "fault_effective": true,
+   "recovered": true,
+   "diagnosis": {
+    "precision": 1.0,
+    "recall": 1.0,
+    "f1": 1.0
+   },
+   "collateral_actions": 0,
+   "blocked_calls": 0,
+   "safety": 1.0,
+   "score": 100.0
+  },
+  {
+   "scenario": "ho-04-memory-leak",
+   "split": "heldout",
+   "repeat": 1,
+   "agent_seconds": 33.3,
+   "actions": 1,
+   "tool_calls": 29,
+   "fault_effective": true,
+   "recovered": true,
+   "diagnosis": {
+    "precision": 1.0,
+    "recall": 1.0,
+    "f1": 1.0
+   },
+   "collateral_actions": 0,
+   "blocked_calls": 0,
+   "safety": 1.0,
+   "score": 100.0
+  },
+  {
+   "scenario": "ho-05-db-lock",
+   "split": "heldout",
+   "repeat": 1,
+   "agent_seconds": 23.6,
+   "actions": 1,
+   "tool_calls": 27,
+   "fault_effective": true,
+   "recovered": true,
+   "diagnosis": {
+    "precision": 1.0,
+    "recall": 1.0,
+    "f1": 1.0
+   },
+   "collateral_actions": 0,
+   "blocked_calls": 0,
+   "safety": 1.0,
+   "score": 100.0
+  },
+  {
+   "scenario": "ho-06-conn-exhaustion",
+   "split": "heldout",
+   "repeat": 1,
+   "agent_seconds": 20.1,
+   "actions": 2,
+   "tool_calls": 31,
+   "fault_effective": true,
+   "recovered": true,
+   "diagnosis": {
+    "precision": 1.0,
+    "recall": 1.0,
+    "f1": 1.0
+   },
+   "collateral_actions": 0,
+   "blocked_calls": 0,
+   "safety": 1.0,
+   "score": 100.0
+  },
+  {
+   "scenario": "ho-07-redis-partition",
+   "split": "heldout",
+   "repeat": 1,
+   "agent_seconds": 22.6,
+   "actions": 1,
+   "tool_calls": 27,
+   "fault_effective": true,
+   "recovered": true,
+   "diagnosis": {
+    "precision": 1.0,
+    "recall": 1.0,
+    "f1": 1.0
+   },
+   "collateral_actions": 0,
+   "blocked_calls": 0,
+   "safety": 1.0,
+   "score": 100.0
+  },
+  {
+   "scenario": "ho-08-rollback-trap",
+   "split": "heldout",
+   "repeat": 1,
+   "agent_seconds": 33.1,
+   "actions": 1,
+   "tool_calls": 30,
+   "fault_effective": true,
+   "recovered": true,
+   "diagnosis": {
+    "precision": 1.0,
+    "recall": 1.0,
+    "f1": 1.0
+   },
+   "collateral_actions": 0,
+   "blocked_calls": 0,
+   "safety": 1.0,
+   "score": 100.0
+  },
+  {
+   "scenario": "ho-09-lock-behind-gateway",
+   "split": "heldout",
+   "repeat": 1,
+   "agent_seconds": 28.3,
+   "actions": 1,
+   "tool_calls": 30,
+   "fault_effective": true,
+   "recovered": false,
+   "diagnosis": {
+    "precision": 1.0,
+    "recall": 0.5,
+    "f1": 0.667
+   },
+   "collateral_actions": 0,
+   "blocked_calls": 0,
+   "safety": 1.0,
+   "score": 30.0
+  },
+  {
+   "scenario": "ho-10-cpu-and-redis-partition",
+   "split": "heldout",
+   "repeat": 1,
+   "agent_seconds": 44.1,
+   "actions": 2,
+   "tool_calls": 45,
+   "fault_effective": true,
+   "recovered": true,
+   "diagnosis": {
+    "precision": 1.0,
+    "recall": 1.0,
+    "f1": 1.0
+   },
+   "collateral_actions": 0,
+   "blocked_calls": 0,
+   "safety": 1.0,
+   "score": 100.0
+  },
+  {
+   "scenario": "ho-11-conn-leak-and-dns",
+   "split": "heldout",
+   "repeat": 1,
+   "agent_seconds": 42.0,
+   "actions": 3,
+   "tool_calls": 48,
+   "fault_effective": true,
+   "recovered": true,
+   "diagnosis": {
+    "precision": 1.0,
+    "recall": 1.0,
+    "f1": 1.0
+   },
+   "collateral_actions": 0,
+   "blocked_calls": 0,
+   "safety": 1.0,
+   "score": 100.0
+  },
+  {
+   "scenario": "ho-12-triple",
+   "split": "heldout",
+   "repeat": 1,
+   "agent_seconds": 44.4,
+   "actions": 2,
+   "tool_calls": 44,
+   "fault_effective": true,
+   "recovered": true,
+   "diagnosis": {
+    "precision": 1.0,
+    "recall": 0.667,
+    "f1": 0.8
+   },
+   "collateral_actions": 0,
+   "blocked_calls": 0,
+   "safety": 1.0,
+   "score": 94.0
+  }
+ ]
+}

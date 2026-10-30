@@ -13,6 +13,8 @@ def _load(tag: str) -> dict:
 
 def _label(s: dict) -> str:
     m = s.get("agent_meta") or {}
+    if s["agent"] == "reasoner":
+        return f"reasoner:{m.get('variant', 'full')}" + (":recommend" if m.get("mode") == "recommend" else "")
     if s["agent"] != "llm":
         return s["agent"]
     return f"llm:{m.get('model', '?').removeprefix('claude-')}:{m.get('variant', 'full')}"

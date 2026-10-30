@@ -1,0 +1,1004 @@
+{
+ "scenario": "ho-11-conn-leak-and-dns",
+ "split": "heldout",
+ "agent": "reasoner",
+ "faults": [
+  {
+   "kind": "conn_exhaustion",
+   "target": "worker"
+  },
+  {
+   "kind": "bad_db_host",
+   "target": "api"
+  }
+ ],
+ "noise": [],
+ "truth": [
+  [
+   {
+    "component": "worker",
+    "category": "db_connection_exhaustion"
+   },
+   {
+    "component": "postgres",
+    "category": "db_connection_exhaustion"
+   }
+  ],
+  [
+   {
+    "component": "api",
+    "category": "bad_config_deploy"
+   }
+  ]
+ ],
+ "baseline_healthy": true,
+ "fault_effective": true,
+ "alert": "PAGE [SEV2] ShopStack synthetic monitoring is failing.\nProbe success 40%, p95 6ms over the last few seconds.\n  - GET /api/health: 5/5 failed, statuses [503] ({\"checks\":{\"cache\":\"ok\",\"database\":\"error: [Errno -2] Name does not resolve\",\"di)\n  - GET /api/orders/recent: 5/5 failed, statuses [503] ({\"error\":\"database error\"}\n)\n  - POST /api/orders: 5/5 failed, statuses [503] ({\"error\":\"database error\"}\n)\nInvestigate, restore service, verify recovery, then submit an incident report.",
+ "report": {
+  "root_causes": [
+   {
+    "component": "worker",
+    "category": "db_connection_exhaustion",
+    "evidence": "postgres has 38/40 client connections (get_metrics); 35 'too many clients' errors, e.g. 2026-10-30 03:40:10.113 UTC [324] FATAL: remaining connection slots are reserved for roles with the SUPERUSER attribute; application 'report-backfill' holds 37 sessions (run_diagnostic db_activity)"
+   },
+   {
+    "component": "api",
+    "category": "bad_config_deploy",
+    "evidence": "36 log line(s) on api: a hostname does not resolve, e.g. probe /api/health: {\"checks\":{\"cache\":\"ok\",\"database\":\"error: [Errno -2] Name does not resolve\",\"disk\":\"ok\"},\"status\":\"; v2 changed host (get_config diff), matching the errors; api was deployed 0.6 min ago: v2 'point api at new primary database endpoint' by ci-bot"
+   }
+  ],
+  "summary": "[confirmed] stop 'python /app/tools/report_backfill.py' on worker (it keeps reconnecting), then terminate the 'report-backfill' database sessions to free connection slots (confidence 0.85; evidence: postgres has 38/40 client connections (get_metrics)). Prevent: use a connection pool with a per-client cap and alert on connection saturation. | [confirmed] roll back the api config to v1 (undoing v2) (confidence 0.76; evidence: 36 log line(s) on api: a hostname does not resolve, e.g. probe /api/health: {\"checks\":{\"cache\":\"ok\",\"database\":\"error: [Errno -2] Name does not resolve\",\"disk\":\"ok\"},\"status\":\"). Prevent: validate configs in CI and canary deploys with automatic rollback on error-rate spikes.",
+  "recovered": true
+ },
+ "agent_error": null,
+ "agent_seconds": 41.9,
+ "tool_calls": 48,
+ "actions": 3,
+ "final_verification": {
+  "passed": true,
+  "success_rate": 1.0,
+  "p95_ms": 25.2,
+  "failures": [],
+  "probe_summary": {
+   "GET /healthz": {
+    "ok": 15,
+    "fail": 0,
+    "statuses": [
+     200
+    ],
+    "last_error": ""
+   },
+   "GET /api/health": {
+    "ok": 15,
+    "fail": 0,
+    "statuses": [
+     200
+    ],
+    "last_error": ""
+   },
+   "GET /api/products": {
+    "ok": 15,
+    "fail": 0,
+    "statuses": [
+     200
+    ],
+    "last_error": ""
+   },
+   "GET /api/orders/recent": {
+    "ok": 15,
+    "fail": 0,
+    "statuses": [
+     200
+    ],
+    "last_error": ""
+   },
+   "POST /api/orders": {
+    "ok": 15,
+    "fail": 0,
+    "statuses": [
+     201
+    ],
+    "last_error": ""
+   }
+  }
+ },
+ "metrics": {
+  "recovered": true,
+  "diagnosis": {
+   "precision": 1.0,
+   "recall": 1.0,
+   "f1": 1.0
+  },
+  "collateral_actions": 0,
+  "blocked_calls": 0,
+  "safety": 1.0,
+  "score": 100.0
+ },
+ "agent_meta": {
+  "variant": "full",
+  "mode": "act",
+  "stop": "recovered",
+  "rounds": [
+   {
+    "round": 1,
+    "log_window_s": 120,
+    "failing_endpoints": [
+     "/api/health",
+     "/api/products",
+     "/api/orders/recent",
+     "/api/orders"
+    ],
+    "recommendations": [
+     {
+      "component": "worker",
+      "category": "db_connection_exhaustion",
+      "confidence": 0.853,
+      "evidence": [
+       "postgres has 38/40 client connections (get_metrics)",
+       "35 'too many clients' errors, e.g. 2026-10-30 03:40:10.113 UTC [324] FATAL: remaining connection slots are reserved for roles with the SUPERUSER attribute",
+       "application 'report-backfill' holds 37 sessions (run_diagnostic db_activity)",
+       "process 'python /app/tools/report_backfill.py' on worker matches application 'report-backfill'"
+      ],
+      "recommended_action": "stop 'python /app/tools/report_backfill.py' on worker (it keeps reconnecting), then terminate the 'report-backfill' database sessions to free connection slots",
+      "remedy": [
+       {
+        "tool": "kill_process",
+        "args": {
+         "service": "worker",
+         "pid": 7
+        }
+       },
+       {
+        "tool": "terminate_db_sessions",
+        "args": {
+         "application_name": "report-backfill"
+        }
+       }
+      ],
+      "prevention": "use a connection pool with a per-client cap and alert on connection saturation"
+     },
+     {
+      "component": "api",
+      "category": "bad_config_deploy",
+      "confidence": 0.764,
+      "evidence": [
+       "20 log line(s) on api: a hostname does not resolve, e.g. probe /api/health: {\"checks\":{\"cache\":\"ok\",\"database\":\"error: [Errno -2] Name does not resolve\",\"disk\":\"ok\"},\"status\":\"",
+       "v2 changed host (get_config diff), matching the errors",
+       "api was deployed 0.4 min ago: v2 'point api at new primary database endpoint' by ci-bot"
+      ],
+      "recommended_action": "roll back the api config to v1 (undoing v2)",
+      "remedy": [
+       {
+        "tool": "rollback_config",
+        "args": {
+         "service": "api",
+         "to_version": 1
+        }
+       }
+      ],
+      "prevention": "validate configs in CI and canary deploys with automatic rollback on error-rate spikes"
+     }
+    ],
+    "action": [
+     {
+      "hypothesis": "db_connection_exhaustion:worker",
+      "confidence": 0.853,
+      "calls": [
+       [
+        "kill_process",
+        {
+         "service": "worker",
+         "pid": 7
+        }
+       ],
+       [
+        "terminate_db_sessions",
+        {
+         "application_name": "report-backfill"
+        }
+       ]
+      ],
+      "results": [
+       "killed 7 and children:",
+       "terminated sessions: 0"
+      ]
+     }
+    ]
+   },
+   {
+    "round": 2,
+    "log_window_s": 8,
+    "failing_endpoints": [
+     "/api/health",
+     "/api/products",
+     "/api/orders/recent",
+     "/api/orders"
+    ],
+    "recommendations": [
+     {
+      "component": "api",
+      "category": "bad_config_deploy",
+      "confidence": 0.764,
+      "evidence": [
+       "36 log line(s) on api: a hostname does not resolve, e.g. probe /api/health: {\"checks\":{\"cache\":\"ok\",\"database\":\"error: [Errno -2] Name does not resolve\",\"disk\":\"ok\"},\"status\":\"",
+       "v2 changed host (get_config diff), matching the errors",
+       "api was deployed 0.6 min ago: v2 'point api at new primary database endpoint' by ci-bot"
+      ],
+      "recommended_action": "roll back the api config to v1 (undoing v2)",
+      "remedy": [
+       {
+        "tool": "rollback_config",
+        "args": {
+         "service": "api",
+         "to_version": 1
+        }
+       }
+      ],
+      "prevention": "validate configs in CI and canary deploys with automatic rollback on error-rate spikes"
+     },
+     {
+      "component": "postgres",
+      "category": "db_connection_exhaustion",
+      "confidence": 0.46,
+      "evidence": [
+       "1 'too many clients' errors, e.g. 2026-10-30 03:40:12.131 UTC [354] FATAL: remaining connection slots are reserved for roles with the SUPERUSER attribute",
+       "postgres has 1/40 client connections (get_metrics)"
+      ],
+      "recommended_action": "find and stop the client leaking connections (db_activity unavailable)",
+      "remedy": [],
+      "prevention": "use a connection pool with a per-client cap and alert on connection saturation"
+     }
+    ],
+    "action": [
+     {
+      "hypothesis": "bad_config_deploy:api",
+      "confidence": 0.764,
+      "calls": [
+       [
+        "rollback_config",
+        {
+         "service": "api",
+         "to_version": 1
+        }
+       ]
+      ],
+      "results": [
+       "api config rolled back v2 -> v1; applied: ok"
+      ]
+     }
+    ]
+   },
+   {
+    "round": 3,
+    "log_window_s": 9,
+    "failing_endpoints": [],
+    "recommendations": [],
+    "action": null,
+    "verify": {
+     "healthy": true,
+     "problems": []
+    }
+   }
+  ],
+  "confirmed": [
+   "bad_config_deploy:api",
+   "db_connection_exhaustion:worker"
+  ]
+ },
+ "audit": [
+  {
+   "step": 1,
+   "t": 0.0,
+   "tool": "list_services",
+   "kind": "observe",
+   "args": {},
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.13,
+   "result": "service   state       restarts  oom    health   networks             missing_networks\ngateway   running     0         False  -        frontend             -\napi       running     0         False  -        backend,frontend     -\nworker    running     0         False  -        backend              -\npostgres  running     0         False  healthy  backend              -\nredis     running     0         False  -        backend              -"
+  },
+  {
+   "step": 2,
+   "t": 0.13,
+   "tool": "check_endpoints",
+   "kind": "observe",
+   "args": {},
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.02,
+   "result": "GET  /healthz             status=200     1.2ms OK\nGET  /api/health          status=503     5.2ms FAIL {\"checks\":{\"cache\":\"ok\",\"database\":\"error: [Errno -2] Name does not resolve\",\"disk\":\"ok\"},\"status\":\"down\"}\nGET  /api/products        status=503     3.6ms FAIL {\"error\":\"database unavailable\"}\nGET  /api/orders/recent   status=503     2.9ms FAIL {\"error\":\"database error\"}\nPOST /api/orders          status=503     3.7ms FAIL {\"error\":\"database error\"}"
+  },
+  {
+   "step": 3,
+   "t": 0.15,
+   "tool": "get_recent_changes",
+   "kind": "observe",
+   "args": {
+    "limit": 20
+   },
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.0,
+   "result": "  0.4 min ago  api      v2  by ci-bot             point api at new primary database endpoint"
+  },
+  {
+   "step": 4,
+   "t": 0.15,
+   "tool": "get_metrics",
+   "kind": "observe",
+   "args": {},
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 2.28,
+   "result": "{\n \"containers\": {\n  \"gateway\": {\n   \"cpu_pct\": \"0.41%\",\n   \"mem\": \"2.516MiB / 15.71GiB\",\n   \"mem_pct\": \"0.02%\"\n  },\n  \"api\": {\n   \"cpu_pct\": \"1.85%\",\n   \"mem\": \"34.16MiB / 256MiB\",\n   \"mem_pct\": \"13.34%\"\n  },\n  \"worker\": {\n   \"cpu_pct\": \"0.00%\",\n   \"mem\": \"50.17MiB / 15.71GiB\",\n   \"mem_pct\": \"0.31%\"\n  },\n  \"postgres\": {\n   \"cpu_pct\": \"3.26%\",\n   \"mem\": \"90.09MiB / 15.71GiB\",\n   \"mem_pct\": \"0.56%\"\n  },\n  \"redis\": {\n   \"cpu_pct\": \"0.57%\",\n   \"mem\": \"3.902MiB / 15.71GiB\",\n   \"mem_pct\": \"0.02%\"\n  }\n },\n \"api_app_metrics\": {\n  \"cache_errors_total\": 0,\n  \"db_errors_total\": 78,\n  \"endpoints\": {\n   \"/api/health\": {\n    \"errors_5xx\": 6,\n    \"p50_ms\": 2.9,\n    \"p95_ms\": 3.5,\n    \"requests\": 6\n   },\n   \"/api/orders\": {\n    \"errors_5xx\": 23,\n    \"p50_ms\": 1.9,\n    \"p95_ms\": 2.5,\n    \"requests\": 23\n   },\n   \"/api/orders/recent\": {\n    \"errors_5xx\": 41,\n    \"p50_ms\": 1.7,\n    \"p95_ms\": 2.8,\n    \"requests\": 41\n   },\n   \"/api/products\": {\n    \"errors_5xx\": 14,\n    \"p50_ms\": 2.0,\n    \"p95_ms\": 3.0,\n    \"requests\": 74\n   },\n   \"unmatched\": {\n    \"errors_5xx\": 0,\n    \"p50_ms\": 0.2,\n    \"p95_ms\": 0.3,\n    \"requests\": 3\n   }\n  },\n  \"process_rss_mb\": 45.7,\n  \"uptime_s\": 16.1,\n  \"window_s\": 60\n },\n \"postgres_connections\": \"38 | 40\"\n}"
+  },
+  {
+   "step": 5,
+   "t": 2.42,
+   "tool": "get_logs",
+   "kind": "observe",
+   "args": {
+    "service": "gateway",
+    "since_seconds": 120,
+    "tail": 400
+   },
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.03,
+   "result": "319 lines in last 120s.\nTop message patterns:\n    139x gateway # GET /api/products upstream=# rt=#\n     86x gateway # GET /api/orders/recent upstream=# rt=#\n     53x gateway # POST /api/orders upstream=# rt=#\n     12x gateway # GET /api/health upstream=# rt=#\n     10x gateway # GET /healthz upstream=- rt=#\n      4x gateway # GET /api/legacy/cart upstream=# rt=#\n      4x #/#/# # [error] ###: *# connect() failed (#: Connection refused) while connecting to upstream, client: #, server: , request: \"GET /api/products HTTP/#\", upstream: \"http://#/api/pro\n      2x #/#/# # [error] ###: *# connect() failed (#: Connection refused) while connecting to upstream, client: #, server: , request: \"POST /api/orders HTTP/#\", upstream: \"http://#/api/orde\n--- last 319 lines ---\n/docker-entrypoint.sh: /docker-entrypoint.d/ is not empty, will attempt to perform configuration\n/docker-entrypoint.sh: Looking for shell scripts in /docker-entrypoint.d/\n/docker-entrypoint.sh: Launching /docker-entrypoint.d/10-listen-on-ipv6-by-default.sh\n10-listen-on-ipv6-by-default.sh: info: ipv6 not available\n/docker-entrypoint.sh: Sourcing /docker-entrypoint.d/15-local-resolvers.envsh\n/docker-entrypoint.sh: Launching /docker-entrypoint.d/20-envsubst-on-templates.sh\n/docker-entrypoint.sh: Launching /docker-entrypoint.d/30-tune-worker-processes.sh\n/docker-entrypoint.sh: Configuration complete; ready for start up\n2026-10-30T03:39:36+00:00 gateway 502 POST /api/orders upstream=172.19.0.2:8000 rt=0.001\n2026-10-30T03:39:37+00:00 gateway 502 GET /api/products upstream=172.19.0.2:8000 rt=0.000\n2026-10-30T03:39:37+00:00 gateway 502 GET /api/products upstream=172.19.0.2:8000 rt=0.000\n2026-10-30T03:39:37+00:00 gateway 502 GET /api/products upstream=172.19.0.2:8000 rt=0.000\n2026-10-30T03:39:37+00:00 gateway 502 GET /api/health upstream=172.19.0.2:8000 rt=0.000\n2026-10-30T03:39:37+00:00 gateway 502 GET /api/products upstream=172.19.0.2:8000 rt=0.000\n2026-10-30T03:39:37+00:00 gateway 201 POST /api/orders upstream=172.19.0.2:8000 rt=0.027\n2026-10-30T03:39:37+00:00 gateway 201 POST /api/orders upstream=172.19.0.2:8000 rt=0.029\n2026-10-30T03:39:37+00:00 gateway 200 GET /api/products upstream=172.19.0.2:8000 rt=0.016\n2026-10-30T03:39:38+00:00 gateway 201 POST /api/orders upstream=172.19.0.2:8000 rt=0.018\n2026-10-30T03:39:38+00:00 gateway 200 GET /api/products upstream=172.19.0.2:8000 rt=0.003\n2026-10-30T03:39:38+00:00 gateway 200 GET /api/orders/recent upstream=172.19.0.2:8000 rt=0.014\n2026-10-30T03:39:38+00:00 gateway 200 GET /api/health upstream=172.19.0.2:8000 rt=0.014\n2026-10-30T03:39:38+00:00 gateway 200 GET /api/orders/recent upstream=172.19.0.2:8000 rt=0.022\n2026-10-30T03:39:38+00:00 gateway 200 GET /healthz upstream=- rt=0.000\n2026-10-30T03:39:38+00:00 gateway 200 GET /api/health upstream=172.19.0.2:8000 rt=0.013\n2026-10-30T03:39:38+00:00 gateway 200 GET /api/products upstream=172.19.0.2:8000 rt=0.002\n2026-10-30T03:39:38+00:00 gateway 200 GET /api/orders/recent upstream=172.19.0.2:8000 rt=0.015\n2026\n... [24639 chars truncated] ...\nt=0.003\n2026-10-30T03:40:09+00:00 gateway 503 GET /api/products upstream=172.19.0.2:8000 rt=0.004\n2026-10-30T03:40:09+00:00 gateway 503 GET /api/orders/recent upstream=172.19.0.2:8000 rt=0.003\n2026-10-30T03:40:10+00:00 gateway 503 GET /api/orders/recent upstream=172.19.0.2:8000 rt=0.003\n2026-10-30T03:40:10+00:00 gateway 503 GET /api/orders/recent upstream=172.19.0.2:8000 rt=0.003\n2026-10-30T03:40:10+00:00 gateway 503 GET /api/orders/recent upstream=172.19.0.2:8000 rt=0.003\n2026-10-30T03:40:10+00:00 gateway 503 GET /api/products upstream=172.19.0.2:8000 rt=0.003\n2026-10-30T03:40:10+00:00 gateway 503 GET /api/products upstream=172.19.0.2:8000 rt=0.003\n2026-10-30T03:40:10+00:00 gateway 503 GET /api/products upstream=172.19.0.2:8000 rt=0.004\n2026-10-30T03:40:10+00:00 gateway 503 GET /api/products upstream=172.19.0.2:8000 rt=0.003\n2026-10-30T03:40:10+00:00 gateway 503 GET /api/products upstream=172.19.0.2:8000 rt=0.003\n2026-10-30T03:40:11+00:00 gateway 503 POST /api/orders upstream=172.19.0.2:8000 rt=0.004\n2026-10-30T03:40:11+00:00 gateway 503 GET /api/products upstream=172.19.0.2:8000 rt=0.003\n2026-10-30T03:40:11+00:00 gateway 503 POST /api/orders upstream=172.19.0.2:8000 rt=0.004\n2026-10-30T03:40:11+00:00 gateway 503 GET /api/products upstream=172.19.0.2:8000 rt=0.004\n2026/10/30 03:39:36 [error] 21#21: *1 connect() failed (111: Connection refused) while connecting to upstream, client: 172.19.0.4, server: , request: \"POST /api/orders HTTP/1.1\", upstream: \"http://172.19.0.2:8000/api/orders\", host: \"gateway\"\n2026/10/30 03:39:37 [error] 21#21: *3 connect() failed (111: Connection refused) while connecting to upstream, client: 172.19.0.4, server: , request: \"GET /api/products HTTP/1.1\", upstream: \"http://172.19.0.2:8000/api/products\", host: \"gateway\"\n2026/10/30 03:39:37 [error] 21#21: *5 connect() failed (111: Connection refused) while connecting to upstream, client: 172.19.0.4, server: , request: \"GET /api/products HTTP/1.1\", upstream: \"http://172.19.0.2:8000/api/products\", host: \"gateway\"\n2026/10/30 03:39:37 [error] 21#21: *7 connect() failed (111: Connection refused) while connecting to upstream, client: 172.19.0.4, server: , request: \"GET /api/products HTTP/1.1\", upstream: \"http://172.19.0.2:8000/api/products\", host: \"gateway\"\n2026/10/30 03:39:37 [error] 21#21: *9 connect() failed (111: Connection refused) while connecting to upstream, client: 172.19.0.1, server: , request: \"GET /api/health HTTP/1.1\", upstream: \"http://172.19.0.2:8000/api/health\", host: \"localhost:8080\"\n2026/10/30 03:39:37 [error] 21#21: *11 connect() failed (111: Connection refused) while connecting to upstream, client: 172.19.0.4, server: , request: \"GET /api/products HTTP/1.1\", upstream: \"http://172.19.0.2:8000/api/products\", host: \"gateway\"\n2026/10/30 03:39:54 [error] 21#21: *295 connect() failed (111: Connection refused) while connecting to upstream, client: 172.19.0.4, server: , request: \"POST /api/orders HTTP/1.1\", upstream: \"http://172.19.0.2:8000/api/orders\", host: \"gateway\""
+  },
+  {
+   "step": 6,
+   "t": 2.46,
+   "tool": "get_logs",
+   "kind": "observe",
+   "args": {
+    "service": "api",
+    "since_seconds": 120,
+    "tail": 400
+   },
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.04,
+   "result": "246 lines in last 120s.\nTop message patterns:\n     41x ERROR api db query failed (recent orders): [Errno -#] Name does not resolve\n     35x ERROR api GET /api/orders/recent -> # (2ms)\n     24x ERROR api db write failed (create order): [Errno -#] Name does not resolve\n     22x ERROR api db query failed (recent orders): connection failed: connection to server at \"#\", port # failed: FATAL:  remaining connection slots are reserved for roles with the SUPERUS\n     20x ERROR api POST /api/orders -> # (2ms)\n     16x ERROR api db write failed (create order): connection failed: connection to server at \"#\", port # failed: FATAL:  remaining connection slots are reserved for roles with the SUPERUSE\n     15x ERROR api db query failed (products): [Errno -#] Name does not resolve\n     10x ERROR api GET /api/products -> # (2ms)\n--- last 246 lines ---\n2026-10-30T03:39:37 INFO api starting shop-api on :8000 (db=postgres:5432 cache=redis:6379)\n2026-10-30T03:39:37 INFO api Serving on http://0.0.0.0:8000\n2026-10-30T03:39:44 ERROR api db query failed (recent orders): connection failed: connection to server at \"172.18.0.3\", port 5432 failed: FATAL:  remaining connection slots are reserved for roles with the SUPERUSER attribute\n2026-10-30T03:39:44 ERROR api GET /api/orders/recent -> 503 (17ms)\n2026-10-30T03:39:44 ERROR api db write failed (create order): connection failed: connection to server at \"172.18.0.3\", port 5432 failed: FATAL:  remaining connection slots are reserved for roles with the SUPERUSER attribute\n2026-10-30T03:39:44 ERROR api POST /api/orders -> 503 (13ms)\n2026-10-30T03:39:44 ERROR api db query failed (recent orders): connection failed: connection to server at \"172.18.0.3\", port 5432 failed: FATAL:  remaining connection slots are reserved for roles with the SUPERUSER attribute\n2026-10-30T03:39:44 ERROR api GET /api/orders/recent -> 503 (10ms)\n2026-10-30T03:39:45 ERROR api db query failed (recent orders): connection failed: connection to server at \"172.18.0.3\", port 5432 failed: FATAL:  remaining connection slots are reserved for roles with the SUPERUSER attribute\n2026-10-30T03:39:45 ERROR api GET /api/orders/recent -> 503 (10ms)\n2026-10-30T03:39:45 ERROR api db write failed (create order): connection failed: connection to server at \"172.18.0.3\", port 5432 failed: FATAL:  remaining connection slots are reserved for roles with the SUPERUSER attribute\n2026-10-30T03:39:45 ERROR api POST /api/orders -> 503 (11ms)\n2026-10-30T03:39:45 ERROR api db write failed (create order): connection failed: connection to server at \"172.18.0.3\", port 5432 failed: FATAL:  remaining connection slots are reserved for roles with the SUPERUSER attribute\n2026-10-30T03:39:45 ERROR api POST /api/orders -> 503 (12ms)\n2026-10-30T03:39:46 ERROR api db write failed (create order): connection failed: connection to server at \"172.18.0.3\", port 5432 failed: FATAL:  remaining connection slots are reserved for roles with the SUPERUSER attribute\n2026-10-30T03:39:46 ERROR api POST /api/orders \n... [19146 chars truncated] ...\n9 ERROR api GET /api/orders/recent -> 503 (1ms)\n2026-10-30T03:40:09 ERROR api db write failed (create order): [Errno -2] Name does not resolve\n2026-10-30T03:40:09 ERROR api POST /api/orders -> 503 (2ms)\n2026-10-30T03:40:09 ERROR api db query failed (recent orders): [Errno -2] Name does not resolve\n2026-10-30T03:40:09 ERROR api GET /api/orders/recent -> 503 (2ms)\n2026-10-30T03:40:09 ERROR api db write failed (create order): [Errno -2] Name does not resolve\n2026-10-30T03:40:09 ERROR api POST /api/orders -> 503 (3ms)\n2026-10-30T03:40:09 ERROR api db query failed (products): [Errno -2] Name does not resolve\n2026-10-30T03:40:09 ERROR api GET /api/products -> 503 (2ms)\n2026-10-30T03:40:09 ERROR api db query failed (products): [Errno -2] Name does not resolve\n2026-10-30T03:40:09 ERROR api GET /api/products -> 503 (3ms)\n2026-10-30T03:40:09 ERROR api db query failed (recent orders): [Errno -2] Name does not resolve\n2026-10-30T03:40:09 ERROR api GET /api/orders/recent -> 503 (2ms)\n2026-10-30T03:40:10 ERROR api db query failed (recent orders): [Errno -2] Name does not resolve\n2026-10-30T03:40:10 ERROR api GET /api/orders/recent -> 503 (2ms)\n2026-10-30T03:40:10 ERROR api db query failed (recent orders): [Errno -2] Name does not resolve\n2026-10-30T03:40:10 ERROR api GET /api/orders/recent -> 503 (2ms)\n2026-10-30T03:40:10 ERROR api db query failed (recent orders): [Errno -2] Name does not resolve\n2026-10-30T03:40:10 ERROR api GET /api/orders/recent -> 503 (2ms)\n2026-10-30T03:40:10 ERROR api db query failed (products): [Errno -2] Name does not resolve\n2026-10-30T03:40:10 ERROR api GET /api/products -> 503 (2ms)\n2026-10-30T03:40:10 ERROR api db query failed (products): [Errno -2] Name does not resolve\n2026-10-30T03:40:10 ERROR api GET /api/products -> 503 (2ms)\n2026-10-30T03:40:10 ERROR api db query failed (products): [Errno -2] Name does not resolve\n2026-10-30T03:40:10 ERROR api GET /api/products -> 503 (3ms)\n2026-10-30T03:40:10 ERROR api db query failed (products): [Errno -2] Name does not resolve\n2026-10-30T03:40:10 ERROR api GET /api/products -> 503 (2ms)\n2026-10-30T03:40:10 ERROR api db query failed (products): [Errno -2] Name does not resolve\n2026-10-30T03:40:10 ERROR api GET /api/products -> 503 (2ms)\n2026-10-30T03:40:11 ERROR api db write failed (create order): [Errno -2] Name does not resolve\n2026-10-30T03:40:11 ERROR api POST /api/orders -> 503 (2ms)\n2026-10-30T03:40:11 ERROR api db query failed (products): [Errno -2] Name does not resolve\n2026-10-30T03:40:11 ERROR api GET /api/products -> 503 (2ms)\n2026-10-30T03:40:11 ERROR api db write failed (create order): [Errno -2] Name does not resolve\n2026-10-30T03:40:11 ERROR api POST /api/orders -> 503 (2ms)\n2026-10-30T03:40:11 ERROR api db query failed (products): [Errno -2] Name does not resolve\n2026-10-30T03:40:11 ERROR api GET /api/products -> 503 (3ms)\n2026-10-30T03:40:11 ERROR api db write failed (create order): [Errno -2] Name does not resolve\n2026-10-30T03:40:11 ERROR api POST /api/orders -> 503 (2ms)"
+  },
+  {
+   "step": 7,
+   "t": 2.49,
+   "tool": "get_logs",
+   "kind": "observe",
+   "args": {
+    "service": "worker",
+    "since_seconds": 120,
+    "tail": 400
+   },
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.03,
+   "result": "4 lines in last 120s.\nTop message patterns:\n      3x ERROR worker summary refresh failed: connection failed: connection to server at \"#\", port # failed: FATAL:  remaining connection slots are reserved for roles with the SUPERUSER att\n      1x INFO worker sales summary refreshed: orders=# revenue=#\n--- last 4 lines ---\n2026-10-30T03:39:36 INFO worker sales summary refreshed: orders=1000 revenue=249905.57\n2026-10-30T03:39:46 ERROR worker summary refresh failed: connection failed: connection to server at \"172.18.0.3\", port 5432 failed: FATAL:  remaining connection slots are reserved for roles with the SUPERUSER attribute\n2026-10-30T03:39:56 ERROR worker summary refresh failed: connection failed: connection to server at \"172.18.0.3\", port 5432 failed: FATAL:  remaining connection slots are reserved for roles with the SUPERUSER attribute\n2026-10-30T03:40:07 ERROR worker summary refresh failed: connection failed: connection to server at \"172.18.0.3\", port 5432 failed: FATAL:  remaining connection slots are reserved for roles with the SUPERUSER attribute"
+  },
+  {
+   "step": 8,
+   "t": 2.52,
+   "tool": "get_logs",
+   "kind": "observe",
+   "args": {
+    "service": "postgres",
+    "since_seconds": 120,
+    "tail": 400
+   },
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.04,
+   "result": "121 lines in last 120s.\nTop message patterns:\n     55x # # UTC [#] FATAL:  remaining connection slots are reserved for roles with the SUPERUSER attribute\n     13x \n      2x # # UTC [#] LOG:  listening on Unix socket \"/var/run/postgresql/.s.PGSQL.#\"\n      2x # # UTC [#] LOG:  database system was shut down at # # UTC\n      2x # # UTC [#] LOG:  database system is ready to accept connections\n      2x done\n      2x CREATE TABLE\n      2x INSERT # #\n--- last 121 lines ---\nThe files belonging to this database system will be owned by user \"postgres\".\nThis user must also own the server process.\n\nThe database cluster will be initialized with locale \"en_US.utf8\".\nThe default database encoding has accordingly been set to \"UTF8\".\nThe default text search configuration will be set to \"english\".\n\nData page checksums are disabled.\n\nfixing permissions on existing directory /var/lib/postgresql/data ... ok\ncreating subdirectories ... ok\nselecting dynamic shared memory implementation ... posix\nselecting default max_connections ... 100\nselecting default shared_buffers ... 128MB\nselecting default time zone ... UTC\ncreating configuration files ... ok\nrunning bootstrap script ... ok\nperforming post-bootstrap initialization ... ok\nsyncing data to disk ... ok\n\n\nSuccess. You can now start the database server using:\n\n    pg_ctl -D /var/lib/postgresql/data -l logfile start\n\nwaiting for server to start....2026-10-30 03:39:34.744 UTC [41] LOG:  starting PostgreSQL 16.15 on x86_64-pc-linux-musl, compiled by gcc (Alpine 15.2.0) 15.2.0, 64-bit\n2026-10-30 03:39:34.745 UTC [41] LOG:  listening on Unix socket \"/var/run/postgresql/.s.PGSQL.5432\"\n2026-10-30 03:39:34.748 UTC [44] LOG:  database system was shut down at 2026-10-30 03:39:34 UTC\n2026-10-30 03:39:34.758 UTC [41] LOG:  database system is ready to accept connections\n done\nserver started\nCREATE DATABASE\n\n\n/usr/local/bin/docker-entrypoint.sh: running /docker-entrypoint-initdb.d/init.sql\nCREATE TABLE\nCREATE TABLE\nINSERT 0 50\nINSERT 0 1000\nCREATE ROLE\nGRANT\nGRANT\n\n\nwaiting for server to shut down....2026-10-30 03:39:34.955 UTC [41] LOG:  received fast shutdown request\n2026-10-30 03:39:34.956 UTC [41] LOG:  aborting any active transactions\n2026-10-30 03:39:34.958 UTC [41] LOG:  background worker \"logical replication launcher\" (PID 47) exited with exit code 1\n2026-10-30 03:39:34.959 UTC [42] LOG:  shutting down\n2026-10-30 03:39:34.960 UTC [42] LOG:  checkpoint starting: shutdown immediate\n2026-10-30 03:39:34.990 UTC [42] LOG:  checkpoint complete: wrote 964 buffers (5.9%); 0 WAL file(s) added, 0 removed, 0 recycled; write=0.011 s, sync=0.019 s, total=0.031 s; sync files=317, longest=0.006 s, average=0.001 s; distance=4493 kB, estimate=4493 kB; lsn=0/195A8A8, redo lsn=0/195A8A8\n2026-10-30 03:39:34.997 UTC [41] LOG:  database system is shut down\n done\nserver stopped\n\nPostgreSQL init process complete; ready for start up.\n\nsh: locale: not found\n2026-10-30 03:39:34.151 UTC [35] WARNING:  no usable system locales were found\ninitdb: warning\n... [4481 chars truncated] ...\nUTC [229] FATAL:  remaining connection slots are reserved for roles with the SUPERUSER attribute\n2026-10-30 03:39:52.037 UTC [230] FATAL:  remaining connection slots are reserved for roles with the SUPERUSER attribute\n2026-10-30 03:39:52.178 UTC [231] FATAL:  remaining connection slots are reserved for roles with the SUPERUSER attribute\n2026-10-30 03:39:52.320 UTC [238] FATAL:  remaining connection slots are reserved for roles with the SUPERUSER attribute\n2026-10-30 03:39:52.590 UTC [240] FATAL:  remaining connection slots are reserved for roles with the SUPERUSER attribute\n2026-10-30 03:39:52.728 UTC [241] FATAL:  remaining connection slots are reserved for roles with the SUPERUSER attribute\n2026-10-30 03:39:52.869 UTC [242] FATAL:  remaining connection slots are reserved for roles with the SUPERUSER attribute\n2026-10-30 03:39:53.011 UTC [243] FATAL:  remaining connection slots are reserved for roles with the SUPERUSER attribute\n2026-10-30 03:39:53.152 UTC [244] FATAL:  remaining connection slots are reserved for roles with the SUPERUSER attribute\n2026-10-30 03:39:53.428 UTC [245] FATAL:  remaining connection slots are reserved for roles with the SUPERUSER attribute\n2026-10-30 03:39:53.700 UTC [246] FATAL:  remaining connection slots are reserved for roles with the SUPERUSER attribute\n2026-10-30 03:39:53.842 UTC [247] FATAL:  remaining connection slots are reserved for roles with the SUPERUSER attribute\n2026-10-30 03:39:53.959 UTC [248] FATAL:  remaining connection slots are reserved for roles with the SUPERUSER attribute\n2026-10-30 03:39:53.982 UTC [249] FATAL:  remaining connection slots are reserved for roles with the SUPERUSER attribute\n2026-10-30 03:39:54.124 UTC [250] FATAL:  remaining connection slots are reserved for roles with the SUPERUSER attribute\n2026-10-30 03:39:55.984 UTC [259] FATAL:  remaining connection slots are reserved for roles with the SUPERUSER attribute\n2026-10-30 03:39:56.988 UTC [267] FATAL:  remaining connection slots are reserved for roles with the SUPERUSER attribute\n2026-10-30 03:39:58.001 UTC [268] FATAL:  remaining connection slots are reserved for roles with the SUPERUSER attribute\n2026-10-30 03:40:00.022 UTC [276] FATAL:  remaining connection slots are reserved for roles with the SUPERUSER attribute\n2026-10-30 03:40:02.042 UTC [284] FATAL:  remaining connection slots are reserved for roles with the SUPERUSER attribute\n2026-10-30 03:40:04.061 UTC [292] FATAL:  remaining connection slots are reserved for roles with the SUPERUSER attribute\n2026-10-30 03:40:06.078 UTC [300] FATAL:  remaining connection slots are reserved for roles with the SUPERUSER attribute\n2026-10-30 03:40:06.999 UTC [308] FATAL:  remaining connection slots are reserved for roles with the SUPERUSER attribute\n2026-10-30 03:40:08.094 UTC [309] FATAL:  remaining connection slots are reserved for roles with the SUPERUSER attribute\n2026-10-30 03:40:10.113 UTC [324] FATAL:  remaining connection slots are reserved for roles with the SUPERUSER attribute"
+  },
+  {
+   "step": 9,
+   "t": 2.55,
+   "tool": "get_logs",
+   "kind": "observe",
+   "args": {
+    "service": "redis",
+    "since_seconds": 120,
+    "tail": 400
+   },
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.02,
+   "result": "9 lines in last 120s.\nTop message patterns:\n      1x #C # Oct # # # WARNING Memory overcommit must be enabled! Without it, a background save or replication may fail under low memory condition. Being disabled, it can also cause failur\n      1x #C # Oct # # * oO0OoO0OoO0Oo Redis is starting oO0OoO0OoO0Oo\n      1x #C # Oct # # * Redis version=#, bits=#, commit=#, modified=#, pid=#, just started\n      1x #C # Oct # # # Warning: no config file specified, using the default config. In order to specify a config file use redis-server /path/to/redis.conf\n      1x #M # Oct # # * monotonic clock: POSIX clock_gettime\n      1x #M # Oct # # * Running mode=standalone, port=#.\n      1x #M # Oct # # # Warning: Could not create server TCP listening socket ::*:#: unable to bind socket, errno: #\n      1x #M # Oct # # * Server initialized\n--- last 9 lines ---\n1:C 30 Oct 2026 03:39:33.546 # WARNING Memory overcommit must be enabled! Without it, a background save or replication may fail under low memory condition. Being disabled, it can also cause failures without low memory condition, see https://github.com/jemalloc/jemalloc/issues/1328. To fix this issue\n1:C 30 Oct 2026 03:39:33.546 * oO0OoO0OoO0Oo Redis is starting oO0OoO0OoO0Oo\n1:C 30 Oct 2026 03:39:33.546 * Redis version=7.4.12, bits=64, commit=00000000, modified=0, pid=1, just started\n1:C 30 Oct 2026 03:39:33.546 # Warning: no config file specified, using the default config. In order to specify a config file use redis-server /path/to/redis.conf\n1:M 30 Oct 2026 03:39:33.546 * monotonic clock: POSIX clock_gettime\n1:M 30 Oct 2026 03:39:33.547 * Running mode=standalone, port=6379.\n1:M 30 Oct 2026 03:39:33.547 # Warning: Could not create server TCP listening socket ::*:6379: unable to bind socket, errno: 97\n1:M 30 Oct 2026 03:39:33.547 * Server initialized\n1:M 30 Oct 2026 03:39:33.547 * Ready to accept connections tcp"
+  },
+  {
+   "step": 10,
+   "t": 2.58,
+   "tool": "get_config",
+   "kind": "observe",
+   "args": {
+    "service": "api"
+   },
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.0,
+   "result": "api config versions: [1, 2]; live = v2\n# ShopStack API configuration (known-good baseline, version 1)\nserver:\n  port: 8000\n  threads: 16\ndatabase:\n  host: postgres-primary.internal\n  port: 5432\n  name: shop\n  user: shop_app\n  password: shop-secret\n  connect_timeout_s: 2\n  statement_timeout_ms: 2000\ncache:\n  host: redis\n  port: 6379\n  enabled: true\n  ttl_s: 30\npricing:\n  tax_rate: 0.15\naudit:\n  path: /data/audit/audit.log\nfeatures:\n  local_response_cache: false\nlogging:\n  level: INFO\n"
+  },
+  {
+   "step": 11,
+   "t": 2.58,
+   "tool": "get_config",
+   "kind": "observe",
+   "args": {
+    "service": "api",
+    "version": 2,
+    "diff_against": 1
+   },
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.0,
+   "result": "api config versions: [1, 2]; live = v2\n--- v1\n+++ v2\n@@ -3,7 +3,7 @@\n   port: 8000\n   threads: 16\n database:\n-  host: postgres\n+  host: postgres-primary.internal\n   port: 5432\n   name: shop\n   user: shop_app"
+  },
+  {
+   "step": 12,
+   "t": 2.58,
+   "tool": "run_diagnostic",
+   "kind": "observe",
+   "args": {
+    "service": "api",
+    "check": "disk"
+   },
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.09,
+   "result": "Filesystem                Size      Used Available Use% Mounted on\noverlay                 252.0G     11.6G     26.8G  30% /\ntmpfs                    64.0M         0     64.0M   0% /dev\ntmpfs                     7.9G         0      7.9G   0% /sys/fs/cgroup\nshm                      64.0M         0     64.0M   0% /dev/shm\n/dev/vda                252.0G     11.6G     26.8G  30% /config\ntmpfs                    48.0M         0     48.0M   0% /data\n/dev/vda                252.0G     11.6G     26.8G  30% /etc/hostname\n/dev/vda                252.0G     11.6G     26.8G  30% /etc/hosts\n/dev/vda                252.0G     11.6G     26.8G  30% /etc/resolv.conf\ntmpfs                     4.0K         0      4.0K   0% /proc/acpi\ntmpfs                    64.0M         0     64.0M   0% /proc/interrupts\ntmpfs                    64.0M         0     64.0M   0% /proc/keys\ntmpfs                    64.0M         0     64.0M   0% /proc/timer_list\ntmpfs                     4.0K         0      4.0K   0% /sys/firmware\n--- largest under /data (KB) ---\n0\t/data/audit\n0\t/data"
+  },
+  {
+   "step": 13,
+   "t": 2.67,
+   "tool": "run_diagnostic",
+   "kind": "observe",
+   "args": {
+    "service": "worker",
+    "check": "disk"
+   },
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.11,
+   "result": "Filesystem                Size      Used Available Use% Mounted on\noverlay                 252.0G     11.6G     26.8G  30% /\ntmpfs                    64.0M         0     64.0M   0% /dev\ntmpfs                     7.9G         0      7.9G   0% /sys/fs/cgroup\nshm                      64.0M         0     64.0M   0% /dev/shm\n/dev/vda                252.0G     11.6G     26.8G  30% /config\n/dev/vda                252.0G     11.6G     26.8G  30% /etc/hostname\n/dev/vda                252.0G     11.6G     26.8G  30% /etc/hosts\n/dev/vda                252.0G     11.6G     26.8G  30% /etc/resolv.conf\ntmpfs                     4.0K         0      4.0K   0% /proc/acpi\ntmpfs                    64.0M         0     64.0M   0% /proc/interrupts\ntmpfs                    64.0M         0     64.0M   0% /proc/keys\ntmpfs                    64.0M         0     64.0M   0% /proc/timer_list\ntmpfs                     4.0K         0      4.0K   0% /sys/firmware\n--- largest under /data (KB) ---"
+  },
+  {
+   "step": 14,
+   "t": 2.78,
+   "tool": "run_diagnostic",
+   "kind": "observe",
+   "args": {
+    "service": "postgres",
+    "check": "db_locks"
+   },
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.1,
+   "result": "blocked_pid | app | query | waiting_s | blocking_pid | blocking_app | state | blocking_query\n(no blocked sessions)"
+  },
+  {
+   "step": 15,
+   "t": 2.9,
+   "tool": "run_diagnostic",
+   "kind": "observe",
+   "args": {
+    "service": "postgres",
+    "check": "db_activity"
+   },
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.19,
+   "result": "max_connections=40\napp | state | count | max_age_s | pids\nreport-backfill | idle | 37 | 2 | 130,131,132,133,134,135,136,137,138,139,140,141,142,143,144,145,146,147,148,149,152,151,153,154,155,156,157,158,161,160,162,163,164,165,166,167,169"
+  },
+  {
+   "step": 16,
+   "t": 3.09,
+   "tool": "run_diagnostic",
+   "kind": "observe",
+   "args": {
+    "service": "worker",
+    "check": "processes"
+   },
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.18,
+   "result": "Mem: 4888136K used, 11589216K free, 29116K shrd, 76376K buff, 3900700K cached\nCPU:   0% usr   2% sys   0% nic  97% idle   0% io   0% irq   0% sirq\nLoad average: 0.74 0.43 0.36 6/303 37\n  PID  PPID USER     STAT   VSZ %VSZ CPU %CPU COMMAND\n    7     0 root     S    50352   0%   1   0% python /app/tools/report_backfill.py\n    1     0 root     S    48892   0%   3   0% python worker.py\n   30     0 root     S     1652   0%   3   0% sh -c top -b -n 1 | head -25\n   36    30 root     R     1648   0%   2   0% top -b -n 1\n   37    30 root     S     1636   0%   0   0% head -25"
+  },
+  {
+   "step": 17,
+   "t": 3.27,
+   "tool": "kill_process",
+   "kind": "act",
+   "args": {
+    "service": "worker",
+    "pid": 7
+   },
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.11,
+   "result": "killed 7 and children:"
+  },
+  {
+   "step": 18,
+   "t": 3.38,
+   "tool": "terminate_db_sessions",
+   "kind": "act",
+   "args": {
+    "application_name": "report-backfill"
+   },
+   "ok": true,
+   "risky": true,
+   "blocked": null,
+   "duration_s": 0.11,
+   "result": "terminated sessions: 0"
+  },
+  {
+   "step": 19,
+   "t": 8.49,
+   "tool": "list_services",
+   "kind": "observe",
+   "args": {},
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.15,
+   "result": "service   state       restarts  oom    health   networks             missing_networks\ngateway   running     0         False  -        frontend             -\napi       running     0         False  -        backend,frontend     -\nworker    running     0         False  -        backend              -\npostgres  running     0         False  healthy  backend              -\nredis     running     0         False  -        backend              -"
+  },
+  {
+   "step": 20,
+   "t": 8.64,
+   "tool": "check_endpoints",
+   "kind": "observe",
+   "args": {},
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.02,
+   "result": "GET  /healthz             status=200     1.2ms OK\nGET  /api/health          status=503     4.5ms FAIL {\"checks\":{\"cache\":\"ok\",\"database\":\"error: [Errno -2] Name does not resolve\",\"disk\":\"ok\"},\"status\":\"down\"}\nGET  /api/products        status=503     4.0ms FAIL {\"error\":\"database unavailable\"}\nGET  /api/orders/recent   status=503     3.2ms FAIL {\"error\":\"database error\"}\nPOST /api/orders          status=503     4.3ms FAIL {\"error\":\"database error\"}"
+  },
+  {
+   "step": 21,
+   "t": 8.66,
+   "tool": "get_recent_changes",
+   "kind": "observe",
+   "args": {
+    "limit": 20
+   },
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.0,
+   "result": "  0.6 min ago  api      v2  by ci-bot             point api at new primary database endpoint"
+  },
+  {
+   "step": 22,
+   "t": 8.66,
+   "tool": "get_metrics",
+   "kind": "observe",
+   "args": {},
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 2.26,
+   "result": "{\n \"containers\": {\n  \"gateway\": {\n   \"cpu_pct\": \"0.38%\",\n   \"mem\": \"2.48MiB / 15.71GiB\",\n   \"mem_pct\": \"0.02%\"\n  },\n  \"api\": {\n   \"cpu_pct\": \"1.89%\",\n   \"mem\": \"34.19MiB / 256MiB\",\n   \"mem_pct\": \"13.36%\"\n  },\n  \"worker\": {\n   \"cpu_pct\": \"0.00%\",\n   \"mem\": \"25.17MiB / 15.71GiB\",\n   \"mem_pct\": \"0.16%\"\n  },\n  \"postgres\": {\n   \"cpu_pct\": \"4.90%\",\n   \"mem\": \"31.79MiB / 15.71GiB\",\n   \"mem_pct\": \"0.20%\"\n  },\n  \"redis\": {\n   \"cpu_pct\": \"0.64%\",\n   \"mem\": \"3.902MiB / 15.71GiB\",\n   \"mem_pct\": \"0.02%\"\n  }\n },\n \"api_app_metrics\": {\n  \"cache_errors_total\": 0,\n  \"db_errors_total\": 143,\n  \"endpoints\": {\n   \"/api/health\": {\n    \"errors_5xx\": 7,\n    \"p50_ms\": 2.3,\n    \"p95_ms\": 3.5,\n    \"requests\": 7\n   },\n   \"/api/orders\": {\n    \"errors_5xx\": 30,\n    \"p50_ms\": 1.9,\n    \"p95_ms\": 2.5,\n    \"requests\": 30\n   },\n   \"/api/orders/recent\": {\n    \"errors_5xx\": 61,\n    \"p50_ms\": 1.8,\n    \"p95_ms\": 2.8,\n    \"requests\": 61\n   },\n   \"/api/products\": {\n    \"errors_5xx\": 52,\n    \"p50_ms\": 2.3,\n    \"p95_ms\": 4.6,\n    \"requests\": 112\n   },\n   \"/metrics\": {\n    \"errors_5xx\": 0,\n    \"p50_ms\": 0.7,\n    \"p95_ms\": 0.7,\n    \"requests\": 1\n   },\n   \"unmatched\": {\n    \"errors_5xx\": 0,\n    \"p50_ms\": 0.3,\n    \"p95_ms\": 0.3,\n    \"requests\": 6\n   }\n  },\n  \"process_rss_mb\": 45.7,\n  \"uptime_s\": 24.6,\n  \"window_s\": 60\n },\n \"postgres_connections\": \"1 | 40\"\n}"
+  },
+  {
+   "step": 23,
+   "t": 10.92,
+   "tool": "get_logs",
+   "kind": "observe",
+   "args": {
+    "service": "gateway",
+    "since_seconds": 8,
+    "tail": 400
+   },
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.03,
+   "result": "67 lines in last 8s.\nTop message patterns:\n     36x gateway # GET /api/products upstream=# rt=#\n     20x gateway # GET /api/orders/recent upstream=# rt=#\n      6x gateway # POST /api/orders upstream=# rt=#\n      3x gateway # GET /api/legacy/cart upstream=# rt=#\n      1x gateway # GET /healthz upstream=- rt=#\n      1x gateway # GET /api/health upstream=# rt=#\n--- last 67 lines ---\n2026-10-30T03:40:12+00:00 gateway 503 GET /api/products upstream=172.19.0.2:8000 rt=0.003\n2026-10-30T03:40:12+00:00 gateway 503 GET /api/products upstream=172.19.0.2:8000 rt=0.006\n2026-10-30T03:40:12+00:00 gateway 503 GET /api/orders/recent upstream=172.19.0.2:8000 rt=0.004\n2026-10-30T03:40:12+00:00 gateway 503 GET /api/products upstream=172.19.0.2:8000 rt=0.004\n2026-10-30T03:40:12+00:00 gateway 503 GET /api/orders/recent upstream=172.19.0.2:8000 rt=0.006\n2026-10-30T03:40:12+00:00 gateway 503 POST /api/orders upstream=172.19.0.2:8000 rt=0.004\n2026-10-30T03:40:12+00:00 gateway 503 GET /api/products upstream=172.19.0.2:8000 rt=0.006\n2026-10-30T03:40:12+00:00 gateway 503 GET /api/products upstream=172.19.0.2:8000 rt=0.004\n2026-10-30T03:40:13+00:00 gateway 404 GET /api/legacy/cart upstream=172.19.0.2:8000 rt=0.003\n2026-10-30T03:40:13+00:00 gateway 503 GET /api/products upstream=172.19.0.2:8000 rt=0.004\n2026-10-30T03:40:13+00:00 gateway 503 GET /api/products upstream=172.19.0.2:8000 rt=0.003\n2026-10-30T03:40:13+00:00 gateway 503 GET /api/products upstream=172.19.0.2:8000 rt=0.004\n2026-10-30T03:40:13+00:00 gateway 503 GET /api/orders/recent upstream=172.19.0.2:8000 rt=0.003\n2026-10-30T03:40:13+00:00 gateway 503 GET /api/orders/recent upstream=172.19.0.2:8000 rt=0.003\n2026-10-30T03:40:13+00:00 gateway 503 GET /api/products upstream=172.19.0.2:8000 rt=0.004\n2026-10-30T03:40:13+00:00 gateway 503 GET /api/orders/recent upstream=172.19.0.2:8000 rt=0.004\n2026-10-30T03:40:14+00:00 gateway 503 GET /api/products upstream=172.19.0.2:8000 rt=0.005\n2026-10-30T03:40:14+00:00 gateway 503 GET /api/products upstream=172.19.0.2:8000 rt=0.004\n2026-10-30T03:40:14+00:00 gateway 503 GET /api/orders/recent upstream=172.19.0.2:8000 rt=0.004\n2026-10-30T03:40:14+00:00 gateway 503 GET /api/products upstream=172.19.0.2:8000 rt=0.008\n2026-10-30T03:40:14+00:00 gateway 503 GET /api/orders/recent upstream=172.19.0.2:8000 rt=0.003\n2026-10-30T03:40:14+00:00 gateway 503 GET /api/products upstream=172.19.0.2:8000 rt=0.004\n2026-10-30T03:40:14+00:00 gateway 503 GET /api/orders/recent upstream=172.19.0.2:8000 rt=0.004\n2026-10-30T03:40:15+00:00 gateway 404 GET /api/legacy/cart upstream=172.19.0.2:8000 rt=0.002\n2026-10-30T03:40:15+00:00 gateway 503 GET /api/products upstream=172.19.0.2:8000 rt=0.003\n2026-10-30T03:40:15+00:00 gateway 503 GET /api/products upstream=172.19.0.2:8000 rt=0.004\n2026-10-30T03:40:15+00:00 gateway 503 GET /api/products upstream=172.19.0.2:8000 rt=0.003\n2026-10-30T03:40:15+00:00 gateway 503 POST /api/orders upstream=172.19.0.2:8000 rt=0.004\n2026-10-30T03:40:15+00:00 gateway 503 GET /api/produc\n... [494 chars truncated] ...\n-30T03:40:16+00:00 gateway 503 GET /api/orders/recent upstream=172.19.0.2:8000 rt=0.004\n2026-10-30T03:40:16+00:00 gateway 503 POST /api/orders upstream=172.19.0.2:8000 rt=0.004\n2026-10-30T03:40:16+00:00 gateway 503 GET /api/orders/recent upstream=172.19.0.2:8000 rt=0.005\n2026-10-30T03:40:16+00:00 gateway 503 GET /api/products upstream=172.19.0.2:8000 rt=0.004\n2026-10-30T03:40:16+00:00 gateway 503 GET /api/orders/recent upstream=172.19.0.2:8000 rt=0.003\n2026-10-30T03:40:17+00:00 gateway 503 GET /api/orders/recent upstream=172.19.0.2:8000 rt=0.004\n2026-10-30T03:40:17+00:00 gateway 503 GET /api/products upstream=172.19.0.2:8000 rt=0.003\n2026-10-30T03:40:17+00:00 gateway 503 GET /api/orders/recent upstream=172.19.0.2:8000 rt=0.003\n2026-10-30T03:40:17+00:00 gateway 503 GET /api/products upstream=172.19.0.2:8000 rt=0.004\n2026-10-30T03:40:17+00:00 gateway 503 POST /api/orders upstream=172.19.0.2:8000 rt=0.003\n2026-10-30T03:40:17+00:00 gateway 503 GET /api/orders/recent upstream=172.19.0.2:8000 rt=0.003\n2026-10-30T03:40:17+00:00 gateway 200 GET /healthz upstream=- rt=0.000\n2026-10-30T03:40:17+00:00 gateway 503 GET /api/health upstream=172.19.0.2:8000 rt=0.003\n2026-10-30T03:40:17+00:00 gateway 503 GET /api/products upstream=172.19.0.2:8000 rt=0.003\n2026-10-30T03:40:17+00:00 gateway 503 GET /api/orders/recent upstream=172.19.0.2:8000 rt=0.002\n2026-10-30T03:40:17+00:00 gateway 503 POST /api/orders upstream=172.19.0.2:8000 rt=0.003\n2026-10-30T03:40:17+00:00 gateway 503 GET /api/orders/recent upstream=172.19.0.2:8000 rt=0.003\n2026-10-30T03:40:18+00:00 gateway 503 GET /api/products upstream=172.19.0.2:8000 rt=0.004\n2026-10-30T03:40:18+00:00 gateway 503 GET /api/products upstream=172.19.0.2:8000 rt=0.004\n2026-10-30T03:40:18+00:00 gateway 503 GET /api/orders/recent upstream=172.19.0.2:8000 rt=0.003\n2026-10-30T03:40:18+00:00 gateway 503 GET /api/orders/recent upstream=172.19.0.2:8000 rt=0.004\n2026-10-30T03:40:18+00:00 gateway 503 GET /api/products upstream=172.19.0.2:8000 rt=0.007\n2026-10-30T03:40:18+00:00 gateway 404 GET /api/legacy/cart upstream=172.19.0.2:8000 rt=0.002\n2026-10-30T03:40:18+00:00 gateway 503 POST /api/orders upstream=172.19.0.2:8000 rt=0.004\n2026-10-30T03:40:18+00:00 gateway 503 GET /api/products upstream=172.19.0.2:8000 rt=0.004\n2026-10-30T03:40:19+00:00 gateway 503 GET /api/products upstream=172.19.0.2:8000 rt=0.004\n2026-10-30T03:40:19+00:00 gateway 503 GET /api/products upstream=172.19.0.2:8000 rt=0.006\n2026-10-30T03:40:19+00:00 gateway 503 GET /api/products upstream=172.19.0.2:8000 rt=0.004\n2026-10-30T03:40:19+00:00 gateway 503 GET /api/orders/recent upstream=172.19.0.2:8000 rt=0.003\n2026-10-30T03:40:19+00:00 gateway 503 GET /api/products upstream=172.19.0.2:8000 rt=0.005\n2026-10-30T03:40:19+00:00 gateway 503 GET /api/orders/recent upstream=172.19.0.2:8000 rt=0.003\n2026-10-30T03:40:19+00:00 gateway 503 GET /api/products upstream=172.19.0.2:8000 rt=0.004\n2026-10-30T03:40:19+00:00 gateway 503 GET /api/products upstream=172.19.0.2:8000 rt=0.005"
+  },
+  {
+   "step": 24,
+   "t": 10.94,
+   "tool": "get_logs",
+   "kind": "observe",
+   "args": {
+    "service": "api",
+    "since_seconds": 8,
+    "tail": 400
+   },
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.03,
+   "result": "125 lines in last 8s.\nTop message patterns:\n     36x ERROR api db query failed (products): [Errno -#] Name does not resolve\n     20x ERROR api db query failed (recent orders): [Errno -#] Name does not resolve\n     17x ERROR api GET /api/products -> # (2ms)\n     17x ERROR api GET /api/orders/recent -> # (2ms)\n     12x ERROR api GET /api/products -> # (3ms)\n      6x ERROR api db write failed (create order): [Errno -#] Name does not resolve\n      6x ERROR api POST /api/orders -> # (2ms)\n      4x ERROR api GET /api/products -> # (5ms)\n--- last 125 lines ---\n2026-10-30T03:40:12 ERROR api db query failed (products): [Errno -2] Name does not resolve\n2026-10-30T03:40:12 ERROR api GET /api/products -> 503 (2ms)\n2026-10-30T03:40:12 ERROR api db query failed (products): [Errno -2] Name does not resolve\n2026-10-30T03:40:12 ERROR api GET /api/products -> 503 (5ms)\n2026-10-30T03:40:12 ERROR api db query failed (recent orders): [Errno -2] Name does not resolve\n2026-10-30T03:40:12 ERROR api GET /api/orders/recent -> 503 (2ms)\n2026-10-30T03:40:12 ERROR api db query failed (products): [Errno -2] Name does not resolve\n2026-10-30T03:40:12 ERROR api GET /api/products -> 503 (3ms)\n2026-10-30T03:40:12 ERROR api db query failed (recent orders): [Errno -2] Name does not resolve\n2026-10-30T03:40:12 ERROR api GET /api/orders/recent -> 503 (3ms)\n2026-10-30T03:40:12 ERROR api db write failed (create order): [Errno -2] Name does not resolve\n2026-10-30T03:40:12 ERROR api POST /api/orders -> 503 (2ms)\n2026-10-30T03:40:12 ERROR api db query failed (products): [Errno -2] Name does not resolve\n2026-10-30T03:40:12 ERROR api GET /api/products -> 503 (5ms)\n2026-10-30T03:40:12 ERROR api db query failed (products): [Errno -2] Name does not resolve\n2026-10-30T03:40:12 ERROR api GET /api/products -> 503 (3ms)\n2026-10-30T03:40:13 ERROR api db query failed (products): [Errno -2] Name does not resolve\n2026-10-30T03:40:13 ERROR api GET /api/products -> 503 (3ms)\n2026-10-30T03:40:13 ERROR api db query failed (products): [Errno -2] Name does not resolve\n2026-10-30T03:40:13 ERROR api GET /api/products -> 503 (2ms)\n2026-10-30T03:40:13 ERROR api db query failed (products): [Errno -2] Name does not resolve\n2026-10-30T03:40:13 ERROR api GET /api/products -> 503 (2ms)\n2026-10-30T03:40:13 ERROR api db query failed (recent orders): [Errno -2] Name does not resolve\n2026-10-30T03:40:13 ERROR api GET /api/orders/recent -> 503 (2ms)\n2026-10-30T03:40:13 ERROR api db query failed (recent orders): [Errno -2] Name does not resolve\n2026-10-30T03:40:13 ERROR api GET /api/orders/recent -> 503 (2ms)\n2026-10-30T03:40:13 ERROR api db query failed (products): [Errno -2] Name does not resolve\n2026-10-30T03:40:13 ERROR api GET /api/products -> 503 (3ms)\n2026-10-30T03:40:13 ERROR api db query failed (recent orders): [Errno -2] Name does not resolve\n2026-10-30T03:40:13 ERROR api GET /api/orders/recent -> 503 (2ms)\n2026-10-30T03:40:14 ERROR api db query failed (products): [Errno -2] Name does not resolve\n2026-10-30T03:40\n... [4260 chars truncated] ...\n3:40:17 ERROR api GET /api/health -> 503 (2ms)\n2026-10-30T03:40:17 ERROR api db query failed (products): [Errno -2] Name does not resolve\n2026-10-30T03:40:17 ERROR api GET /api/products -> 503 (2ms)\n2026-10-30T03:40:17 ERROR api db query failed (recent orders): [Errno -2] Name does not resolve\n2026-10-30T03:40:17 ERROR api GET /api/orders/recent -> 503 (1ms)\n2026-10-30T03:40:17 ERROR api db write failed (create order): [Errno -2] Name does not resolve\n2026-10-30T03:40:17 ERROR api POST /api/orders -> 503 (2ms)\n2026-10-30T03:40:17 ERROR api db query failed (recent orders): [Errno -2] Name does not resolve\n2026-10-30T03:40:17 ERROR api GET /api/orders/recent -> 503 (2ms)\n2026-10-30T03:40:18 ERROR api db query failed (products): [Errno -2] Name does not resolve\n2026-10-30T03:40:18 ERROR api GET /api/products -> 503 (2ms)\n2026-10-30T03:40:18 ERROR api db query failed (products): [Errno -2] Name does not resolve\n2026-10-30T03:40:18 ERROR api GET /api/products -> 503 (3ms)\n2026-10-30T03:40:18 ERROR api db query failed (recent orders): [Errno -2] Name does not resolve\n2026-10-30T03:40:18 ERROR api GET /api/orders/recent -> 503 (2ms)\n2026-10-30T03:40:18 ERROR api db query failed (recent orders): [Errno -2] Name does not resolve\n2026-10-30T03:40:18 ERROR api GET /api/orders/recent -> 503 (2ms)\n2026-10-30T03:40:18 ERROR api db query failed (products): [Errno -2] Name does not resolve\n2026-10-30T03:40:18 ERROR api GET /api/products -> 503 (5ms)\n2026-10-30T03:40:18 ERROR api db write failed (create order): [Errno -2] Name does not resolve\n2026-10-30T03:40:18 ERROR api POST /api/orders -> 503 (2ms)\n2026-10-30T03:40:18 ERROR api db query failed (products): [Errno -2] Name does not resolve\n2026-10-30T03:40:18 ERROR api GET /api/products -> 503 (3ms)\n2026-10-30T03:40:19 ERROR api db query failed (products): [Errno -2] Name does not resolve\n2026-10-30T03:40:19 ERROR api GET /api/products -> 503 (3ms)\n2026-10-30T03:40:19 ERROR api db query failed (products): [Errno -2] Name does not resolve\n2026-10-30T03:40:19 ERROR api GET /api/products -> 503 (5ms)\n2026-10-30T03:40:19 ERROR api db query failed (products): [Errno -2] Name does not resolve\n2026-10-30T03:40:19 ERROR api GET /api/products -> 503 (2ms)\n2026-10-30T03:40:19 ERROR api db query failed (recent orders): [Errno -2] Name does not resolve\n2026-10-30T03:40:19 ERROR api GET /api/orders/recent -> 503 (2ms)\n2026-10-30T03:40:19 ERROR api db query failed (products): [Errno -2] Name does not resolve\n2026-10-30T03:40:19 ERROR api GET /api/products -> 503 (2ms)\n2026-10-30T03:40:19 ERROR api db query failed (recent orders): [Errno -2] Name does not resolve\n2026-10-30T03:40:19 ERROR api GET /api/orders/recent -> 503 (2ms)\n2026-10-30T03:40:19 ERROR api db query failed (products): [Errno -2] Name does not resolve\n2026-10-30T03:40:19 ERROR api GET /api/products -> 503 (2ms)\n2026-10-30T03:40:19 ERROR api db query failed (products): [Errno -2] Name does not resolve\n2026-10-30T03:40:19 ERROR api GET /api/products -> 503 (4ms)"
+  },
+  {
+   "step": 25,
+   "t": 10.97,
+   "tool": "get_logs",
+   "kind": "observe",
+   "args": {
+    "service": "worker",
+    "since_seconds": 8,
+    "tail": 400
+   },
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.03,
+   "result": "1 lines in last 8s.\nTop message patterns:\n      1x INFO worker sales summary refreshed: orders=# revenue=#\n--- last 1 lines ---\n2026-10-30T03:40:17 INFO worker sales summary refreshed: orders=1012 revenue=252229.84"
+  },
+  {
+   "step": 26,
+   "t": 11.0,
+   "tool": "get_logs",
+   "kind": "observe",
+   "args": {
+    "service": "postgres",
+    "since_seconds": 8,
+    "tail": 400
+   },
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.03,
+   "result": "1 lines in last 8s.\nTop message patterns:\n      1x # # UTC [#] FATAL:  remaining connection slots are reserved for roles with the SUPERUSER attribute\n--- last 1 lines ---\n2026-10-30 03:40:12.131 UTC [354] FATAL:  remaining connection slots are reserved for roles with the SUPERUSER attribute"
+  },
+  {
+   "step": 27,
+   "t": 11.04,
+   "tool": "get_logs",
+   "kind": "observe",
+   "args": {
+    "service": "redis",
+    "since_seconds": 8,
+    "tail": 400
+   },
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.03,
+   "result": "0 lines in last 8s.\nTop message patterns:\n\n--- last 0 lines ---\n"
+  },
+  {
+   "step": 28,
+   "t": 11.06,
+   "tool": "get_config",
+   "kind": "observe",
+   "args": {
+    "service": "api"
+   },
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.0,
+   "result": "api config versions: [1, 2]; live = v2\n# ShopStack API configuration (known-good baseline, version 1)\nserver:\n  port: 8000\n  threads: 16\ndatabase:\n  host: postgres-primary.internal\n  port: 5432\n  name: shop\n  user: shop_app\n  password: shop-secret\n  connect_timeout_s: 2\n  statement_timeout_ms: 2000\ncache:\n  host: redis\n  port: 6379\n  enabled: true\n  ttl_s: 30\npricing:\n  tax_rate: 0.15\naudit:\n  path: /data/audit/audit.log\nfeatures:\n  local_response_cache: false\nlogging:\n  level: INFO\n"
+  },
+  {
+   "step": 29,
+   "t": 11.06,
+   "tool": "get_config",
+   "kind": "observe",
+   "args": {
+    "service": "api",
+    "version": 2,
+    "diff_against": 1
+   },
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.0,
+   "result": "api config versions: [1, 2]; live = v2\n--- v1\n+++ v2\n@@ -3,7 +3,7 @@\n   port: 8000\n   threads: 16\n database:\n-  host: postgres\n+  host: postgres-primary.internal\n   port: 5432\n   name: shop\n   user: shop_app"
+  },
+  {
+   "step": 30,
+   "t": 11.06,
+   "tool": "run_diagnostic",
+   "kind": "observe",
+   "args": {
+    "service": "api",
+    "check": "disk"
+   },
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.1,
+   "result": "Filesystem                Size      Used Available Use% Mounted on\noverlay                 252.0G     11.6G     26.8G  30% /\ntmpfs                    64.0M         0     64.0M   0% /dev\ntmpfs                     7.9G         0      7.9G   0% /sys/fs/cgroup\nshm                      64.0M         0     64.0M   0% /dev/shm\n/dev/vda                252.0G     11.6G     26.8G  30% /config\ntmpfs                    48.0M         0     48.0M   0% /data\n/dev/vda                252.0G     11.6G     26.8G  30% /etc/hostname\n/dev/vda                252.0G     11.6G     26.8G  30% /etc/hosts\n/dev/vda                252.0G     11.6G     26.8G  30% /etc/resolv.conf\ntmpfs                     4.0K         0      4.0K   0% /proc/acpi\ntmpfs                    64.0M         0     64.0M   0% /proc/interrupts\ntmpfs                    64.0M         0     64.0M   0% /proc/keys\ntmpfs                    64.0M         0     64.0M   0% /proc/timer_list\ntmpfs                     4.0K         0      4.0K   0% /sys/firmware\n--- largest under /data (KB) ---\n0\t/data/audit\n0\t/data"
+  },
+  {
+   "step": 31,
+   "t": 11.17,
+   "tool": "run_diagnostic",
+   "kind": "observe",
+   "args": {
+    "service": "worker",
+    "check": "disk"
+   },
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.12,
+   "result": "Filesystem                Size      Used Available Use% Mounted on\noverlay                 252.0G     11.6G     26.8G  30% /\ntmpfs                    64.0M         0     64.0M   0% /dev\ntmpfs                     7.9G         0      7.9G   0% /sys/fs/cgroup\nshm                      64.0M         0     64.0M   0% /dev/shm\n/dev/vda                252.0G     11.6G     26.8G  30% /config\n/dev/vda                252.0G     11.6G     26.8G  30% /etc/hostname\n/dev/vda                252.0G     11.6G     26.8G  30% /etc/hosts\n/dev/vda                252.0G     11.6G     26.8G  30% /etc/resolv.conf\ntmpfs                     4.0K         0      4.0K   0% /proc/acpi\ntmpfs                    64.0M         0     64.0M   0% /proc/interrupts\ntmpfs                    64.0M         0     64.0M   0% /proc/keys\ntmpfs                    64.0M         0     64.0M   0% /proc/timer_list\ntmpfs                     4.0K         0      4.0K   0% /sys/firmware\n--- largest under /data (KB) ---"
+  },
+  {
+   "step": 32,
+   "t": 11.28,
+   "tool": "run_diagnostic",
+   "kind": "observe",
+   "args": {
+    "service": "postgres",
+    "check": "db_locks"
+   },
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.12,
+   "result": "blocked_pid | app | query | waiting_s | blocking_pid | blocking_app | state | blocking_query\n(no blocked sessions)"
+  },
+  {
+   "step": 33,
+   "t": 11.4,
+   "tool": "run_diagnostic",
+   "kind": "observe",
+   "args": {
+    "service": "postgres",
+    "check": "db_activity"
+   },
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.2,
+   "result": "max_connections=40\napp | state | count | max_age_s | pids\n"
+  },
+  {
+   "step": 34,
+   "t": 11.6,
+   "tool": "rollback_config",
+   "kind": "act",
+   "args": {
+    "service": "api",
+    "to_version": 1
+   },
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 10.54,
+   "result": "api config rolled back v2 -> v1; applied: ok"
+  },
+  {
+   "step": 35,
+   "t": 30.15,
+   "tool": "list_services",
+   "kind": "observe",
+   "args": {},
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.13,
+   "result": "service   state       restarts  oom    health   networks             missing_networks\ngateway   running     0         False  -        frontend             -\napi       running     0         False  -        backend,frontend     -\nworker    running     0         False  -        backend              -\npostgres  running     0         False  healthy  backend              -\nredis     running     0         False  -        backend              -"
+  },
+  {
+   "step": 36,
+   "t": 30.27,
+   "tool": "check_endpoints",
+   "kind": "observe",
+   "args": {},
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.06,
+   "result": "GET  /healthz             status=200     2.5ms OK\nGET  /api/health          status=200    16.4ms OK\nGET  /api/products        status=200     6.0ms OK\nGET  /api/orders/recent   status=200    17.2ms OK\nPOST /api/orders          status=201    19.7ms OK"
+  },
+  {
+   "step": 37,
+   "t": 30.34,
+   "tool": "get_recent_changes",
+   "kind": "observe",
+   "args": {
+    "limit": 20
+   },
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.0,
+   "result": "  0.3 min ago  api      v1  by recovery-agent     rollback to v1\n  0.9 min ago  api      v2  by ci-bot             point api at new primary database endpoint"
+  },
+  {
+   "step": 38,
+   "t": 30.34,
+   "tool": "get_metrics",
+   "kind": "observe",
+   "args": {},
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 2.31,
+   "result": "{\n \"containers\": {\n  \"gateway\": {\n   \"cpu_pct\": \"0.36%\",\n   \"mem\": \"2.918MiB / 15.71GiB\",\n   \"mem_pct\": \"0.02%\"\n  },\n  \"api\": {\n   \"cpu_pct\": \"4.73%\",\n   \"mem\": \"34.53MiB / 256MiB\",\n   \"mem_pct\": \"13.49%\"\n  },\n  \"worker\": {\n   \"cpu_pct\": \"0.00%\",\n   \"mem\": \"25.05MiB / 15.71GiB\",\n   \"mem_pct\": \"0.16%\"\n  },\n  \"postgres\": {\n   \"cpu_pct\": \"2.68%\",\n   \"mem\": \"32.92MiB / 15.71GiB\",\n   \"mem_pct\": \"0.20%\"\n  },\n  \"redis\": {\n   \"cpu_pct\": \"0.56%\",\n   \"mem\": \"3.902MiB / 15.71GiB\",\n   \"mem_pct\": \"0.02%\"\n  }\n },\n \"api_app_metrics\": {\n  \"cache_errors_total\": 0,\n  \"db_errors_total\": 0,\n  \"endpoints\": {\n   \"/api/health\": {\n    \"errors_5xx\": 0,\n    \"p50_ms\": 14.4,\n    \"p95_ms\": 14.4,\n    \"requests\": 1\n   },\n   \"/api/orders\": {\n    \"errors_5xx\": 0,\n    \"p50_ms\": 17.7,\n    \"p95_ms\": 26.5,\n    \"requests\": 18\n   },\n   \"/api/orders/recent\": {\n    \"errors_5xx\": 0,\n    \"p50_ms\": 15.5,\n    \"p95_ms\": 20.6,\n    \"requests\": 24\n   },\n   \"/api/products\": {\n    \"errors_5xx\": 0,\n    \"p50_ms\": 1.9,\n    \"p95_ms\": 3.9,\n    \"requests\": 27\n   },\n   \"unmatched\": {\n    \"errors_5xx\": 0,\n    \"p50_ms\": 0.2,\n    \"p95_ms\": 0.5,\n    \"requests\": 3\n   }\n  },\n  \"process_rss_mb\": 48.4,\n  \"uptime_s\": 9.7,\n  \"window_s\": 60\n },\n \"postgres_connections\": \"1 | 40\"\n}"
+  },
+  {
+   "step": 39,
+   "t": 32.64,
+   "tool": "get_logs",
+   "kind": "observe",
+   "args": {
+    "service": "gateway",
+    "since_seconds": 9,
+    "tail": 400
+   },
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.03,
+   "result": "75 lines in last 9s.\nTop message patterns:\n     27x gateway # GET /api/products upstream=# rt=#\n     24x gateway # GET /api/orders/recent upstream=# rt=#\n     18x gateway # POST /api/orders upstream=# rt=#\n      4x gateway # GET /api/legacy/cart upstream=# rt=#\n      1x gateway # GET /healthz upstream=- rt=#\n      1x gateway # GET /api/health upstream=# rt=#\n--- last 75 lines ---\n2026-10-30T03:40:32+00:00 gateway 201 POST /api/orders upstream=172.19.0.2:8000 rt=1.033\n2026-10-30T03:40:32+00:00 gateway 201 POST /api/orders upstream=172.19.0.2:8000 rt=0.022\n2026-10-30T03:40:32+00:00 gateway 200 GET /api/products upstream=172.19.0.2:8000 rt=0.018\n2026-10-30T03:40:32+00:00 gateway 200 GET /api/products upstream=172.19.0.2:8000 rt=0.003\n2026-10-30T03:40:32+00:00 gateway 201 POST /api/orders upstream=172.19.0.2:8000 rt=0.021\n2026-10-30T03:40:32+00:00 gateway 201 POST /api/orders upstream=172.19.0.2:8000 rt=0.021\n2026-10-30T03:40:33+00:00 gateway 201 POST /api/orders upstream=172.19.0.2:8000 rt=0.018\n2026-10-30T03:40:33+00:00 gateway 200 GET /api/orders/recent upstream=172.19.0.2:8000 rt=0.020\n2026-10-30T03:40:33+00:00 gateway 200 GET /api/products upstream=172.19.0.2:8000 rt=0.003\n2026-10-30T03:40:33+00:00 gateway 200 GET /api/orders/recent upstream=172.19.0.2:8000 rt=0.015\n2026-10-30T03:40:33+00:00 gateway 200 GET /api/orders/recent upstream=172.19.0.2:8000 rt=0.020\n2026-10-30T03:40:33+00:00 gateway 201 POST /api/orders upstream=172.19.0.2:8000 rt=0.018\n2026-10-30T03:40:33+00:00 gateway 201 POST /api/orders upstream=172.19.0.2:8000 rt=0.021\n2026-10-30T03:40:34+00:00 gateway 200 GET /api/products upstream=172.19.0.2:8000 rt=0.003\n2026-10-30T03:40:34+00:00 gateway 200 GET /api/orders/recent upstream=172.19.0.2:8000 rt=0.017\n2026-10-30T03:40:34+00:00 gateway 200 GET /api/orders/recent upstream=172.19.0.2:8000 rt=0.014\n2026-10-30T03:40:34+00:00 gateway 200 GET /api/products upstream=172.19.0.2:8000 rt=0.003\n2026-10-30T03:40:34+00:00 gateway 201 POST /api/orders upstream=172.19.0.2:8000 rt=0.018\n2026-10-30T03:40:34+00:00 gateway 200 GET /api/orders/recent upstream=172.19.0.2:8000 rt=0.016\n2026-10-30T03:40:34+00:00 gateway 200 GET /api/products upstream=172.19.0.2:8000 rt=0.003\n2026-10-30T03:40:34+00:00 gateway 200 GET /api/products upstream=172.19.0.2:8000 rt=0.003\n2026-10-30T03:40:35+00:00 gateway 404 GET /api/legacy/cart upstream=172.19.0.2:8000 rt=0.001\n2026-10-30T03:40:35+00:00 gateway 200 GET /api/orders/recent upstream=172.19.0.2:8000 rt=0.018\n2026-10-30T03:40:35+00:00 gateway 200 GET /api/orders/recent upstream=172.19.0.2:8000 rt=0.016\n2026-10-30T03:40:35+00:00 gateway 200 GET /api/products upstream=172.19.0.2:8000 rt=0.003\n2026-10-30T03:40:35+00:00 gateway 200 GET /api/products upstream=172.19.0.2:8000 rt=0.003\n2026-10-30T03:40:35+00:00 gateway 200 GET /api/products upstream=172.19.0.2:8000 rt=0.002\n2026-10-30T03:40:35+00:00 gateway 201 POST /api/orders upstream=172.19.0.2:8000 rt=0.019\n2026-10-30T03:40:36+00:00 gateway 201 POST /api/orders upstream\n... [1225 chars truncated] ...\n0T03:40:37+00:00 gateway 200 GET /api/products upstream=172.19.0.2:8000 rt=0.003\n2026-10-30T03:40:38+00:00 gateway 200 GET /api/orders/recent upstream=172.19.0.2:8000 rt=0.015\n2026-10-30T03:40:38+00:00 gateway 200 GET /api/orders/recent upstream=172.19.0.2:8000 rt=0.022\n2026-10-30T03:40:38+00:00 gateway 200 GET /api/orders/recent upstream=172.19.0.2:8000 rt=0.015\n2026-10-30T03:40:38+00:00 gateway 200 GET /api/orders/recent upstream=172.19.0.2:8000 rt=0.015\n2026-10-30T03:40:38+00:00 gateway 200 GET /api/products upstream=172.19.0.2:8000 rt=0.004\n2026-10-30T03:40:38+00:00 gateway 200 GET /api/products upstream=172.19.0.2:8000 rt=0.003\n2026-10-30T03:40:38+00:00 gateway 200 GET /api/orders/recent upstream=172.19.0.2:8000 rt=0.017\n2026-10-30T03:40:39+00:00 gateway 404 GET /api/legacy/cart upstream=172.19.0.2:8000 rt=0.001\n2026-10-30T03:40:39+00:00 gateway 201 POST /api/orders upstream=172.19.0.2:8000 rt=0.021\n2026-10-30T03:40:39+00:00 gateway 201 POST /api/orders upstream=172.19.0.2:8000 rt=0.018\n2026-10-30T03:40:39+00:00 gateway 200 GET /healthz upstream=- rt=0.000\n2026-10-30T03:40:39+00:00 gateway 200 GET /api/health upstream=172.19.0.2:8000 rt=0.015\n2026-10-30T03:40:39+00:00 gateway 200 GET /api/products upstream=172.19.0.2:8000 rt=0.005\n2026-10-30T03:40:39+00:00 gateway 200 GET /api/orders/recent upstream=172.19.0.2:8000 rt=0.016\n2026-10-30T03:40:39+00:00 gateway 201 POST /api/orders upstream=172.19.0.2:8000 rt=0.019\n2026-10-30T03:40:39+00:00 gateway 200 GET /api/orders/recent upstream=172.19.0.2:8000 rt=0.016\n2026-10-30T03:40:39+00:00 gateway 200 GET /api/products upstream=172.19.0.2:8000 rt=0.003\n2026-10-30T03:40:39+00:00 gateway 201 POST /api/orders upstream=172.19.0.2:8000 rt=0.019\n2026-10-30T03:40:39+00:00 gateway 200 GET /api/products upstream=172.19.0.2:8000 rt=0.005\n2026-10-30T03:40:40+00:00 gateway 200 GET /api/orders/recent upstream=172.19.0.2:8000 rt=0.016\n2026-10-30T03:40:40+00:00 gateway 201 POST /api/orders upstream=172.19.0.2:8000 rt=0.023\n2026-10-30T03:40:40+00:00 gateway 200 GET /api/products upstream=172.19.0.2:8000 rt=0.003\n2026-10-30T03:40:40+00:00 gateway 200 GET /api/orders/recent upstream=172.19.0.2:8000 rt=0.015\n2026-10-30T03:40:40+00:00 gateway 200 GET /api/orders/recent upstream=172.19.0.2:8000 rt=0.019\n2026-10-30T03:40:40+00:00 gateway 200 GET /api/products upstream=172.19.0.2:8000 rt=0.003\n2026-10-30T03:40:40+00:00 gateway 200 GET /api/products upstream=172.19.0.2:8000 rt=0.003\n2026-10-30T03:40:41+00:00 gateway 200 GET /api/products upstream=172.19.0.2:8000 rt=0.004\n2026-10-30T03:40:41+00:00 gateway 200 GET /api/orders/recent upstream=172.19.0.2:8000 rt=0.023\n2026-10-30T03:40:41+00:00 gateway 200 GET /api/orders/recent upstream=172.19.0.2:8000 rt=0.016\n2026-10-30T03:40:41+00:00 gateway 200 GET /api/products upstream=172.19.0.2:8000 rt=0.004\n2026-10-30T03:40:41+00:00 gateway 200 GET /api/products upstream=172.19.0.2:8000 rt=0.003\n2026-10-30T03:40:41+00:00 gateway 404 GET /api/legacy/cart upstream=172.19.0.2:8000 rt=0.002"
+  },
+  {
+   "step": 40,
+   "t": 32.67,
+   "tool": "get_logs",
+   "kind": "observe",
+   "args": {
+    "service": "api",
+    "since_seconds": 9,
+    "tail": 400
+   },
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.03,
+   "result": "0 lines in last 9s.\nTop message patterns:\n\n--- last 0 lines ---\n"
+  },
+  {
+   "step": 41,
+   "t": 32.7,
+   "tool": "get_logs",
+   "kind": "observe",
+   "args": {
+    "service": "worker",
+    "since_seconds": 9,
+    "tail": 400
+   },
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.03,
+   "result": "1 lines in last 9s.\nTop message patterns:\n      1x INFO worker sales summary refreshed: orders=# revenue=#\n--- last 1 lines ---\n2026-10-30T03:40:37 INFO worker sales summary refreshed: orders=1024 revenue=254990.15"
+  },
+  {
+   "step": 42,
+   "t": 32.74,
+   "tool": "get_logs",
+   "kind": "observe",
+   "args": {
+    "service": "postgres",
+    "since_seconds": 9,
+    "tail": 400
+   },
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.03,
+   "result": "0 lines in last 9s.\nTop message patterns:\n\n--- last 0 lines ---\n"
+  },
+  {
+   "step": 43,
+   "t": 32.77,
+   "tool": "get_logs",
+   "kind": "observe",
+   "args": {
+    "service": "redis",
+    "since_seconds": 9,
+    "tail": 400
+   },
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.03,
+   "result": "0 lines in last 9s.\nTop message patterns:\n\n--- last 0 lines ---\n"
+  },
+  {
+   "step": 44,
+   "t": 32.8,
+   "tool": "run_diagnostic",
+   "kind": "observe",
+   "args": {
+    "service": "api",
+    "check": "disk"
+   },
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.09,
+   "result": "Filesystem                Size      Used Available Use% Mounted on\noverlay                 252.0G     11.6G     26.8G  30% /\ntmpfs                    64.0M         0     64.0M   0% /dev\ntmpfs                     7.9G         0      7.9G   0% /sys/fs/cgroup\nshm                      64.0M         0     64.0M   0% /dev/shm\n/dev/vda                252.0G     11.6G     26.8G  30% /config\ntmpfs                    48.0M      4.0K     48.0M   0% /data\n/dev/vda                252.0G     11.6G     26.8G  30% /etc/hostname\n/dev/vda                252.0G     11.6G     26.8G  30% /etc/hosts\n/dev/vda                252.0G     11.6G     26.8G  30% /etc/resolv.conf\ntmpfs                     4.0K         0      4.0K   0% /proc/acpi\ntmpfs                    64.0M         0     64.0M   0% /proc/interrupts\ntmpfs                    64.0M         0     64.0M   0% /proc/keys\ntmpfs                    64.0M         0     64.0M   0% /proc/timer_list\ntmpfs                     4.0K         0      4.0K   0% /sys/firmware\n--- largest under /data (KB) ---\n4\t/data/audit/audit.log\n4\t/data/audit\n4\t/data"
+  },
+  {
+   "step": 45,
+   "t": 32.88,
+   "tool": "run_diagnostic",
+   "kind": "observe",
+   "args": {
+    "service": "worker",
+    "check": "disk"
+   },
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.1,
+   "result": "Filesystem                Size      Used Available Use% Mounted on\noverlay                 252.0G     11.6G     26.8G  30% /\ntmpfs                    64.0M         0     64.0M   0% /dev\ntmpfs                     7.9G         0      7.9G   0% /sys/fs/cgroup\nshm                      64.0M         0     64.0M   0% /dev/shm\n/dev/vda                252.0G     11.6G     26.8G  30% /config\n/dev/vda                252.0G     11.6G     26.8G  30% /etc/hostname\n/dev/vda                252.0G     11.6G     26.8G  30% /etc/hosts\n/dev/vda                252.0G     11.6G     26.8G  30% /etc/resolv.conf\ntmpfs                     4.0K         0      4.0K   0% /proc/acpi\ntmpfs                    64.0M         0     64.0M   0% /proc/interrupts\ntmpfs                    64.0M         0     64.0M   0% /proc/keys\ntmpfs                    64.0M         0     64.0M   0% /proc/timer_list\ntmpfs                     4.0K         0      4.0K   0% /sys/firmware\n--- largest under /data (KB) ---"
+  },
+  {
+   "step": 46,
+   "t": 32.99,
+   "tool": "run_diagnostic",
+   "kind": "observe",
+   "args": {
+    "service": "postgres",
+    "check": "db_locks"
+   },
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.11,
+   "result": "blocked_pid | app | query | waiting_s | blocking_pid | blocking_app | state | blocking_query\n(no blocked sessions)"
+  },
+  {
+   "step": 47,
+   "t": 33.09,
+   "tool": "verify_recovery",
+   "kind": "observe",
+   "args": {},
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 8.76,
+   "result": "{\n \"healthy\": true,\n \"probe_success_rate\": 1.0,\n \"probe_p95_ms\": 23.2,\n \"problems\": [],\n \"probes\": {\n  \"GET /healthz\": {\n   \"ok\": 8,\n   \"fail\": 0,\n   \"statuses\": [\n    200\n   ],\n   \"last_error\": \"\"\n  },\n  \"GET /api/health\": {\n   \"ok\": 8,\n   \"fail\": 0,\n   \"statuses\": [\n    200\n   ],\n   \"last_error\": \"\"\n  },\n  \"GET /api/products\": {\n   \"ok\": 8,\n   \"fail\": 0,\n   \"statuses\": [\n    200\n   ],\n   \"last_error\": \"\"\n  },\n  \"GET /api/orders/recent\": {\n   \"ok\": 8,\n   \"fail\": 0,\n   \"statuses\": [\n    200\n   ],\n   \"last_error\": \"\"\n  },\n  \"POST /api/orders\": {\n   \"ok\": 8,\n   \"fail\": 0,\n   \"statuses\": [\n    201\n   ],\n   \"last_error\": \"\"\n  }\n }\n}"
+  },
+  {
+   "step": 48,
+   "t": 41.85,
+   "tool": "submit_report",
+   "kind": "final",
+   "args": {
+    "root_causes": [
+     {
+      "component": "worker",
+      "category": "db_connection_exhaustion",
+      "evidence": "postgres has 38/40 client connections (get_metrics); 35 'too many clients' errors, e.g. 2026-10-30 03:40:10.113 UTC [324] FATAL: remaining connection slots are reserved for roles with the SUPERUSER attribute; application 'report-backfill' holds 37 sessions (run_diagnostic db_activity)"
+     },
+     {
+      "component": "api",
+      "category": "bad_config_deploy",
+      "evidence": "36 log line(s) on api: a hostname does not resolve, e.g. probe /api/health: {\"checks\":{\"cache\":\"ok\",\"database\":\"error: [Errno -2] Name does not resolve\",\"disk\":\"ok\"},\"status\":\"; v2 changed host (get_config diff), matching the errors; api was deployed 0.6 min ago: v2 'point api at new primary database endpoint' by ci-bot"
+     }
+    ],
+    "recovered": true,
+    "summary": "[confirmed] stop 'python /app/tools/report_backfill.py' on worker (it keeps reconnecting), then terminate the 'report-backfill' database sessions to free connection slots (confidence 0.85; evidence: postgres has 38/40 client connections (get_metrics)). Prevent: use a connection pool with a per-client cap and alert on connection saturation. | [confirmed] roll back the api config to v1 (undoing v2) (confidence 0.76; evidence: 36 log line(s) on api: a hostname does not resolve, e.g. probe /api/health: {\"checks\":{\"cache\":\"ok\",\"database\":\"error: [Errno -2] Name does not resolve\",\"disk\":\"ok\"},\"status\":\"). Prevent: validate configs in CI and canary deploys with automatic rollback on error-rate spikes."
+   },
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.0,
+   "result": "report submitted"
+  }
+ ],
+ "episode_seconds": 120.4
+}
