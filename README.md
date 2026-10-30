@@ -136,7 +136,14 @@ python -m recovery up                    # build and start ShopStack
 python -m recovery status                # service states + endpoint probes
 make baselines                           # noop / restart_all / rules on all 22 scenarios (~2 h)
 python -m recovery report baseline-noop baseline-restart_all baseline-rules --out docs/results.md
+pip install -e '.[export]'               # reportlab, only needed for the PDF
+python -m recovery export baseline-noop baseline-restart_all baseline-rules   # CSV + PDF incident reports
 ```
+
+`export` writes to `docs/reports/`: for each run, `<tag>.csv` (one row per incident: verdict,
+score breakdown, true vs reported root causes, evidence, actions taken, verifier numbers) and
+`<tag>.pdf` (a summary page, then one page per incident with the pager alert, ground truth,
+the agent's report, every tool call, and the verification result), plus `all_episodes.csv`.
 
 Manual demo: `python -m recovery inject dev-04-db-password`, then `python -m recovery status`
 shows the broken system.
@@ -181,5 +188,7 @@ recovery/agents/    noop, restart_all, rules, llm
 scenarios/          dev.yaml (10), heldout.yaml (12)
 runs/               committed episode records (evidence)
 docs/results.md     generated comparison report
+docs/reports/       CSV + PDF incident reports (python -m recovery export)
+docs/replay.html    incident replay viewer (opens in any browser)
 tests/              unit tests (scoring, guardrails, scenarios, LLM agent replay)
 ```
