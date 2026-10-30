@@ -4,7 +4,7 @@
 
 ## Before you go on stage
 - Open the Mend web app link and use its **Share** menu so judges can open it too. Keep a copy of
-  `docs/replay.html` on your laptop as a backup: it opens in any browser, offline.
+  `docs/mend.html` on your laptop as a backup: it opens in any browser, offline.
 - Have the web app open at the top of the page, and one incident PDF already downloaded
   (`mend-ho-05-db-lock-runbook-agent.pdf`) in case downloads are blocked on the venue Wi-Fi.
 - Optional: the live terminal demo (section 6) needs Docker. Use it only if the machine is ready.

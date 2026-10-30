@@ -1,6 +1,6 @@
-"""Build docs/replay.html: a self-contained incident replay viewer over recorded runs.
+"""Build docs/mend.html: the Mend web app, a self-contained incident replay over recorded runs.
 
-Usage: python scripts/build_replay.py [--raw PATH] [tag ...]   (default: the three baseline tags)
+Usage: python webapp/build.py [--raw PATH] [tag ...]   (default: the three baseline tags)
   --raw PATH  also write the page body without the html/head wrapper (for publishing as an artifact)
 
 The page embeds a compact copy of each episode record (alert, faults, every tool call with a
@@ -102,10 +102,10 @@ def main() -> None:
     if args[:1] == ["--raw"]:
         raw, args = Path(args[1]), args[2:]
     data = json.dumps(build(args or DEFAULT_TAGS), separators=(",", ":")).replace("</", "<\\/")
-    page = (ROOT / "scripts" / "replay_template.html").read_text().replace("/*__DATA__*/null", data)
+    page = (ROOT / "webapp" / "template.html").read_text().replace("/*__DATA__*/null", data)
     if raw:
         raw.write_text(page)
-    out = ROOT / "docs" / "replay.html"
+    out = ROOT / "docs" / "mend.html"
     out.write_text('<!doctype html>\n<html lang="en">\n<head>\n<meta charset="utf-8">\n'
                    '<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">\n'
                    '<style>body{margin:0}[hidden]{display:none!important}</style>\n</head>\n<body>\n'
