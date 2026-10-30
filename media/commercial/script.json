@@ -1,0 +1,12 @@
+{
+  "voice": "en_US-ryan-high",
+  "length_scale": 1.0,
+  "scenes": [
+    {"id": "hook",    "min": 4.0, "line": "When systems fail, every minute counts."},
+    {"id": "problem", "min": 5.0, "line": "Orders stop. Customers can't pay. And someone has to find out why, fast."},
+    {"id": "meet",    "min": 5.5, "line": "Meet Mend AI. It reads the logs and the metrics, weighs the evidence, and finds the real cause."},
+    {"id": "prove",   "min": 5.0, "line": "It fixes it safely, and an independent check proves the system truly recovered."},
+    {"id": "results", "min": 5.5, "line": "On twelve failures it had never seen, Mend fixed ninety-six percent, without breaking anything else."},
+    {"id": "end",     "min": 4.5, "line": "Mend. Agents that bring failing systems back. Proof, not promises."}
+  ]
+}
