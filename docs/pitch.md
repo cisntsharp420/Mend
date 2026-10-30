@@ -3,8 +3,8 @@
 **Mend: agents that bring failing systems back.** Built for the HUMAIN hackathon, Challenge 1.
 
 ## Before you go on stage
-- Open the Mend web app link and use its **Share** menu so judges can open it too. Keep a copy of
-  `docs/mend.html` on your laptop as a backup: it opens in any browser, offline.
+- Open the Mend web app at **https://cisntsharp420.github.io/Mend/** (public, so judges can open
+  it too). Keep a copy of `docs/mend.html` on your laptop as a backup: it opens in any browser, offline.
 - Have the web app open at the top of the page, and one incident PDF already downloaded
   (`mend-ho-05-db-lock-runbook-agent.pdf`) in case downloads are blocked on the venue Wi-Fi.
 - Optional: the live terminal demo (section 6) needs Docker. Use it only if the machine is ready.

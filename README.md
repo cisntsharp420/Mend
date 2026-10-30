@@ -11,7 +11,7 @@
 </p>
 
 <p align="center">
-  <b><a href="#level-0--look">Open the web app</a></b> ·
+  <b><a href="https://cisntsharp420.github.io/Mend/">Open the web app</a></b> ·
   <a href="#the-idea-from-scratch">The idea</a> ·
   <a href="#what-we-found">Results</a> ·
   <a href="#zero-to-hero">Zero to hero</a> ·
@@ -112,15 +112,17 @@ Start at any level. Levels 0 to 2 need nothing installed; levels 3 to 5 need Doc
 
 ### Level 0 · Look
 
-The **Mend web app** is a single file, [`docs/mend.html`](docs/mend.html). It holds every recorded
-run and opens in any browser, offline, with nothing to install.
+The **Mend web app** is live at **[cisntsharp420.github.io/Mend](https://cisntsharp420.github.io/Mend/)**.
+Open it in any browser, on a computer or a phone, with nothing to install.
+
+It is also a single file, [`docs/mend.html`](docs/mend.html), that holds every recorded run and
+works offline:
 
 - **From GitHub:** open [`docs/mend.html`](docs/mend.html), click **Download raw file**, then
   double-click the downloaded file.
 - **From a clone:** open `docs/mend.html` in your browser.
-- **As a website:** in the repository's **Settings → Pages**, choose *Deploy from a branch*, select
-  the branch and the `/docs` folder, and save. The app is then served at
-  `https://<owner>.github.io/<repo>/mend.html`.
+- **On your own fork:** in **Settings → Pages**, choose *Deploy from a branch*, select `main` and
+  the `/docs` folder, and save. GitHub serves it at `https://<your-name>.github.io/<repo>/`.
 
 <p align="center"><img src="docs/images/app-hero.jpg" alt="The Mend web app" width="100%"></p>
 
@@ -193,8 +195,8 @@ Windows, run everything inside Ubuntu on WSL (`wsl --install -d Ubuntu` in an ad
 then turn on *WSL integration* for Ubuntu in Docker Desktop's settings).
 
 ```bash
-git clone https://github.com/cisntsharp420/agentic-recovery.git
-cd agentic-recovery
+git clone https://github.com/cisntsharp420/Mend.git
+cd Mend
 python3 -m venv .venv && source .venv/bin/activate
 make install          # the package, test tools and PDF support
 make test             # 25 unit tests, no Docker needed
@@ -410,7 +412,7 @@ budget (12) and a time budget (420 s), `--approve` puts a human in the loop for 
 ## Repository layout
 
 ```
-agentic-recovery/
+Mend/
 ├── README.md            you are here
 ├── Makefile             shortcuts: install, test, baselines, reports, webapp, ...
 ├── pyproject.toml       Python package and optional extras (dev, export)
@@ -428,6 +430,7 @@ agentic-recovery/
 ├── runs/                every recorded episode, committed as evidence
 └── docs/
     ├── mend.html        the Mend web app (one file, works offline)
+    ├── index.html       opens mend.html (the GitHub Pages front door)
     ├── reports/         PDF and CSV incident reports
     ├── results.md       comparison tables
     ├── pitch.md         five-minute pitch and demo script
