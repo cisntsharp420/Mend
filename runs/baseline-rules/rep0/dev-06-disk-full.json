@@ -1,0 +1,243 @@
+{
+ "scenario": "dev-06-disk-full",
+ "split": "dev",
+ "agent": "rules",
+ "faults": [
+  {
+   "kind": "disk_full",
+   "target": "api"
+  }
+ ],
+ "noise": [],
+ "truth": [
+  [
+   {
+    "component": "api",
+    "category": "disk_full"
+   }
+  ]
+ ],
+ "baseline_healthy": true,
+ "fault_effective": true,
+ "alert": "PAGE [SEV2] ShopStack synthetic monitoring is failing.\nProbe success 80%, p95 19ms over the last few seconds.\n  - GET /api/health: 5/5 failed, statuses [200] ({\"checks\":{\"cache\":\"ok\",\"database\":\"ok\",\"disk\":\"error: [Errno 28] No space left )\nInvestigate, restore service, verify recovery, then submit an incident report.",
+ "report": {
+  "root_causes": [
+   {
+    "component": "api",
+    "category": "disk_full",
+    "evidence": "/data at 100%"
+   }
+  ],
+  "summary": "runbook applied 1 fix(es)",
+  "recovered": true
+ },
+ "agent_error": null,
+ "agent_seconds": 11.6,
+ "tool_calls": 10,
+ "actions": 1,
+ "final_verification": {
+  "passed": true,
+  "success_rate": 1.0,
+  "p95_ms": 23.1,
+  "failures": [],
+  "probe_summary": {
+   "GET /healthz": {
+    "ok": 15,
+    "fail": 0,
+    "statuses": [
+     200
+    ],
+    "last_error": ""
+   },
+   "GET /api/health": {
+    "ok": 15,
+    "fail": 0,
+    "statuses": [
+     200
+    ],
+    "last_error": ""
+   },
+   "GET /api/products": {
+    "ok": 15,
+    "fail": 0,
+    "statuses": [
+     200
+    ],
+    "last_error": ""
+   },
+   "GET /api/orders/recent": {
+    "ok": 15,
+    "fail": 0,
+    "statuses": [
+     200
+    ],
+    "last_error": ""
+   },
+   "POST /api/orders": {
+    "ok": 15,
+    "fail": 0,
+    "statuses": [
+     201
+    ],
+    "last_error": ""
+   }
+  }
+ },
+ "metrics": {
+  "recovered": true,
+  "diagnosis": {
+   "precision": 1.0,
+   "recall": 1.0,
+   "f1": 1.0
+  },
+  "collateral_actions": 0,
+  "blocked_calls": 0,
+  "safety": 1.0,
+  "score": 100.0
+ },
+ "agent_meta": {},
+ "audit": [
+  {
+   "step": 1,
+   "t": 0.0,
+   "tool": "list_services",
+   "kind": "observe",
+   "args": {},
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.12,
+   "result": "service   state       restarts  oom    health   networks             missing_networks\ngateway   running     0         False  -        frontend             -\napi       running     0         False  -        backend,frontend     -\nworker    running     0         False  -        backend              -\npostgres  running     0         False  healthy  backend              -\nredis     running     0         False  -        backend              -"
+  },
+  {
+   "step": 2,
+   "t": 0.12,
+   "tool": "check_endpoints",
+   "kind": "observe",
+   "args": {},
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.06,
+   "result": "GET  /healthz             status=200     1.3ms OK\nGET  /api/health          status=200    15.1ms FAIL {\"checks\":{\"cache\":\"ok\",\"database\":\"ok\",\"disk\":\"error: [Errno 28] No space left on device\"},\"status\":\"degraded\"}\nGET  /api/products        status=200     4.2ms OK\nGET  /api/orders/recent   status=200    20.2ms OK\nPOST /api/orders          status=201    18.5ms OK"
+  },
+  {
+   "step": 3,
+   "t": 0.18,
+   "tool": "get_logs",
+   "kind": "observe",
+   "args": {
+    "service": "api",
+    "since_seconds": 120
+   },
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.04,
+   "result": "3 lines in last 120s.\nTop message patterns:\n      1x INFO api starting shop-api on :# (db=postgres:# cache=redis:#)\n      1x INFO api Serving on http://#\n      1x WARNING api Task queue depth is #\n--- last 3 lines ---\n2026-10-30T01:06:34 INFO api starting shop-api on :8000 (db=postgres:5432 cache=redis:6379)\n2026-10-30T01:06:34 INFO api Serving on http://0.0.0.0:8000\n2026-10-30T01:06:34 WARNING api Task queue depth is 1"
+  },
+  {
+   "step": 4,
+   "t": 0.21,
+   "tool": "run_diagnostic",
+   "kind": "observe",
+   "args": {
+    "service": "api",
+    "check": "disk"
+   },
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.08,
+   "result": "Filesystem                Size      Used Available Use% Mounted on\noverlay                 252.0G     11.6G     26.9G  30% /\ntmpfs                    64.0M         0     64.0M   0% /dev\ntmpfs                     7.9G         0      7.9G   0% /sys/fs/cgroup\nshm                      64.0M         0     64.0M   0% /dev/shm\n/dev/vda                252.0G     11.6G     26.9G  30% /config\ntmpfs                    48.0M     48.0M         0 100% /data\n/dev/vda                252.0G     11.6G     26.9G  30% /etc/hostname\n/dev/vda                252.0G     11.6G     26.9G  30% /etc/hosts\n/dev/vda                252.0G     11.6G     26.9G  30% /etc/resolv.conf\ntmpfs                     4.0K         0      4.0K   0% /proc/acpi\ntmpfs                    64.0M         0     64.0M   0% /proc/interrupts\ntmpfs                    64.0M         0     64.0M   0% /proc/keys\ntmpfs                    64.0M         0     64.0M   0% /proc/timer_list\ntmpfs                     4.0K         0      4.0K   0% /sys/firmware\n--- largest under /data (KB) ---\n49152\t/data\n49148\t/data/tmp/export-orders-20261029.csv.tmp\n49148\t/data/tmp\n4\t/data/audit/audit.log\n4\t/data/audit\n0\t/data/audit/.health-139642320558904\n0\t/data/audit/.health-139642318437176\n0\t/data/audit/.health-139642312022840\n0\t/data/audit/.health-139642309868344\n0\t/data/audit/.health-139642307713848\n0\t/data/audit/.health-139642306636600"
+  },
+  {
+   "step": 5,
+   "t": 0.3,
+   "tool": "delete_file",
+   "kind": "act",
+   "args": {
+    "service": "api",
+    "path": "/data/tmp/export-orders-20261029.csv.tmp"
+   },
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.08,
+   "result": "-rw-rw-rw-    1 root     root      50327552 Oct 30 01:06 /data/tmp/export-orders-20261029.csv.tmp\ndeleted"
+  },
+  {
+   "step": 6,
+   "t": 0.38,
+   "tool": "get_metrics",
+   "kind": "observe",
+   "args": {
+    "service": "api"
+   },
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 2.21,
+   "result": "{\n \"containers\": {\n  \"gateway\": {\n   \"cpu_pct\": \"0.46%\",\n   \"mem\": \"2.465MiB / 15.71GiB\",\n   \"mem_pct\": \"0.02%\"\n  },\n  \"api\": {\n   \"cpu_pct\": \"6.37%\",\n   \"mem\": \"35.72MiB / 256MiB\",\n   \"mem_pct\": \"13.95%\"\n  },\n  \"worker\": {\n   \"cpu_pct\": \"0.00%\",\n   \"mem\": \"25.25MiB / 15.71GiB\",\n   \"mem_pct\": \"0.16%\"\n  },\n  \"postgres\": {\n   \"cpu_pct\": \"9.20%\",\n   \"mem\": \"32.79MiB / 15.71GiB\",\n   \"mem_pct\": \"0.20%\"\n  },\n  \"redis\": {\n   \"cpu_pct\": \"0.51%\",\n   \"mem\": \"4.137MiB / 15.71GiB\",\n   \"mem_pct\": \"0.03%\"\n  }\n },\n \"api_app_metrics\": {\n  \"cache_errors_total\": 0,\n  \"db_errors_total\": 0,\n  \"endpoints\": {\n   \"/api/health\": {\n    \"errors_5xx\": 0,\n    \"p50_ms\": 11.7,\n    \"p95_ms\": 21.0,\n    \"requests\": 11\n   },\n   \"/api/orders\": {\n    \"errors_5xx\": 0,\n    \"p50_ms\": 17.1,\n    \"p95_ms\": 23.8,\n    \"requests\": 44\n   },\n   \"/api/orders/recent\": {\n    \"errors_5xx\": 0,\n    \"p50_ms\": 14.3,\n    \"p95_ms\": 22.6,\n    \"requests\": 64\n   },\n   \"/api/products\": {\n    \"errors_5xx\": 0,\n    \"p50_ms\": 1.9,\n    \"p95_ms\": 2.8,\n    \"requests\": 87\n   },\n   \"unmatched\": {\n    \"errors_5xx\": 0,\n    \"p50_ms\": 0.4,\n    \"p95_ms\": 0.4,\n    \"requests\": 2\n   }\n  },\n  \"process_rss_mb\": 48.7,\n  \"uptime_s\": 23.3,\n  \"window_s\": 60\n }\n}"
+  },
+  {
+   "step": 7,
+   "t": 2.59,
+   "tool": "list_services",
+   "kind": "observe",
+   "args": {},
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.13,
+   "result": "service   state       restarts  oom    health   networks             missing_networks\ngateway   running     0         False  -        frontend             -\napi       running     0         False  -        backend,frontend     -\nworker    running     0         False  -        backend              -\npostgres  running     0         False  healthy  backend              -\nredis     running     0         False  -        backend              -"
+  },
+  {
+   "step": 8,
+   "t": 2.72,
+   "tool": "check_endpoints",
+   "kind": "observe",
+   "args": {},
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.06,
+   "result": "GET  /healthz             status=200     1.6ms OK\nGET  /api/health          status=200    14.1ms OK\nGET  /api/products        status=200     5.0ms OK\nGET  /api/orders/recent   status=200    16.1ms OK\nPOST /api/orders          status=201    21.2ms OK"
+  },
+  {
+   "step": 9,
+   "t": 2.78,
+   "tool": "verify_recovery",
+   "kind": "observe",
+   "args": {},
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 8.78,
+   "result": "{\n \"healthy\": true,\n \"probe_success_rate\": 1.0,\n \"probe_p95_ms\": 21.0,\n \"problems\": [],\n \"probes\": {\n  \"GET /healthz\": {\n   \"ok\": 8,\n   \"fail\": 0,\n   \"statuses\": [\n    200\n   ],\n   \"last_error\": \"\"\n  },\n  \"GET /api/health\": {\n   \"ok\": 8,\n   \"fail\": 0,\n   \"statuses\": [\n    200\n   ],\n   \"last_error\": \"\"\n  },\n  \"GET /api/products\": {\n   \"ok\": 8,\n   \"fail\": 0,\n   \"statuses\": [\n    200\n   ],\n   \"last_error\": \"\"\n  },\n  \"GET /api/orders/recent\": {\n   \"ok\": 8,\n   \"fail\": 0,\n   \"statuses\": [\n    200\n   ],\n   \"last_error\": \"\"\n  },\n  \"POST /api/orders\": {\n   \"ok\": 8,\n   \"fail\": 0,\n   \"statuses\": [\n    201\n   ],\n   \"last_error\": \"\"\n  }\n }\n}"
+  },
+  {
+   "step": 10,
+   "t": 11.55,
+   "tool": "submit_report",
+   "kind": "final",
+   "args": {
+    "root_causes": [
+     {
+      "component": "api",
+      "category": "disk_full",
+      "evidence": "/data at 100%"
+     }
+    ],
+    "summary": "runbook applied 1 fix(es)",
+    "recovered": true
+   },
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.0,
+   "result": "report submitted"
+  }
+ ],
+ "episode_seconds": 78.8
+}

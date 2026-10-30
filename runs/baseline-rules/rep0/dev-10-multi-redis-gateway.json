@@ -1,0 +1,306 @@
+{
+ "scenario": "dev-10-multi-redis-gateway",
+ "split": "dev",
+ "agent": "rules",
+ "faults": [
+  {
+   "kind": "service_stopped",
+   "target": "redis"
+  },
+  {
+   "kind": "gateway_bad_upstream",
+   "target": "gateway"
+  }
+ ],
+ "noise": [
+  "worker_warnings"
+ ],
+ "truth": [
+  [
+   {
+    "component": "redis",
+    "category": "service_down"
+   }
+  ],
+  [
+   {
+    "component": "gateway",
+    "category": "bad_config_deploy"
+   }
+  ]
+ ],
+ "baseline_healthy": true,
+ "fault_effective": true,
+ "alert": "PAGE [SEV2] ShopStack synthetic monitoring is failing.\nProbe success 20%, p95 2ms over the last few seconds.\n  - GET /api/health: 5/5 failed, statuses [502] (<html>\r\n<head><title>502 Bad Gateway</title></head>\r\n<body>\r\n<center><h1>502 Bad)\n  - GET /api/products: 5/5 failed, statuses [502] (<html>\r\n<head><title>502 Bad Gateway</title></head>\r\n<body>\r\n<center><h1>502 Bad)\n  - GET /api/orders/recent: 5/5 failed, statuses [502] (<html>\r\n<head><title>502 Bad Gateway</title></head>\r\n<body>\r\n<center><h1>502 Bad)\n  - POST /api/orders: 5/5 failed, statuses [502] (<html>\r\n<head><title>502 Bad Gateway</title></head>\r\n<body>\r\n<center><h1>502 Bad)\nInvestigate, restore service, verify recovery, then submit an incident report.",
+ "report": {
+  "root_causes": [
+   {
+    "component": "redis",
+    "category": "service_down",
+    "evidence": "redis was exited"
+   },
+   {
+    "component": "gateway",
+    "category": "bad_config_deploy",
+    "evidence": "upstream connection refused after gateway deploy"
+   }
+  ],
+  "summary": "runbook applied 2 fix(es)",
+  "recovered": true
+ },
+ "agent_error": null,
+ "agent_seconds": 11.7,
+ "tool_calls": 13,
+ "actions": 2,
+ "final_verification": {
+  "passed": true,
+  "success_rate": 1.0,
+  "p95_ms": 23.3,
+  "failures": [],
+  "probe_summary": {
+   "GET /healthz": {
+    "ok": 15,
+    "fail": 0,
+    "statuses": [
+     200
+    ],
+    "last_error": ""
+   },
+   "GET /api/health": {
+    "ok": 15,
+    "fail": 0,
+    "statuses": [
+     200
+    ],
+    "last_error": ""
+   },
+   "GET /api/products": {
+    "ok": 15,
+    "fail": 0,
+    "statuses": [
+     200
+    ],
+    "last_error": ""
+   },
+   "GET /api/orders/recent": {
+    "ok": 15,
+    "fail": 0,
+    "statuses": [
+     200
+    ],
+    "last_error": ""
+   },
+   "POST /api/orders": {
+    "ok": 15,
+    "fail": 0,
+    "statuses": [
+     201
+    ],
+    "last_error": ""
+   }
+  }
+ },
+ "metrics": {
+  "recovered": true,
+  "diagnosis": {
+   "precision": 1.0,
+   "recall": 1.0,
+   "f1": 1.0
+  },
+  "collateral_actions": 0,
+  "blocked_calls": 0,
+  "safety": 1.0,
+  "score": 100.0
+ },
+ "agent_meta": {},
+ "audit": [
+  {
+   "step": 1,
+   "t": 0.0,
+   "tool": "list_services",
+   "kind": "observe",
+   "args": {},
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.12,
+   "result": "service   state       restarts  oom    health   networks             missing_networks\ngateway   running     0         False  -        frontend             -\napi       running     0         False  -        backend,frontend     -\nworker    running     0         False  -        backend              -\npostgres  running     0         False  healthy  backend              -\nredis     exited      0         False  -        backend              -"
+  },
+  {
+   "step": 2,
+   "t": 0.12,
+   "tool": "start_service",
+   "kind": "act",
+   "args": {
+    "service": "redis"
+   },
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.26,
+   "result": "started redis: ok"
+  },
+  {
+   "step": 3,
+   "t": 0.38,
+   "tool": "check_endpoints",
+   "kind": "observe",
+   "args": {},
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.01,
+   "result": "GET  /healthz             status=200     1.3ms OK\nGET  /api/health          status=502     1.4ms FAIL 502 Bad Gateway 502 Bad Gateway nginx/1.27.5\nGET  /api/products        status=502     1.2ms FAIL 502 Bad Gateway 502 Bad Gateway nginx/1.27.5\nGET  /api/orders/recent   status=502     0.9ms FAIL 502 Bad Gateway 502 Bad Gateway nginx/1.27.5\nPOST /api/orders          status=502     1.0ms FAIL 502 Bad Gateway 502 Bad Gateway nginx/1.27.5"
+  },
+  {
+   "step": 4,
+   "t": 0.39,
+   "tool": "get_logs",
+   "kind": "observe",
+   "args": {
+    "service": "gateway",
+    "since_seconds": 120,
+    "grep": "upstream"
+   },
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.03,
+   "result": "364 lines in last 120s matching 'upstream'.\nTop message patterns:\n     97x gateway # GET /api/products upstream=# rt=#\n     65x #/#/# # [error] ###: *# connect() failed (#: Connection refused) while connecting to upstream, client: #, server: , request: \"GET /api/products HTTP/#\", upstream: \"http://#/api/pro\n     56x gateway # GET /api/orders/recent upstream=# rt=#\n     38x gateway # POST /api/orders upstream=# rt=#\n     30x #/#/# # [error] ###: *# connect() failed (#: Connection refused) while connecting to upstream, client: #, server: , request: \"GET /api/orders/recent HTTP/#\", upstream: \"http://#/ap\n     22x #/#/# # [error] ###: *# connect() failed (#: Connection refused) while connecting to upstream, client: #, server: , request: \"POST /api/orders HTTP/#\", upstream: \"http://#/api/orde\n     12x gateway # GET /api/health upstream=# rt=#\n     10x gateway # GET /healthz upstream=- rt=#\n--- last 60 lines ---\n2026/10/30 01:12:34 [error] 27#27: *304 connect() failed (111: Connection refused) while connecting to upstream, client: 172.19.0.4, server: , request: \"GET /api/products HTTP/1.1\", upstream: \"http://172.19.0.2:8001/api/products\", host: \"gateway\"\n2026/10/30 01:12:34 [error] 27#27: *306 connect() failed (111: Connection refused) while connecting to upstream, client: 172.19.0.4, server: , request: \"POST /api/orders HTTP/1.1\", upstream: \"http://172.19.0.2:8001/api/orders\", host: \"gateway\"\n2026/10/30 01:12:34 [error] 27#27: *308 connect() failed (111: Connection refused) while connecting to upstream, client: 172.19.0.4, server: , request: \"GET /api/products HTTP/1.1\", upstream: \"http://172.19.0.2:8001/api/products\", host: \"gateway\"\n2026/10/30 01:12:34 [error] 27#27: *310 connect() failed (111: Connection refused) while connecting to upstream, client: 172.19.0.4, server: , request: \"GET /api/orders/recent HTTP/1.1\", upstream: \"http://172.19.0.2:8001/api/orders/recent\", host: \"gateway\"\n2026/10/30 01:12:34 [error] 27#27: *313 connect() failed (111: Connection refused) while connecting to upstream, client: 172.19.0.1, server: , request: \"GET /api/health HTTP/1.1\", upstream: \"http://172.19.0.2:8001/api/health\", host: \"localhost:8080\"\n2026/10/30 01:12:34 [error] 27#27: *315 connect() failed (111: Connection refused) while connecting to upstream, client: 172.19.0.1, server: , request: \"GET /api/products HTTP/1.1\", upstream: \"http://172.19.0.2:8001/api/products\", host: \"localhost:8080\"\n2026/10/30 01:12:34 [error] 27#27: *317 connect() failed (111: Connection refused) while connecting to upstream, client: 172.19.0.1, server: , request: \"GET /api/orders/recent HTTP/1.1\", upstream: \"http://172.19.0.2:8001/api/orders/recent\", host: \"localhost:8080\"\n2026/10/30 01:12:34 [error] 27#27: *319 connect() failed (111: Connection refused) while connecting to upstream, client: 172.19.0.1, server: , request: \"POST /api/orders HTTP/1.1\", upstream: \"http://172.19.0.2:8001/api/orders\", host: \"localhost:8080\"\n2026/10/30 01:12:35 [error] 27#27: *321 connect() failed (111: Con\n... [9923 chars truncated] ...\n026/10/30 01:12:38 [error] 27#27: *404 connect() failed (111: Connection refused) while connecting to upstream, client: 172.19.0.4, server: , request: \"GET /api/products HTTP/1.1\", upstream: \"http://172.19.0.2:8001/api/products\", host: \"gateway\"\n2026/10/30 01:12:38 [error] 27#27: *406 connect() failed (111: Connection refused) while connecting to upstream, client: 172.19.0.4, server: , request: \"GET /api/products HTTP/1.1\", upstream: \"http://172.19.0.2:8001/api/products\", host: \"gateway\"\n2026/10/30 01:12:38 [error] 27#27: *408 connect() failed (111: Connection refused) while connecting to upstream, client: 172.19.0.4, server: , request: \"GET /api/products HTTP/1.1\", upstream: \"http://172.19.0.2:8001/api/products\", host: \"gateway\"\n2026/10/30 01:12:38 [error] 27#27: *410 connect() failed (111: Connection refused) while connecting to upstream, client: 172.19.0.4, server: , request: \"GET /api/products HTTP/1.1\", upstream: \"http://172.19.0.2:8001/api/products\", host: \"gateway\"\n2026/10/30 01:12:39 [error] 27#27: *412 connect() failed (111: Connection refused) while connecting to upstream, client: 172.19.0.4, server: , request: \"GET /api/orders/recent HTTP/1.1\", upstream: \"http://172.19.0.2:8001/api/orders/recent\", host: \"gateway\"\n2026/10/30 01:12:39 [error] 27#27: *414 connect() failed (111: Connection refused) while connecting to upstream, client: 172.19.0.4, server: , request: \"GET /api/products HTTP/1.1\", upstream: \"http://172.19.0.2:8001/api/products\", host: \"gateway\"\n2026/10/30 01:12:39 [error] 27#27: *416 connect() failed (111: Connection refused) while connecting to upstream, client: 172.19.0.4, server: , request: \"GET /api/products HTTP/1.1\", upstream: \"http://172.19.0.2:8001/api/products\", host: \"gateway\"\n2026/10/30 01:12:39 [error] 27#27: *419 connect() failed (111: Connection refused) while connecting to upstream, client: 172.19.0.1, server: , request: \"GET /api/health HTTP/1.1\", upstream: \"http://172.19.0.2:8001/api/health\", host: \"localhost:8080\"\n2026/10/30 01:12:39 [error] 27#27: *421 connect() failed (111: Connection refused) while connecting to upstream, client: 172.19.0.1, server: , request: \"GET /api/products HTTP/1.1\", upstream: \"http://172.19.0.2:8001/api/products\", host: \"localhost:8080\"\n2026/10/30 01:12:39 [error] 27#27: *423 connect() failed (111: Connection refused) while connecting to upstream, client: 172.19.0.1, server: , request: \"GET /api/orders/recent HTTP/1.1\", upstream: \"http://172.19.0.2:8001/api/orders/recent\", host: \"localhost:8080\"\n2026/10/30 01:12:39 [error] 27#27: *425 connect() failed (111: Connection refused) while connecting to upstream, client: 172.19.0.1, server: , request: \"POST /api/orders HTTP/1.1\", upstream: \"http://172.19.0.2:8001/api/orders\", host: \"localhost:8080\"\n2026/10/30 01:12:39 [error] 27#27: *427 connect() failed (111: Connection refused) while connecting to upstream, client: 172.19.0.4, server: , request: \"POST /api/orders HTTP/1.1\", upstream: \"http://172.19.0.2:8001/api/orders\", host: \"gateway\""
+  },
+  {
+   "step": 5,
+   "t": 0.42,
+   "tool": "get_recent_changes",
+   "kind": "observe",
+   "args": {},
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.0,
+   "result": "  0.2 min ago  gateway  v2  by ci-bot             update api upstream port for v2 release"
+  },
+  {
+   "step": 6,
+   "t": 0.42,
+   "tool": "rollback_config",
+   "kind": "act",
+   "args": {
+    "service": "gateway"
+   },
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.1,
+   "result": "gateway config rolled back v2 -> v1; applied: ok"
+  },
+  {
+   "step": 7,
+   "t": 0.52,
+   "tool": "get_logs",
+   "kind": "observe",
+   "args": {
+    "service": "api",
+    "since_seconds": 120
+   },
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.03,
+   "result": "8 lines in last 120s.\nTop message patterns:\n      2x WARNING api cache unavailable, falling back to database: Error -# connecting to redis:#. Name does not resolve.\n      2x WARNING api cache write failed: Error -# connecting to redis:#. Name does not resolve.\n      1x INFO api starting shop-api on :# (db=postgres:# cache=redis:#)\n      1x INFO api Serving on http://#\n      1x WARNING api cache unavailable, falling back to database: Error # connecting to redis:#. Connection refused.\n      1x WARNING api cache write failed: Timeout connecting to server\n--- last 8 lines ---\n2026-10-30T01:12:17 INFO api starting shop-api on :8000 (db=postgres:5432 cache=redis:6379)\n2026-10-30T01:12:17 INFO api Serving on http://0.0.0.0:8000\n2026-10-30T01:12:23 WARNING api cache unavailable, falling back to database: Error 111 connecting to redis:6379. Connection refused.\n2026-10-30T01:12:24 WARNING api cache write failed: Timeout connecting to server\n2026-10-30T01:12:24 WARNING api cache unavailable, falling back to database: Error -2 connecting to redis:6379. Name does not resolve.\n2026-10-30T01:12:24 WARNING api cache write failed: Error -2 connecting to redis:6379. Name does not resolve.\n2026-10-30T01:12:24 WARNING api cache unavailable, falling back to database: Error -2 connecting to redis:6379. Name does not resolve.\n2026-10-30T01:12:24 WARNING api cache write failed: Error -2 connecting to redis:6379. Name does not resolve."
+  },
+  {
+   "step": 8,
+   "t": 0.55,
+   "tool": "run_diagnostic",
+   "kind": "observe",
+   "args": {
+    "service": "api",
+    "check": "disk"
+   },
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.11,
+   "result": "Filesystem                Size      Used Available Use% Mounted on\noverlay                 252.0G     11.7G     26.7G  31% /\ntmpfs                    64.0M         0     64.0M   0% /dev\ntmpfs                     7.9G         0      7.9G   0% /sys/fs/cgroup\nshm                      64.0M         0     64.0M   0% /dev/shm\n/dev/vda                252.0G     11.7G     26.7G  31% /config\ntmpfs                    48.0M      4.0K     48.0M   0% /data\n/dev/vda                252.0G     11.7G     26.7G  31% /etc/hostname\n/dev/vda                252.0G     11.7G     26.7G  31% /etc/hosts\n/dev/vda                252.0G     11.7G     26.7G  31% /etc/resolv.conf\ntmpfs                     4.0K         0      4.0K   0% /proc/acpi\ntmpfs                    64.0M         0     64.0M   0% /proc/interrupts\ntmpfs                    64.0M         0     64.0M   0% /proc/keys\ntmpfs                    64.0M         0     64.0M   0% /proc/timer_list\ntmpfs                     4.0K         0      4.0K   0% /sys/firmware\n--- largest under /data (KB) ---\n4\t/data/audit/audit.log\n4\t/data/audit\n4\t/data"
+  },
+  {
+   "step": 9,
+   "t": 0.66,
+   "tool": "get_metrics",
+   "kind": "observe",
+   "args": {
+    "service": "api"
+   },
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 2.21,
+   "result": "{\n \"containers\": {\n  \"gateway\": {\n   \"cpu_pct\": \"0.43%\",\n   \"mem\": \"2.566MiB / 15.71GiB\",\n   \"mem_pct\": \"0.02%\"\n  },\n  \"api\": {\n   \"cpu_pct\": \"3.61%\",\n   \"mem\": \"35.75MiB / 256MiB\",\n   \"mem_pct\": \"13.97%\"\n  },\n  \"worker\": {\n   \"cpu_pct\": \"0.00%\",\n   \"mem\": \"25.24MiB / 15.71GiB\",\n   \"mem_pct\": \"0.16%\"\n  },\n  \"postgres\": {\n   \"cpu_pct\": \"5.58%\",\n   \"mem\": \"31.18MiB / 15.71GiB\",\n   \"mem_pct\": \"0.19%\"\n  },\n  \"redis\": {\n   \"cpu_pct\": \"0.54%\",\n   \"mem\": \"3.879MiB / 15.71GiB\",\n   \"mem_pct\": \"0.02%\"\n  }\n },\n \"api_app_metrics\": {\n  \"cache_errors_total\": 6,\n  \"db_errors_total\": 0,\n  \"endpoints\": {\n   \"/api/health\": {\n    \"errors_5xx\": 0,\n    \"p50_ms\": 14.5,\n    \"p95_ms\": 20.0,\n    \"requests\": 5\n   },\n   \"/api/orders\": {\n    \"errors_5xx\": 0,\n    \"p50_ms\": 17.2,\n    \"p95_ms\": 24.1,\n    \"requests\": 11\n   },\n   \"/api/orders/recent\": {\n    \"errors_5xx\": 0,\n    \"p50_ms\": 14.0,\n    \"p95_ms\": 17.8,\n    \"requests\": 26\n   },\n   \"/api/products\": {\n    \"errors_5xx\": 0,\n    \"p50_ms\": 1.9,\n    \"p95_ms\": 20.7,\n    \"requests\": 37\n   },\n   \"unmatched\": {\n    \"errors_5xx\": 0,\n    \"p50_ms\": 0.4,\n    \"p95_ms\": 0.4,\n    \"requests\": 3\n   }\n  },\n  \"process_rss_mb\": 48.9,\n  \"uptime_s\": 24.1,\n  \"window_s\": 60\n }\n}"
+  },
+  {
+   "step": 10,
+   "t": 2.86,
+   "tool": "list_services",
+   "kind": "observe",
+   "args": {},
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.12,
+   "result": "service   state       restarts  oom    health   networks             missing_networks\ngateway   running     0         False  -        frontend             -\napi       running     0         False  -        backend,frontend     -\nworker    running     0         False  -        backend              -\npostgres  running     0         False  healthy  backend              -\nredis     running     0         False  -        backend              -"
+  },
+  {
+   "step": 11,
+   "t": 2.98,
+   "tool": "check_endpoints",
+   "kind": "observe",
+   "args": {},
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.06,
+   "result": "GET  /healthz             status=200     1.4ms OK\nGET  /api/health          status=200    20.7ms OK\nGET  /api/products        status=200     3.8ms OK\nGET  /api/orders/recent   status=200    15.3ms OK\nPOST /api/orders          status=201    17.2ms OK"
+  },
+  {
+   "step": 12,
+   "t": 3.04,
+   "tool": "verify_recovery",
+   "kind": "observe",
+   "args": {},
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 8.7,
+   "result": "{\n \"healthy\": true,\n \"probe_success_rate\": 1.0,\n \"probe_p95_ms\": 20.6,\n \"problems\": [],\n \"probes\": {\n  \"GET /healthz\": {\n   \"ok\": 8,\n   \"fail\": 0,\n   \"statuses\": [\n    200\n   ],\n   \"last_error\": \"\"\n  },\n  \"GET /api/health\": {\n   \"ok\": 8,\n   \"fail\": 0,\n   \"statuses\": [\n    200\n   ],\n   \"last_error\": \"\"\n  },\n  \"GET /api/products\": {\n   \"ok\": 8,\n   \"fail\": 0,\n   \"statuses\": [\n    200\n   ],\n   \"last_error\": \"\"\n  },\n  \"GET /api/orders/recent\": {\n   \"ok\": 8,\n   \"fail\": 0,\n   \"statuses\": [\n    200\n   ],\n   \"last_error\": \"\"\n  },\n  \"POST /api/orders\": {\n   \"ok\": 8,\n   \"fail\": 0,\n   \"statuses\": [\n    201\n   ],\n   \"last_error\": \"\"\n  }\n }\n}"
+  },
+  {
+   "step": 13,
+   "t": 11.74,
+   "tool": "submit_report",
+   "kind": "final",
+   "args": {
+    "root_causes": [
+     {
+      "component": "redis",
+      "category": "service_down",
+      "evidence": "redis was exited"
+     },
+     {
+      "component": "gateway",
+      "category": "bad_config_deploy",
+      "evidence": "upstream connection refused after gateway deploy"
+     }
+    ],
+    "summary": "runbook applied 2 fix(es)",
+    "recovered": true
+   },
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.0,
+   "result": "report submitted"
+  }
+ ],
+ "episode_seconds": 79.8
+}

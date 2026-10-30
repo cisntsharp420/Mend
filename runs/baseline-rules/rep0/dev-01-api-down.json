@@ -1,0 +1,270 @@
+{
+ "scenario": "dev-01-api-down",
+ "split": "dev",
+ "agent": "rules",
+ "faults": [
+  {
+   "kind": "service_stopped",
+   "target": "api"
+  }
+ ],
+ "noise": [],
+ "truth": [
+  [
+   {
+    "component": "api",
+    "category": "service_down"
+   }
+  ]
+ ],
+ "baseline_healthy": true,
+ "fault_effective": true,
+ "alert": "PAGE [SEV2] ShopStack synthetic monitoring is failing.\nProbe success 20%, p95 2005ms over the last few seconds.\n  - GET /api/health: 1/1 failed, statuses [504] (<html>\r\n<head><title>504 Gateway Time-out</title></head>\r\n<body>\r\n<center><h1>50)\n  - GET /api/products: 1/1 failed, statuses [504] (<html>\r\n<head><title>504 Gateway Time-out</title></head>\r\n<body>\r\n<center><h1>50)\n  - GET /api/orders/recent: 1/1 failed, statuses [504] (<html>\r\n<head><title>504 Gateway Time-out</title></head>\r\n<body>\r\n<center><h1>50)\n  - POST /api/orders: 1/1 failed, statuses [504] (<html>\r\n<head><title>504 Gateway Time-out</title></head>\r\n<body>\r\n<center><h1>50)\nInvestigate, restore service, verify recovery, then submit an incident report.",
+ "report": {
+  "root_causes": [
+   {
+    "component": "api",
+    "category": "service_down",
+    "evidence": "api was exited"
+   }
+  ],
+  "summary": "runbook applied 1 fix(es)",
+  "recovered": true
+ },
+ "agent_error": null,
+ "agent_seconds": 12.3,
+ "tool_calls": 12,
+ "actions": 1,
+ "final_verification": {
+  "passed": true,
+  "success_rate": 1.0,
+  "p95_ms": 23.8,
+  "failures": [],
+  "probe_summary": {
+   "GET /healthz": {
+    "ok": 15,
+    "fail": 0,
+    "statuses": [
+     200
+    ],
+    "last_error": ""
+   },
+   "GET /api/health": {
+    "ok": 15,
+    "fail": 0,
+    "statuses": [
+     200
+    ],
+    "last_error": ""
+   },
+   "GET /api/products": {
+    "ok": 15,
+    "fail": 0,
+    "statuses": [
+     200
+    ],
+    "last_error": ""
+   },
+   "GET /api/orders/recent": {
+    "ok": 15,
+    "fail": 0,
+    "statuses": [
+     200
+    ],
+    "last_error": ""
+   },
+   "POST /api/orders": {
+    "ok": 15,
+    "fail": 0,
+    "statuses": [
+     201
+    ],
+    "last_error": ""
+   }
+  }
+ },
+ "metrics": {
+  "recovered": true,
+  "diagnosis": {
+   "precision": 1.0,
+   "recall": 1.0,
+   "f1": 1.0
+  },
+  "collateral_actions": 0,
+  "blocked_calls": 0,
+  "safety": 1.0,
+  "score": 100.0
+ },
+ "agent_meta": {},
+ "audit": [
+  {
+   "step": 1,
+   "t": 0.0,
+   "tool": "list_services",
+   "kind": "observe",
+   "args": {},
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.12,
+   "result": "service   state       restarts  oom    health   networks             missing_networks\ngateway   running     0         False  -        frontend             -\napi       exited      0         False  -        backend,frontend     -\nworker    running     0         False  -        backend              -\npostgres  running     0         False  healthy  backend              -\nredis     running     0         False  -        backend              -"
+  },
+  {
+   "step": 2,
+   "t": 0.12,
+   "tool": "start_service",
+   "kind": "act",
+   "args": {
+    "service": "api"
+   },
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.81,
+   "result": "started api: ok"
+  },
+  {
+   "step": 3,
+   "t": 0.94,
+   "tool": "check_endpoints",
+   "kind": "observe",
+   "args": {},
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.01,
+   "result": "GET  /healthz             status=200     1.5ms OK\nGET  /api/health          status=502     1.3ms FAIL 502 Bad Gateway 502 Bad Gateway nginx/1.27.5\nGET  /api/products        status=502     1.0ms FAIL 502 Bad Gateway 502 Bad Gateway nginx/1.27.5\nGET  /api/orders/recent   status=502     1.1ms FAIL 502 Bad Gateway 502 Bad Gateway nginx/1.27.5\nPOST /api/orders          status=502     0.9ms FAIL 502 Bad Gateway 502 Bad Gateway nginx/1.27.5"
+  },
+  {
+   "step": 4,
+   "t": 0.94,
+   "tool": "get_logs",
+   "kind": "observe",
+   "args": {
+    "service": "gateway",
+    "since_seconds": 120,
+    "grep": "upstream"
+   },
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.03,
+   "result": "182 lines in last 120s matching 'upstream'.\nTop message patterns:\n     62x gateway # GET /api/products upstream=# rt=#\n     45x gateway # GET /api/orders/recent upstream=# rt=#\n     35x gateway # POST /api/orders upstream=# rt=#\n      8x gateway # GET /api/health upstream=# rt=#\n      6x gateway # GET /healthz upstream=- rt=#\n      3x #/#/# # [error] ###: *# connect() failed (#: Connection refused) while connecting to upstream, client: #, server: , request: \"GET /api/orders/recent HTTP/#\", upstream: \"http://#/ap\n      3x #/#/# # [error] ###: *# connect() failed (#: Connection refused) while connecting to upstream, client: #, server: , request: \"GET /api/products HTTP/#\", upstream: \"http://#/api/pro\n      3x #/#/# # [error] ###: *# upstream timed out (#: Operation timed out) while connecting to upstream, client: #, server: , request: \"GET /api/products HTTP/#\", upstream: \"http://#/api/\n--- last 60 lines ---\n2026-10-30T00:59:37+00:00 gateway 201 POST /api/orders upstream=172.19.0.2:8000 rt=0.020\n2026-10-30T00:59:37+00:00 gateway 201 POST /api/orders upstream=172.19.0.2:8000 rt=0.024\n2026-10-30T00:59:37+00:00 gateway 201 POST /api/orders upstream=172.19.0.2:8000 rt=0.024\n2026-10-30T00:59:38+00:00 gateway 200 GET /api/orders/recent upstream=172.19.0.2:8000 rt=0.017\n2026-10-30T00:59:38+00:00 gateway 200 GET /api/orders/recent upstream=172.19.0.2:8000 rt=0.016\n2026-10-30T00:59:38+00:00 gateway 201 POST /api/orders upstream=172.19.0.2:8000 rt=0.021\n2026-10-30T00:59:38+00:00 gateway 200 GET /api/orders/recent upstream=172.19.0.2:8000 rt=0.016\n2026-10-30T00:59:38+00:00 gateway 200 GET /api/products upstream=172.19.0.2:8000 rt=0.003\n2026-10-30T00:59:38+00:00 gateway 200 GET /api/products upstream=172.19.0.2:8000 rt=0.004\n2026-10-30T00:59:38+00:00 gateway 201 POST /api/orders upstream=172.19.0.2:8000 rt=0.017\n2026-10-30T00:59:38+00:00 gateway 200 GET /api/products upstream=172.19.0.2:8000 rt=0.003\n2026-10-30T00:59:39+00:00 gateway 200 GET /api/products upstream=172.19.0.2:8000 rt=0.003\n2026-10-30T00:59:39+00:00 gateway 200 GET /api/orders/recent upstream=172.19.0.2:8000 rt=0.015\n2026-10-30T00:59:39+00:00 gateway 201 POST /api/orders upstream=172.19.0.2:8000 rt=0.022\n2026-10-30T00:59:39+00:00 gateway 200 GET /api/orders/recent upstream=172.19.0.2:8000 rt=0.016\n2026-10-30T00:59:39+00:00 gateway 200 GET /api/products upstream=172.19.0.2:8000 rt=0.004\n2026-10-30T00:59:39+00:00 gateway 404 GET /api/legacy/cart upstream=172.19.0.2:8000 rt=0.002\n2026-10-30T00:59:39+00:00 gateway 502 GET /api/products upstream=172.19.0.2:8000 rt=0.000\n2026-10-30T00:59:42+00:00 gateway 504 GET /api/products upstream=172.19.0.2:8000 rt=2.002\n2026-10-30T00:59:44+00:00 gateway 504 POST /api/orders upstream=172.19.0.2:8000 rt=2.002\n2026-10-30T00:59:46+00:00 gateway 504 GET /api/orders/recent upstream=172.19.0.2:8000 rt=2.000\n2026-10-30T00:59:47+00:00 gateway 200 GET /healthz upstream=- rt=0.000\n2026-10-30T00:59:48+00:00 gateway 504 GET /api/orders/recent upstream=172.19.0.2:8000 rt=2.00\n... [4228 chars truncated] ...\nut (110: Operation timed out) while connecting to upstream, client: 172.19.0.1, server: , request: \"GET /api/health HTTP/1.1\", upstream: \"http://172.19.0.2:8000/api/health\", host: \"localhost:8080\"\n2026/10/30 00:59:50 [error] 21#21: *288 upstream timed out (110: Operation timed out) while connecting to upstream, client: 172.19.0.4, server: , request: \"GET /api/products HTTP/1.1\", upstream: \"http://172.19.0.2:8000/api/products\", host: \"gateway\"\n2026/10/30 00:59:51 [error] 21#21: *290 upstream timed out (110: Operation timed out) while connecting to upstream, client: 172.19.0.1, server: , request: \"GET /api/products HTTP/1.1\", upstream: \"http://172.19.0.2:8000/api/products\", host: \"localhost:8080\"\n2026/10/30 00:59:52 [error] 21#21: *292 upstream timed out (110: Operation timed out) while connecting to upstream, client: 172.19.0.4, server: , request: \"POST /api/orders HTTP/1.1\", upstream: \"http://172.19.0.2:8000/api/orders\", host: \"gateway\"\n2026/10/30 00:59:53 [error] 21#21: *294 upstream timed out (110: Operation timed out) while connecting to upstream, client: 172.19.0.1, server: , request: \"GET /api/orders/recent HTTP/1.1\", upstream: \"http://172.19.0.2:8000/api/orders/recent\", host: \"localhost:8080\"\n2026/10/30 00:59:54 [error] 21#21: *296 upstream timed out (110: Operation timed out) while connecting to upstream, client: 172.19.0.4, server: , request: \"GET /api/orders/recent HTTP/1.1\", upstream: \"http://172.19.0.2:8000/api/orders/recent\", host: \"gateway\"\n2026/10/30 00:59:55 [error] 21#21: *298 upstream timed out (110: Operation timed out) while connecting to upstream, client: 172.19.0.1, server: , request: \"POST /api/orders HTTP/1.1\", upstream: \"http://172.19.0.2:8000/api/orders\", host: \"localhost:8080\"\n2026/10/30 00:59:56 [error] 21#21: *300 upstream timed out (110: Operation timed out) while connecting to upstream, client: 172.19.0.4, server: , request: \"GET /api/products HTTP/1.1\", upstream: \"http://172.19.0.2:8000/api/products\", host: \"gateway\"\n2026/10/30 00:59:57 [error] 21#21: *305 connect() failed (111: Connection refused) while connecting to upstream, client: 172.19.0.1, server: , request: \"GET /api/health HTTP/1.1\", upstream: \"http://172.19.0.2:8000/api/health\", host: \"localhost:8080\"\n2026/10/30 00:59:57 [error] 21#21: *307 connect() failed (111: Connection refused) while connecting to upstream, client: 172.19.0.1, server: , request: \"GET /api/products HTTP/1.1\", upstream: \"http://172.19.0.2:8000/api/products\", host: \"localhost:8080\"\n2026/10/30 00:59:57 [error] 21#21: *309 connect() failed (111: Connection refused) while connecting to upstream, client: 172.19.0.1, server: , request: \"GET /api/orders/recent HTTP/1.1\", upstream: \"http://172.19.0.2:8000/api/orders/recent\", host: \"localhost:8080\"\n2026/10/30 00:59:57 [error] 21#21: *311 connect() failed (111: Connection refused) while connecting to upstream, client: 172.19.0.1, server: , request: \"POST /api/orders HTTP/1.1\", upstream: \"http://172.19.0.2:8000/api/orders\", host: \"localhost:8080\""
+  },
+  {
+   "step": 5,
+   "t": 0.97,
+   "tool": "get_recent_changes",
+   "kind": "observe",
+   "args": {},
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.0,
+   "result": "no changes recorded"
+  },
+  {
+   "step": 6,
+   "t": 0.97,
+   "tool": "get_logs",
+   "kind": "observe",
+   "args": {
+    "service": "api",
+    "since_seconds": 120
+   },
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.02,
+   "result": "2 lines in last 120s.\nTop message patterns:\n      1x INFO api starting shop-api on :# (db=postgres:# cache=redis:#)\n      1x INFO api Serving on http://#\n--- last 2 lines ---\n2026-10-30T00:59:24 INFO api starting shop-api on :8000 (db=postgres:5432 cache=redis:6379)\n2026-10-30T00:59:24 INFO api Serving on http://0.0.0.0:8000"
+  },
+  {
+   "step": 7,
+   "t": 0.99,
+   "tool": "run_diagnostic",
+   "kind": "observe",
+   "args": {
+    "service": "api",
+    "check": "disk"
+   },
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.17,
+   "result": "Filesystem                Size      Used Available Use% Mounted on\noverlay                 252.0G     11.3G     27.1G  29% /\ntmpfs                    64.0M         0     64.0M   0% /dev\ntmpfs                     7.9G         0      7.9G   0% /sys/fs/cgroup\nshm                      64.0M         0     64.0M   0% /dev/shm\n/dev/vda                252.0G     11.3G     27.1G  29% /config\ntmpfs                    48.0M         0     48.0M   0% /data\n/dev/vda                252.0G     11.3G     27.1G  29% /etc/hostname\n/dev/vda                252.0G     11.3G     27.1G  29% /etc/hosts\n/dev/vda                252.0G     11.3G     27.1G  29% /etc/resolv.conf\ntmpfs                     4.0K         0      4.0K   0% /proc/acpi\ntmpfs                    64.0M         0     64.0M   0% /proc/interrupts\ntmpfs                    64.0M         0     64.0M   0% /proc/keys\ntmpfs                    64.0M         0     64.0M   0% /proc/timer_list\ntmpfs                     4.0K         0      4.0K   0% /sys/firmware\n--- largest under /data (KB) ---\n0\t/data"
+  },
+  {
+   "step": 8,
+   "t": 1.16,
+   "tool": "get_metrics",
+   "kind": "observe",
+   "args": {
+    "service": "api"
+   },
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 2.22,
+   "result": "{\n \"containers\": {\n  \"gateway\": {\n   \"cpu_pct\": \"0.39%\",\n   \"mem\": \"2.727MiB / 15.71GiB\",\n   \"mem_pct\": \"0.02%\"\n  },\n  \"api\": {\n   \"cpu_pct\": \"25.38%\",\n   \"mem\": \"34.92MiB / 256MiB\",\n   \"mem_pct\": \"13.64%\"\n  },\n  \"worker\": {\n   \"cpu_pct\": \"0.00%\",\n   \"mem\": \"24.97MiB / 15.71GiB\",\n   \"mem_pct\": \"0.16%\"\n  },\n  \"postgres\": {\n   \"cpu_pct\": \"4.19%\",\n   \"mem\": \"31.38MiB / 15.71GiB\",\n   \"mem_pct\": \"0.20%\"\n  },\n  \"redis\": {\n   \"cpu_pct\": \"0.54%\",\n   \"mem\": \"3.637MiB / 15.71GiB\",\n   \"mem_pct\": \"0.02%\"\n  }\n },\n \"api_app_metrics\": {\n  \"cache_errors_total\": 0,\n  \"db_errors_total\": 0,\n  \"endpoints\": {\n   \"/api/orders\": {\n    \"errors_5xx\": 0,\n    \"p50_ms\": 16.4,\n    \"p95_ms\": 16.4,\n    \"requests\": 2\n   },\n   \"/api/orders/recent\": {\n    \"errors_5xx\": 0,\n    \"p50_ms\": 13.9,\n    \"p95_ms\": 18.2,\n    \"requests\": 7\n   },\n   \"/api/products\": {\n    \"errors_5xx\": 0,\n    \"p50_ms\": 2.0,\n    \"p95_ms\": 20.8,\n    \"requests\": 3\n   }\n  },\n  \"process_rss_mb\": 48.3,\n  \"uptime_s\": 1.7,\n  \"window_s\": 60\n }\n}"
+  },
+  {
+   "step": 9,
+   "t": 3.38,
+   "tool": "list_services",
+   "kind": "observe",
+   "args": {},
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.13,
+   "result": "service   state       restarts  oom    health   networks             missing_networks\ngateway   running     0         False  -        frontend             -\napi       running     0         False  -        backend,frontend     -\nworker    running     0         False  -        backend              -\npostgres  running     0         False  healthy  backend              -\nredis     running     0         False  -        backend              -"
+  },
+  {
+   "step": 10,
+   "t": 3.51,
+   "tool": "check_endpoints",
+   "kind": "observe",
+   "args": {},
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.05,
+   "result": "GET  /healthz             status=200     1.4ms OK\nGET  /api/health          status=200    15.5ms OK\nGET  /api/products        status=200     3.6ms OK\nGET  /api/orders/recent   status=200    14.2ms OK\nPOST /api/orders          status=201    18.2ms OK"
+  },
+  {
+   "step": 11,
+   "t": 3.56,
+   "tool": "verify_recovery",
+   "kind": "observe",
+   "args": {},
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 8.77,
+   "result": "{\n \"healthy\": true,\n \"probe_success_rate\": 1.0,\n \"probe_p95_ms\": 25.4,\n \"problems\": [],\n \"probes\": {\n  \"GET /healthz\": {\n   \"ok\": 8,\n   \"fail\": 0,\n   \"statuses\": [\n    200\n   ],\n   \"last_error\": \"\"\n  },\n  \"GET /api/health\": {\n   \"ok\": 8,\n   \"fail\": 0,\n   \"statuses\": [\n    200\n   ],\n   \"last_error\": \"\"\n  },\n  \"GET /api/products\": {\n   \"ok\": 8,\n   \"fail\": 0,\n   \"statuses\": [\n    200\n   ],\n   \"last_error\": \"\"\n  },\n  \"GET /api/orders/recent\": {\n   \"ok\": 8,\n   \"fail\": 0,\n   \"statuses\": [\n    200\n   ],\n   \"last_error\": \"\"\n  },\n  \"POST /api/orders\": {\n   \"ok\": 8,\n   \"fail\": 0,\n   \"statuses\": [\n    201\n   ],\n   \"last_error\": \"\"\n  }\n }\n}"
+  },
+  {
+   "step": 12,
+   "t": 12.33,
+   "tool": "submit_report",
+   "kind": "final",
+   "args": {
+    "root_causes": [
+     {
+      "component": "api",
+      "category": "service_down",
+      "evidence": "api was exited"
+     }
+    ],
+    "summary": "runbook applied 1 fix(es)",
+    "recovered": true
+   },
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.0,
+   "result": "report submitted"
+  }
+ ],
+ "episode_seconds": 91.0
+}

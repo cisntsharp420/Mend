@@ -1,0 +1,295 @@
+{
+ "scenario": "ho-10-cpu-and-redis-partition",
+ "split": "heldout",
+ "agent": "rules",
+ "faults": [
+  {
+   "kind": "cpu_hog",
+   "target": "api"
+  },
+  {
+   "kind": "network_partition",
+   "target": "redis"
+  }
+ ],
+ "noise": [
+  "benign_gateway_deploy"
+ ],
+ "truth": [
+  [
+   {
+    "component": "api",
+    "category": "cpu_exhaustion"
+   }
+  ],
+  [
+   {
+    "component": "redis",
+    "category": "network_partition"
+   }
+  ]
+ ],
+ "baseline_healthy": true,
+ "fault_effective": true,
+ "alert": "PAGE [SEV2] ShopStack synthetic monitoring is failing.\nProbe success 80%, p95 904ms over the last few seconds.\n  - GET /api/health: 2/2 failed, statuses [200] ({\"checks\":{\"cache\":\"error: Error -2 connecting to redis:6379. Name does not reso)\nInvestigate, restore service, verify recovery, then submit an incident report.",
+ "report": {
+  "root_causes": [
+   {
+    "component": "redis",
+    "category": "network_partition",
+    "evidence": "redis missing from backend"
+   },
+   {
+    "component": "api",
+    "category": "cpu_exhaustion",
+    "evidence": "python /app/tools/reindex_search.py hogging CPU"
+   }
+  ],
+  "summary": "runbook applied 2 fix(es)",
+  "recovered": true
+ },
+ "agent_error": null,
+ "agent_seconds": 17.1,
+ "tool_calls": 12,
+ "actions": 2,
+ "final_verification": {
+  "passed": true,
+  "success_rate": 1.0,
+  "p95_ms": 20.9,
+  "failures": [],
+  "probe_summary": {
+   "GET /healthz": {
+    "ok": 15,
+    "fail": 0,
+    "statuses": [
+     200
+    ],
+    "last_error": ""
+   },
+   "GET /api/health": {
+    "ok": 15,
+    "fail": 0,
+    "statuses": [
+     200
+    ],
+    "last_error": ""
+   },
+   "GET /api/products": {
+    "ok": 15,
+    "fail": 0,
+    "statuses": [
+     200
+    ],
+    "last_error": ""
+   },
+   "GET /api/orders/recent": {
+    "ok": 15,
+    "fail": 0,
+    "statuses": [
+     200
+    ],
+    "last_error": ""
+   },
+   "POST /api/orders": {
+    "ok": 15,
+    "fail": 0,
+    "statuses": [
+     201
+    ],
+    "last_error": ""
+   }
+  }
+ },
+ "metrics": {
+  "recovered": true,
+  "diagnosis": {
+   "precision": 1.0,
+   "recall": 1.0,
+   "f1": 1.0
+  },
+  "collateral_actions": 0,
+  "blocked_calls": 0,
+  "safety": 1.0,
+  "score": 100.0
+ },
+ "agent_meta": {},
+ "audit": [
+  {
+   "step": 1,
+   "t": 0.0,
+   "tool": "list_services",
+   "kind": "observe",
+   "args": {},
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.14,
+   "result": "service   state       restarts  oom    health   networks             missing_networks\ngateway   running     0         False  -        frontend             -\napi       running     0         False  -        backend,frontend     -\nworker    running     0         False  -        backend              -\npostgres  running     0         False  healthy  backend              -\nredis     running     0         False  -        -                    backend"
+  },
+  {
+   "step": 2,
+   "t": 0.14,
+   "tool": "reconnect_network",
+   "kind": "act",
+   "args": {
+    "service": "redis",
+    "network": "backend"
+   },
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.06,
+   "result": "connected redis to backend: ok"
+  },
+  {
+   "step": 3,
+   "t": 0.2,
+   "tool": "check_endpoints",
+   "kind": "observe",
+   "args": {},
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 1.77,
+   "result": "GET  /healthz             status=200     1.5ms OK\nGET  /api/health          status=200   473.7ms OK\nGET  /api/products        status=200   199.6ms OK\nGET  /api/orders/recent   status=200   397.7ms OK\nPOST /api/orders          status=201   692.5ms OK"
+  },
+  {
+   "step": 4,
+   "t": 1.97,
+   "tool": "get_logs",
+   "kind": "observe",
+   "args": {
+    "service": "api",
+    "since_seconds": 120
+   },
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.03,
+   "result": "32 lines in last 120s.\nTop message patterns:\n     15x WARNING api cache write failed: Error -# connecting to redis:#. Name does not resolve.\n     14x WARNING api cache unavailable, falling back to database: Error -# connecting to redis:#. Name does not resolve.\n      1x INFO api starting shop-api on :# (db=postgres:# cache=redis:#)\n      1x INFO api Serving on http://#\n      1x WARNING api cache unavailable, falling back to database: Timeout reading from socket\n--- last 32 lines ---\n2026-10-30T01:28:00 INFO api starting shop-api on :8000 (db=postgres:5432 cache=redis:6379)\n2026-10-30T01:28:00 INFO api Serving on http://0.0.0.0:8000\n2026-10-30T01:28:08 WARNING api cache unavailable, falling back to database: Timeout reading from socket\n2026-10-30T01:28:08 WARNING api cache write failed: Error -2 connecting to redis:6379. Name does not resolve.\n2026-10-30T01:28:08 WARNING api cache unavailable, falling back to database: Error -2 connecting to redis:6379. Name does not resolve.\n2026-10-30T01:28:09 WARNING api cache write failed: Error -2 connecting to redis:6379. Name does not resolve.\n2026-10-30T01:28:10 WARNING api cache unavailable, falling back to database: Error -2 connecting to redis:6379. Name does not resolve.\n2026-10-30T01:28:10 WARNING api cache write failed: Error -2 connecting to redis:6379. Name does not resolve.\n2026-10-30T01:28:11 WARNING api cache unavailable, falling back to database: Error -2 connecting to redis:6379. Name does not resolve.\n2026-10-30T01:28:11 WARNING api cache write failed: Error -2 connecting to redis:6379. Name does not resolve.\n2026-10-30T01:28:12 WARNING api cache unavailable, falling back to database: Error -2 connecting to redis:6379. Name does not resolve.\n2026-10-30T01:28:12 WARNING api cache write failed: Error -2 connecting to redis:6379. Name does not resolve.\n2026-10-30T01:28:13 WARNING api cache unavailable, falling back to database: Error -2 connecting to redis:6379. Name does not resolve.\n2026-10-30T01:28:14 WARNING api cache write failed: Error -2 connecting to redis:6379. Name does not resolve.\n2026-10-30T01:28:16 WARNING api cache unavailable, falling back to database: Error -2 connecting to redis:6379. Name does not resolve.\n2026-10-30T01:28:16 WARNING api cache write failed: Error -2 connecting to redis:6379. Name does not resolve.\n2026-10-30T01:28:19 WARNING api cache unavailable, falling back to database: Error -2 connecting to redis:6379. Name does not resolve.\n2026-10-30T01:28:19 WARNING api cache unavailable, falling back to database: Error -2 connecting to redis:6379. Name does not resolve.\n2026-10-30T01:28:19 WARNING api cache write failed: Error -2 connecting to redis:6379. Name does not resolve.\n2026-10-30T01:28:19 WARNING api cache write failed: Error -2 connecting to redis:6379. Name does not resolve.\n2026-10-30T01:28:20 WARNING api cache unavailable, falling back to database: Error -2 connecting to redis:6379. Name does not resolve.\n2026-10-30T01:28:20 WARNING api cache write failed: Error -2 connecting to redis:6379. Name does not resolve.\n2026-10-30T01:28:22 WARNING api cache unavailable, falling back to database: Error -2 connecting to redis:6379. Name does not resolve.\n2026-10-30T01:28:22 WARNING api cache write failed: Error -2 connecting to redis:6379. Name does not resolve.\n2026-10-30T01:28:22 WARNING api cache unavailable, falling back to database: Error -2 connecting to redis:6379. Name does not resolve.\n2026-10-30T01:28:22 WARNING api cache write failed: Error -2 connecting to redis:6379. Name does not resolve.\n2026-10-30T01:28:23 WARNING api cache unavailable, falling back to database: Error -2 connecting to redis:6379. Name does not resolve.\n2026-10-30T01:28:23 WARNING api cache write failed: Error -2 connecting to redis:6379. Name does not resolve.\n2026-10-30T01:28:24 WARNING api cache unavailable, falling back to database: Error -2 connecting to redis:6379. Name does not resolve.\n2026-10-30T01:28:24 WARNING api cache write failed: Error -2 connecting to redis:6379. Name does not resolve.\n2026-10-30T01:28:25 WARNING api cache unavailable, falling back to database: Error -2 connecting to redis:6379. Name does not resolve.\n2026-10-30T01:28:25 WARNING api cache write failed: Error -2 connecting to redis:6379. Name does not resolve."
+  },
+  {
+   "step": 5,
+   "t": 2.0,
+   "tool": "run_diagnostic",
+   "kind": "observe",
+   "args": {
+    "service": "api",
+    "check": "disk"
+   },
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.77,
+   "result": "Filesystem                Size      Used Available Use% Mounted on\noverlay                 252.0G     12.2G     26.3G  32% /\ntmpfs                    64.0M         0     64.0M   0% /dev\ntmpfs                     7.9G         0      7.9G   0% /sys/fs/cgroup\nshm                      64.0M         0     64.0M   0% /dev/shm\n/dev/vda                252.0G     12.2G     26.3G  32% /config\ntmpfs                    48.0M      4.0K     48.0M   0% /data\n/dev/vda                252.0G     12.2G     26.3G  32% /etc/hostname\n/dev/vda                252.0G     12.2G     26.3G  32% /etc/hosts\n/dev/vda                252.0G     12.2G     26.3G  32% /etc/resolv.conf\ntmpfs                     4.0K         0      4.0K   0% /proc/acpi\ntmpfs                    64.0M         0     64.0M   0% /proc/interrupts\ntmpfs                    64.0M         0     64.0M   0% /proc/keys\ntmpfs                    64.0M         0     64.0M   0% /proc/timer_list\ntmpfs                     4.0K         0      4.0K   0% /sys/firmware\n--- largest under /data (KB) ---\n4\t/data/audit/audit.log\n4\t/data/audit\n4\t/data"
+  },
+  {
+   "step": 6,
+   "t": 2.77,
+   "tool": "get_metrics",
+   "kind": "observe",
+   "args": {
+    "service": "api"
+   },
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 3.51,
+   "result": "{\n \"containers\": {\n  \"gateway\": {\n   \"cpu_pct\": \"0.11%\",\n   \"mem\": \"3.23MiB / 15.71GiB\",\n   \"mem_pct\": \"0.02%\"\n  },\n  \"api\": {\n   \"cpu_pct\": \"48.64%\",\n   \"mem\": \"51MiB / 256MiB\",\n   \"mem_pct\": \"19.92%\"\n  },\n  \"worker\": {\n   \"cpu_pct\": \"0.00%\",\n   \"mem\": \"25.3MiB / 15.71GiB\",\n   \"mem_pct\": \"0.16%\"\n  },\n  \"postgres\": {\n   \"cpu_pct\": \"5.06%\",\n   \"mem\": \"32.37MiB / 15.71GiB\",\n   \"mem_pct\": \"0.20%\"\n  },\n  \"redis\": {\n   \"cpu_pct\": \"0.50%\",\n   \"mem\": \"4.109MiB / 15.71GiB\",\n   \"mem_pct\": \"0.03%\"\n  }\n },\n \"api_app_metrics\": {\n  \"cache_errors_total\": 30,\n  \"db_errors_total\": 0,\n  \"endpoints\": {\n   \"/api/health\": {\n    \"errors_5xx\": 0,\n    \"p50_ms\": 24.4,\n    \"p95_ms\": 494.6,\n    \"requests\": 8\n   },\n   \"/api/orders\": {\n    \"errors_5xx\": 0,\n    \"p50_ms\": 20.2,\n    \"p95_ms\": 604.8,\n    \"requests\": 21\n   },\n   \"/api/orders/recent\": {\n    \"errors_5xx\": 0,\n    \"p50_ms\": 200.5,\n    \"p95_ms\": 597.2,\n    \"requests\": 36\n   },\n   \"/api/products\": {\n    \"errors_5xx\": 0,\n    \"p50_ms\": 2.4,\n    \"p95_ms\": 703.1,\n    \"requests\": 45\n   },\n   \"unmatched\": {\n    \"errors_5xx\": 0,\n    \"p50_ms\": 0.4,\n    \"p95_ms\": 0.4,\n    \"requests\": 2\n   }\n  },\n  \"process_rss_mb\": 48.9,\n  \"uptime_s\": 31.5,\n  \"window_s\": 60\n }\n}"
+  },
+  {
+   "step": 7,
+   "t": 6.27,
+   "tool": "run_diagnostic",
+   "kind": "observe",
+   "args": {
+    "service": "api",
+    "check": "processes"
+   },
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.9,
+   "result": "Mem: 5453052K used, 11024300K free, 28728K shrd, 90924K buff, 4483548K cached\nCPU:  14% usr   0% sys   0% nic  83% idle   0% io   0% irq   2% sirq\nLoad average: 0.12 0.24 0.33 10/273 67\n  PID  PPID USER     STAT   VSZ %VSZ CPU %CPU COMMAND\n   31    23 root     R    13748   0%   1   5% python /app/tools/reindex_search.py\n   33    23 root     R    13748   0%   2   2% python /app/tools/reindex_search.py\n   34    23 root     R    13748   0%   0   2% python /app/tools/reindex_search.py\n   32    23 root     R    13748   0%   3   2% python /app/tools/reindex_search.py\n   35    23 root     R    13748   0%   3   2% python /app/tools/reindex_search.py\n    1     0 root     S    74720   0%   2   0% python app.py\n   30    23 root     R    13748   0%   0   0% python /app/tools/reindex_search.py\n   36    23 root     R    13748   0%   3   0% python /app/tools/reindex_search.py\n   37    23 root     R    13748   0%   3   0% python /app/tools/reindex_search.py\n   23     0 root     S    13748   0%   1   0% python /app/tools/reindex_search.py\n   60     0 root     S     1652   0%   1   0% sh -c top -b -n 1 | head -25\n   66    60 root     R     1648   0%   1   0% top -b -n 1\n   67    60 root     S     1636   0%   1   0% head -25"
+  },
+  {
+   "step": 8,
+   "t": 7.18,
+   "tool": "kill_process",
+   "kind": "act",
+   "args": {
+    "service": "api",
+    "pid": 23
+   },
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.99,
+   "result": "killed 23 and children: 30 31 32 33 34 35 36 37"
+  },
+  {
+   "step": 9,
+   "t": 8.17,
+   "tool": "list_services",
+   "kind": "observe",
+   "args": {},
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.13,
+   "result": "service   state       restarts  oom    health   networks             missing_networks\ngateway   running     0         False  -        frontend             -\napi       running     0         False  -        backend,frontend     -\nworker    running     0         False  -        backend              -\npostgres  running     0         False  healthy  backend              -\nredis     running     0         False  -        backend              -"
+  },
+  {
+   "step": 10,
+   "t": 8.29,
+   "tool": "check_endpoints",
+   "kind": "observe",
+   "args": {},
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.06,
+   "result": "GET  /healthz             status=200     1.6ms OK\nGET  /api/health          status=200    17.4ms OK\nGET  /api/products        status=200     3.6ms OK\nGET  /api/orders/recent   status=200    16.2ms OK\nPOST /api/orders          status=201    17.5ms OK"
+  },
+  {
+   "step": 11,
+   "t": 8.35,
+   "tool": "verify_recovery",
+   "kind": "observe",
+   "args": {},
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 8.73,
+   "result": "{\n \"healthy\": true,\n \"probe_success_rate\": 1.0,\n \"probe_p95_ms\": 25.0,\n \"problems\": [],\n \"probes\": {\n  \"GET /healthz\": {\n   \"ok\": 8,\n   \"fail\": 0,\n   \"statuses\": [\n    200\n   ],\n   \"last_error\": \"\"\n  },\n  \"GET /api/health\": {\n   \"ok\": 8,\n   \"fail\": 0,\n   \"statuses\": [\n    200\n   ],\n   \"last_error\": \"\"\n  },\n  \"GET /api/products\": {\n   \"ok\": 8,\n   \"fail\": 0,\n   \"statuses\": [\n    200\n   ],\n   \"last_error\": \"\"\n  },\n  \"GET /api/orders/recent\": {\n   \"ok\": 8,\n   \"fail\": 0,\n   \"statuses\": [\n    200\n   ],\n   \"last_error\": \"\"\n  },\n  \"POST /api/orders\": {\n   \"ok\": 8,\n   \"fail\": 0,\n   \"statuses\": [\n    201\n   ],\n   \"last_error\": \"\"\n  }\n }\n}"
+  },
+  {
+   "step": 12,
+   "t": 17.08,
+   "tool": "submit_report",
+   "kind": "final",
+   "args": {
+    "root_causes": [
+     {
+      "component": "redis",
+      "category": "network_partition",
+      "evidence": "redis missing from backend"
+     },
+     {
+      "component": "api",
+      "category": "cpu_exhaustion",
+      "evidence": "python /app/tools/reindex_search.py hogging CPU"
+     }
+    ],
+    "summary": "runbook applied 2 fix(es)",
+    "recovered": true
+   },
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.0,
+   "result": "report submitted"
+  }
+ ],
+ "episode_seconds": 89.2
+}

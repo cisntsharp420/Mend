@@ -37,6 +37,9 @@ def run_episode(sb, scenario: Scenario, agent, policy: Policy | None = None,
     t_episode = time.time()
     sb.reset()
     baseline = soak(sb, 4)
+    if not baseline.passed:  # warm-up race after recreating containers: retry once before injecting
+        sb.reset()
+        baseline = soak(sb, 4)
     settle = inject_all(sb, scenario.faults, scenario.noise, noise_first=not scenario.noise_after)
     time.sleep(settle)
     pre = soak(sb, 5, faults=scenario.faults)

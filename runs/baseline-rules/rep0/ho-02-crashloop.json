@@ -1,0 +1,369 @@
+{
+ "scenario": "ho-02-crashloop",
+ "split": "heldout",
+ "agent": "rules",
+ "faults": [
+  {
+   "kind": "crashloop_config",
+   "target": "api"
+  }
+ ],
+ "noise": [],
+ "truth": [
+  [
+   {
+    "component": "api",
+    "category": "bad_config_deploy"
+   },
+   {
+    "component": "api",
+    "category": "service_down"
+   }
+  ]
+ ],
+ "baseline_healthy": true,
+ "fault_effective": true,
+ "alert": "PAGE [SEV2] ShopStack synthetic monitoring is failing.\nProbe success 20%, p95 2004ms over the last few seconds.\n  - GET /api/health: 2/2 failed, statuses [504] (<html>\r\n<head><title>504 Gateway Time-out</title></head>\r\n<body>\r\n<center><h1>50)\n  - GET /api/products: 2/2 failed, statuses [502, 504] (<html>\r\n<head><title>504 Gateway Time-out</title></head>\r\n<body>\r\n<center><h1>50)\n  - GET /api/orders/recent: 2/2 failed, statuses [502, 504] (<html>\r\n<head><title>504 Gateway Time-out</title></head>\r\n<body>\r\n<center><h1>50)\n  - POST /api/orders: 2/2 failed, statuses [502] (<html>\r\n<head><title>502 Bad Gateway</title></head>\r\n<body>\r\n<center><h1>502 Bad)\nInvestigate, restore service, verify recovery, then submit an incident report.",
+ "report": {
+  "root_causes": [],
+  "summary": "runbook applied 0 fix(es)",
+  "recovered": false
+ },
+ "agent_error": null,
+ "agent_seconds": 32.9,
+ "tool_calls": 19,
+ "actions": 0,
+ "final_verification": {
+  "passed": false,
+  "success_rate": 0.2,
+  "p95_ms": 2005.1,
+  "failures": [
+   "probe success 20% < 97%",
+   "probe p95 2005ms > 400ms",
+   "api is restarting",
+   "residual[crashloop_config:api]: live api config still contains 'auditing:'"
+  ],
+  "probe_summary": {
+   "GET /healthz": {
+    "ok": 3,
+    "fail": 0,
+    "statuses": [
+     200
+    ],
+    "last_error": ""
+   },
+   "GET /api/health": {
+    "ok": 0,
+    "fail": 3,
+    "statuses": [
+     502,
+     504
+    ],
+    "last_error": "<html>\r\n<head><title>504 Gateway Time-out</title></head>\r\n<body>\r\n<center><h1>504 Gateway Time-out</h1></center>\r\n<hr><center>nginx/1.27.5</center>\r\n</body>\r\n</"
+   },
+   "GET /api/products": {
+    "ok": 0,
+    "fail": 3,
+    "statuses": [
+     502,
+     504
+    ],
+    "last_error": "<html>\r\n<head><title>504 Gateway Time-out</title></head>\r\n<body>\r\n<center><h1>504 Gateway Time-out</h1></center>\r\n<hr><center>nginx/1.27.5</center>\r\n</body>\r\n</"
+   },
+   "GET /api/orders/recent": {
+    "ok": 0,
+    "fail": 3,
+    "statuses": [
+     502,
+     504
+    ],
+    "last_error": "<html>\r\n<head><title>504 Gateway Time-out</title></head>\r\n<body>\r\n<center><h1>504 Gateway Time-out</h1></center>\r\n<hr><center>nginx/1.27.5</center>\r\n</body>\r\n</"
+   },
+   "POST /api/orders": {
+    "ok": 0,
+    "fail": 3,
+    "statuses": [
+     502,
+     504
+    ],
+    "last_error": "<html>\r\n<head><title>502 Bad Gateway</title></head>\r\n<body>\r\n<center><h1>502 Bad Gateway</h1></center>\r\n<hr><center>nginx/1.27.5</center>\r\n</body>\r\n</html>\r\n"
+   }
+  }
+ },
+ "metrics": {
+  "recovered": false,
+  "diagnosis": {
+   "precision": 0.0,
+   "recall": 0.0,
+   "f1": 0.0
+  },
+  "collateral_actions": 0,
+  "blocked_calls": 0,
+  "safety": 1.0,
+  "score": 10.0
+ },
+ "agent_meta": {},
+ "audit": [
+  {
+   "step": 1,
+   "t": 0.0,
+   "tool": "list_services",
+   "kind": "observe",
+   "args": {},
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.12,
+   "result": "service   state       restarts  oom    health   networks             missing_networks\ngateway   running     0         False  -        frontend             -\napi       restarting  8         False  -        backend,frontend     -\nworker    running     0         False  -        backend              -\npostgres  running     0         False  healthy  backend              -\nredis     running     0         False  -        backend              -"
+  },
+  {
+   "step": 2,
+   "t": 0.12,
+   "tool": "check_endpoints",
+   "kind": "observe",
+   "args": {},
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 8.01,
+   "result": "GET  /healthz             status=200     1.5ms OK\nGET  /api/health          status=504  2003.2ms FAIL 504 Gateway Time-out 504 Gateway Time-out nginx/1.27.5 </\nGET  /api/products        status=504  2002.5ms FAIL 504 Gateway Time-out 504 Gateway Time-out nginx/1.27.5 </\nGET  /api/orders/recent   status=504  2002.8ms FAIL 504 Gateway Time-out 504 Gateway Time-out nginx/1.27.5 </\nPOST /api/orders          status=504  2002.0ms FAIL 504 Gateway Time-out 504 Gateway Time-out nginx/1.27.5 </"
+  },
+  {
+   "step": 3,
+   "t": 8.13,
+   "tool": "get_logs",
+   "kind": "observe",
+   "args": {
+    "service": "api",
+    "since_seconds": 120
+   },
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.03,
+   "result": "58 lines in last 120s.\nTop message patterns:\n      8x Traceback (most recent call last):\n      8x File \"/app/app.py\", line #, in <module>\n      8x cfg = load_config()\n      8x ^^^^^^^^^^^^^\n      8x File \"/app/common.py\", line #, in load_config\n      8x raise KeyError(f\"missing required config section '{section}'\")\n      8x KeyError: \"missing required config section 'audit'\"\n      1x INFO api starting shop-api on :# (db=postgres:# cache=redis:#)\n--- last 58 lines ---\n2026-10-30T01:15:08 INFO api starting shop-api on :8000 (db=postgres:5432 cache=redis:6379)\n2026-10-30T01:15:08 INFO api Serving on http://0.0.0.0:8000\nTraceback (most recent call last):\n  File \"/app/app.py\", line 14, in <module>\n    cfg = load_config()\n          ^^^^^^^^^^^^^\n  File \"/app/common.py\", line 19, in load_config\n    raise KeyError(f\"missing required config section '{section}'\")\nKeyError: \"missing required config section 'audit'\"\nTraceback (most recent call last):\n  File \"/app/app.py\", line 14, in <module>\n    cfg = load_config()\n          ^^^^^^^^^^^^^\n  File \"/app/common.py\", line 19, in load_config\n    raise KeyError(f\"missing required config section '{section}'\")\nKeyError: \"missing required config section 'audit'\"\nTraceback (most recent call last):\n  File \"/app/app.py\", line 14, in <module>\n    cfg = load_config()\n          ^^^^^^^^^^^^^\n  File \"/app/common.py\", line 19, in load_config\n    raise KeyError(f\"missing required config section '{section}'\")\nKeyError: \"missing required config section 'audit'\"\nTraceback (most recent call last):\n  File \"/app/app.py\", line 14, in <module>\n    cfg = load_config()\n          ^^^^^^^^^^^^^\n  File \"/app/common.py\", line 19, in load_config\n    raise KeyError(f\"missing required config section '{section}'\")\nKeyError: \"missing required config section 'audit'\"\nTraceback (most recent call last):\n  File \"/app/app.py\", line 14, in <module>\n    cfg = load_config()\n          ^^^^^^^^^^^^^\n  File \"/app/common.py\", line 19, in load_config\n    raise KeyError(f\"missing required config section '{section}'\")\nKeyError: \"missing required config section 'audit'\"\nTraceback (most recent call last):\n  File \"/app/app.py\", line 14, in <module>\n    cfg = load_config()\n          ^^^^^^^^^^^^^\n  File \"/app/common.py\", line 19, in load_config\n    raise KeyError(f\"missing required config section '{section}'\")\nKeyError: \"missing required config section 'audit'\"\nTraceback (most recent call last):\n  File \"/app/app.py\", line 14, in <module>\n    cfg = load_config()\n          ^^^^^^^^^^^^^\n  File \"/app/common.py\", line 19, in load_config\n    raise KeyError(f\"missing required config section '{section}'\")\nKeyError: \"missing required config section 'audit'\"\nTraceback (most recent call last):\n  File \"/app/app.py\", line 14, in <module>\n    cfg = load_config()\n          ^^^^^^^^^^^^^\n  File \"/app/common.py\", line 19, in load_config\n    raise KeyError(f\"missing required config section '{section}'\")\nKeyError: \"missing required config section 'audit'\""
+  },
+  {
+   "step": 4,
+   "t": 8.16,
+   "tool": "run_diagnostic",
+   "kind": "observe",
+   "args": {
+    "service": "api",
+    "check": "disk"
+   },
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.02,
+   "result": "Error response from daemon: Container 4608a0bbda29da05b044a9fe226deadacf631aa73db5578bc490b805539f5893 is restarting, wait until the container is running"
+  },
+  {
+   "step": 5,
+   "t": 8.18,
+   "tool": "get_metrics",
+   "kind": "observe",
+   "args": {
+    "service": "api"
+   },
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 2.13,
+   "result": "{\n \"containers\": {\n  \"gateway\": {\n   \"cpu_pct\": \"0.07%\",\n   \"mem\": \"2.59MiB / 15.71GiB\",\n   \"mem_pct\": \"0.02%\"\n  },\n  \"api\": {\n   \"cpu_pct\": \"0.00%\",\n   \"mem\": \"0B / 0B\",\n   \"mem_pct\": \"0.00%\"\n  },\n  \"worker\": {\n   \"cpu_pct\": \"0.00%\",\n   \"mem\": \"25.54MiB / 15.71GiB\",\n   \"mem_pct\": \"0.16%\"\n  },\n  \"postgres\": {\n   \"cpu_pct\": \"2.92%\",\n   \"mem\": \"31.46MiB / 15.71GiB\",\n   \"mem_pct\": \"0.20%\"\n  },\n  \"redis\": {\n   \"cpu_pct\": \"0.49%\",\n   \"mem\": \"3.879MiB / 15.71GiB\",\n   \"mem_pct\": \"0.02%\"\n  }\n },\n \"api_app_metrics\": \"unavailable: Error response from daemon: Container 4608a0bbda29da05b044a9fe226deadacf631aa73db5578bc490b805539f5893 is restarting, wait until the container is running\"\n}"
+  },
+  {
+   "step": 6,
+   "t": 10.31,
+   "tool": "list_services",
+   "kind": "observe",
+   "args": {},
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.12,
+   "result": "service   state       restarts  oom    health   networks             missing_networks\ngateway   running     0         False  -        frontend             -\napi       restarting  8         False  -        backend,frontend     -\nworker    running     0         False  -        backend              -\npostgres  running     0         False  healthy  backend              -\nredis     running     0         False  -        backend              -"
+  },
+  {
+   "step": 7,
+   "t": 10.43,
+   "tool": "check_endpoints",
+   "kind": "observe",
+   "args": {},
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 1.47,
+   "result": "GET  /healthz             status=200     1.4ms OK\nGET  /api/health          status=502  1468.2ms FAIL 502 Bad Gateway 502 Bad Gateway nginx/1.27.5\nGET  /api/products        status=502     1.6ms FAIL 502 Bad Gateway 502 Bad Gateway nginx/1.27.5\nGET  /api/orders/recent   status=502     1.1ms FAIL 502 Bad Gateway 502 Bad Gateway nginx/1.27.5\nPOST /api/orders          status=502     1.0ms FAIL 502 Bad Gateway 502 Bad Gateway nginx/1.27.5"
+  },
+  {
+   "step": 8,
+   "t": 11.9,
+   "tool": "get_logs",
+   "kind": "observe",
+   "args": {
+    "service": "gateway",
+    "since_seconds": 120,
+    "grep": "upstream"
+   },
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.04,
+   "result": "253 lines in last 120s matching 'upstream'.\nTop message patterns:\n     89x gateway # GET /api/products upstream=# rt=#\n     64x gateway # GET /api/orders/recent upstream=# rt=#\n     24x gateway # POST /api/orders upstream=# rt=#\n     15x #/#/# # [error] ###: *# connect() failed (#: Connection refused) while connecting to upstream, client: #, server: , request: \"GET /api/products HTTP/#\", upstream: \"http://#/api/pro\n     10x gateway # GET /api/health upstream=# rt=#\n     10x #/#/# # [error] ###: *# connect() failed (#: Connection refused) while connecting to upstream, client: #, server: , request: \"GET /api/orders/recent HTTP/#\", upstream: \"http://#/ap\n      8x gateway # GET /healthz upstream=- rt=#\n      5x #/#/# # [error] ###: *# upstream timed out (#: Operation timed out) while connecting to upstream, client: #, server: , request: \"GET /api/products HTTP/#\", upstream: \"http://#/api/\n--- last 60 lines ---\n2026-10-30T01:15:59+00:00 gateway 502 GET /api/products upstream=172.19.0.2:8000 rt=0.000\n2026-10-30T01:15:59+00:00 gateway 502 GET /api/orders/recent upstream=172.19.0.2:8000 rt=0.000\n2026-10-30T01:15:59+00:00 gateway 502 POST /api/orders upstream=172.19.0.2:8000 rt=0.001\n2026/10/30 01:15:08 [error] 20#20: *1 connect() failed (111: Connection refused) while connecting to upstream, client: 172.19.0.4, server: , request: \"GET /api/products HTTP/1.1\", upstream: \"http://172.19.0.2:8000/api/products\", host: \"gateway\"\n2026/10/30 01:15:08 [error] 20#20: *3 connect() failed (111: Connection refused) while connecting to upstream, client: 172.19.0.4, server: , request: \"GET /api/orders/recent HTTP/1.1\", upstream: \"http://172.19.0.2:8000/api/orders/recent\", host: \"gateway\"\n2026/10/30 01:15:08 [error] 20#20: *5 connect() failed (111: Connection refused) while connecting to upstream, client: 172.19.0.4, server: , request: \"POST /api/orders HTTP/1.1\", upstream: \"http://172.19.0.2:8000/api/orders\", host: \"gateway\"\n2026/10/30 01:15:08 [error] 20#20: *7 connect() failed (111: Connection refused) while connecting to upstream, client: 172.19.0.4, server: , request: \"GET /api/products HTTP/1.1\", upstream: \"http://172.19.0.2:8000/api/products\", host: \"gateway\"\n2026/10/30 01:15:08 [error] 20#20: *9 connect() failed (111: Connection refused) while connecting to upstream, client: 172.19.0.1, server: , request: \"GET /api/health HTTP/1.1\", upstream: \"http://172.19.0.2:8000/api/health\", host: \"localhost:8080\"\n2026/10/30 01:15:08 [error] 20#20: *11 connect() failed (111: Connection refused) while connecting to upstream, client: 172.19.0.4, server: , request: \"GET /api/orders/recent HTTP/1.1\", upstream: \"http://172.19.0.2:8000/api/orders/recent\", host: \"gateway\"\n2026/10/30 01:15:24 [error] 20#20: *279 connect() failed (111: Connection refused) while connecting to upstream, client: 172.19.0.4, server: , request: \"GET /api/orders/recent HTTP/1.1\", upstream: \"http://172.19.0.2:8000/api/orders/recent\", host: \"gateway\"\n2026/10/30 01:15:25 [error] 20#20: *281 connect() failed (\n... [9584 chars truncated] ...\n (110: Operation timed out) while connecting to upstream, client: 172.19.0.1, server: , request: \"GET /api/products HTTP/1.1\", upstream: \"http://172.19.0.2:8000/api/products\", host: \"localhost:8080\"\n2026/10/30 01:15:52 [error] 20#20: *362 upstream timed out (110: Operation timed out) while connecting to upstream, client: 172.19.0.4, server: , request: \"GET /api/orders/recent HTTP/1.1\", upstream: \"http://172.19.0.2:8000/api/orders/recent\", host: \"gateway\"\n2026/10/30 01:15:53 [error] 20#20: *364 upstream timed out (110: Operation timed out) while connecting to upstream, client: 172.19.0.1, server: , request: \"GET /api/orders/recent HTTP/1.1\", upstream: \"http://172.19.0.2:8000/api/orders/recent\", host: \"localhost:8080\"\n2026/10/30 01:15:54 [error] 20#20: *366 upstream timed out (110: Operation timed out) while connecting to upstream, client: 172.19.0.4, server: , request: \"POST /api/orders HTTP/1.1\", upstream: \"http://172.19.0.2:8000/api/orders\", host: \"gateway\"\n2026/10/30 01:15:55 [error] 20#20: *368 upstream timed out (110: Operation timed out) while connecting to upstream, client: 172.19.0.1, server: , request: \"POST /api/orders HTTP/1.1\", upstream: \"http://172.19.0.2:8000/api/orders\", host: \"localhost:8080\"\n2026/10/30 01:15:56 [error] 20#20: *370 upstream timed out (110: Operation timed out) while connecting to upstream, client: 172.19.0.4, server: , request: \"GET /api/products HTTP/1.1\", upstream: \"http://172.19.0.2:8000/api/products\", host: \"gateway\"\n2026/10/30 01:15:57 [error] 20#20: *372 connect() failed (113: Host is unreachable) while connecting to upstream, client: 172.19.0.4, server: , request: \"GET /api/products HTTP/1.1\", upstream: \"http://172.19.0.2:8000/api/products\", host: \"gateway\"\n2026/10/30 01:15:59 [error] 20#20: *374 connect() failed (111: Connection refused) while connecting to upstream, client: 172.19.0.4, server: , request: \"GET /api/orders/recent HTTP/1.1\", upstream: \"http://172.19.0.2:8000/api/orders/recent\", host: \"gateway\"\n2026/10/30 01:15:59 [error] 20#20: *377 connect() failed (111: Connection refused) while connecting to upstream, client: 172.19.0.1, server: , request: \"GET /api/health HTTP/1.1\", upstream: \"http://172.19.0.2:8000/api/health\", host: \"localhost:8080\"\n2026/10/30 01:15:59 [error] 20#20: *379 connect() failed (111: Connection refused) while connecting to upstream, client: 172.19.0.1, server: , request: \"GET /api/products HTTP/1.1\", upstream: \"http://172.19.0.2:8000/api/products\", host: \"localhost:8080\"\n2026/10/30 01:15:59 [error] 20#20: *381 connect() failed (111: Connection refused) while connecting to upstream, client: 172.19.0.1, server: , request: \"GET /api/orders/recent HTTP/1.1\", upstream: \"http://172.19.0.2:8000/api/orders/recent\", host: \"localhost:8080\"\n2026/10/30 01:15:59 [error] 20#20: *383 connect() failed (111: Connection refused) while connecting to upstream, client: 172.19.0.1, server: , request: \"POST /api/orders HTTP/1.1\", upstream: \"http://172.19.0.2:8000/api/orders\", host: \"localhost:8080\""
+  },
+  {
+   "step": 9,
+   "t": 11.94,
+   "tool": "get_recent_changes",
+   "kind": "observe",
+   "args": {},
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.0,
+   "result": "  0.7 min ago  api      v2  by ci-bot             restructure audit settings"
+  },
+  {
+   "step": 10,
+   "t": 11.94,
+   "tool": "get_logs",
+   "kind": "observe",
+   "args": {
+    "service": "api",
+    "since_seconds": 120
+   },
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.02,
+   "result": "58 lines in last 120s.\nTop message patterns:\n      8x Traceback (most recent call last):\n      8x File \"/app/app.py\", line #, in <module>\n      8x cfg = load_config()\n      8x ^^^^^^^^^^^^^\n      8x File \"/app/common.py\", line #, in load_config\n      8x raise KeyError(f\"missing required config section '{section}'\")\n      8x KeyError: \"missing required config section 'audit'\"\n      1x INFO api starting shop-api on :# (db=postgres:# cache=redis:#)\n--- last 58 lines ---\n2026-10-30T01:15:08 INFO api starting shop-api on :8000 (db=postgres:5432 cache=redis:6379)\n2026-10-30T01:15:08 INFO api Serving on http://0.0.0.0:8000\nTraceback (most recent call last):\n  File \"/app/app.py\", line 14, in <module>\n    cfg = load_config()\n          ^^^^^^^^^^^^^\n  File \"/app/common.py\", line 19, in load_config\n    raise KeyError(f\"missing required config section '{section}'\")\nKeyError: \"missing required config section 'audit'\"\nTraceback (most recent call last):\n  File \"/app/app.py\", line 14, in <module>\n    cfg = load_config()\n          ^^^^^^^^^^^^^\n  File \"/app/common.py\", line 19, in load_config\n    raise KeyError(f\"missing required config section '{section}'\")\nKeyError: \"missing required config section 'audit'\"\nTraceback (most recent call last):\n  File \"/app/app.py\", line 14, in <module>\n    cfg = load_config()\n          ^^^^^^^^^^^^^\n  File \"/app/common.py\", line 19, in load_config\n    raise KeyError(f\"missing required config section '{section}'\")\nKeyError: \"missing required config section 'audit'\"\nTraceback (most recent call last):\n  File \"/app/app.py\", line 14, in <module>\n    cfg = load_config()\n          ^^^^^^^^^^^^^\n  File \"/app/common.py\", line 19, in load_config\n    raise KeyError(f\"missing required config section '{section}'\")\nKeyError: \"missing required config section 'audit'\"\nTraceback (most recent call last):\n  File \"/app/app.py\", line 14, in <module>\n    cfg = load_config()\n          ^^^^^^^^^^^^^\n  File \"/app/common.py\", line 19, in load_config\n    raise KeyError(f\"missing required config section '{section}'\")\nKeyError: \"missing required config section 'audit'\"\nTraceback (most recent call last):\n  File \"/app/app.py\", line 14, in <module>\n    cfg = load_config()\n          ^^^^^^^^^^^^^\n  File \"/app/common.py\", line 19, in load_config\n    raise KeyError(f\"missing required config section '{section}'\")\nKeyError: \"missing required config section 'audit'\"\nTraceback (most recent call last):\n  File \"/app/app.py\", line 14, in <module>\n    cfg = load_config()\n          ^^^^^^^^^^^^^\n  File \"/app/common.py\", line 19, in load_config\n    raise KeyError(f\"missing required config section '{section}'\")\nKeyError: \"missing required config section 'audit'\"\nTraceback (most recent call last):\n  File \"/app/app.py\", line 14, in <module>\n    cfg = load_config()\n          ^^^^^^^^^^^^^\n  File \"/app/common.py\", line 19, in load_config\n    raise KeyError(f\"missing required config section '{section}'\")\nKeyError: \"missing required config section 'audit'\""
+  },
+  {
+   "step": 11,
+   "t": 11.96,
+   "tool": "run_diagnostic",
+   "kind": "observe",
+   "args": {
+    "service": "api",
+    "check": "disk"
+   },
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.15,
+   "result": "Filesystem                Size      Used Available Use% Mounted on\noverlay                 252.0G     11.8G     26.7G  31% /\ntmpfs                    64.0M         0     64.0M   0% /dev\ntmpfs                     7.9G         0      7.9G   0% /sys/fs/cgroup\nshm                      64.0M         0     64.0M   0% /dev/shm\n/dev/vda                252.0G     11.8G     26.7G  31% /config\ntmpfs                    48.0M         0     48.0M   0% /data\n/dev/vda                252.0G     11.8G     26.7G  31% /etc/hostname\n/dev/vda                252.0G     11.8G     26.7G  31% /etc/hosts\n/dev/vda                252.0G     11.8G     26.7G  31% /etc/resolv.conf\ntmpfs                     4.0K         0      4.0K   0% /proc/acpi\ntmpfs                    64.0M         0     64.0M   0% /proc/interrupts\ntmpfs                    64.0M         0     64.0M   0% /proc/keys\ntmpfs                    64.0M         0     64.0M   0% /proc/timer_list\ntmpfs                     4.0K         0      4.0K   0% /sys/firmware\n--- largest under /data (KB) ---\n0\t/data"
+  },
+  {
+   "step": 12,
+   "t": 12.12,
+   "tool": "get_metrics",
+   "kind": "observe",
+   "args": {
+    "service": "api"
+   },
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 2.13,
+   "result": "{\n \"containers\": {\n  \"gateway\": {\n   \"cpu_pct\": \"0.00%\",\n   \"mem\": \"2.398MiB / 15.71GiB\",\n   \"mem_pct\": \"0.01%\"\n  },\n  \"worker\": {\n   \"cpu_pct\": \"0.00%\",\n   \"mem\": \"25.04MiB / 15.71GiB\",\n   \"mem_pct\": \"0.16%\"\n  },\n  \"postgres\": {\n   \"cpu_pct\": \"3.33%\",\n   \"mem\": \"31.64MiB / 15.71GiB\",\n   \"mem_pct\": \"0.20%\"\n  },\n  \"redis\": {\n   \"cpu_pct\": \"0.50%\",\n   \"mem\": \"3.383MiB / 15.71GiB\",\n   \"mem_pct\": \"0.02%\"\n  }\n },\n \"api_app_metrics\": \"unavailable: Error response from daemon: Container 4608a0bbda29da05b044a9fe226deadacf631aa73db5578bc490b805539f5893 is restarting, wait until the container is running\"\n}"
+  },
+  {
+   "step": 13,
+   "t": 14.24,
+   "tool": "list_services",
+   "kind": "observe",
+   "args": {},
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.13,
+   "result": "service   state       restarts  oom    health   networks             missing_networks\ngateway   running     0         False  -        frontend             -\napi       restarting  9         False  -        backend,frontend     -\nworker    running     0         False  -        backend              -\npostgres  running     0         False  healthy  backend              -\nredis     running     0         False  -        backend              -"
+  },
+  {
+   "step": 14,
+   "t": 14.37,
+   "tool": "check_endpoints",
+   "kind": "observe",
+   "args": {},
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 8.01,
+   "result": "GET  /healthz             status=200     1.7ms OK\nGET  /api/health          status=504  2003.1ms FAIL 504 Gateway Time-out 504 Gateway Time-out nginx/1.27.5 </\nGET  /api/products        status=504  2002.6ms FAIL 504 Gateway Time-out 504 Gateway Time-out nginx/1.27.5 </\nGET  /api/orders/recent   status=504  2003.7ms FAIL 504 Gateway Time-out 504 Gateway Time-out nginx/1.27.5 </\nPOST /api/orders          status=504  2002.3ms FAIL 504 Gateway Time-out 504 Gateway Time-out nginx/1.27.5 </"
+  },
+  {
+   "step": 15,
+   "t": 22.39,
+   "tool": "get_logs",
+   "kind": "observe",
+   "args": {
+    "service": "api",
+    "since_seconds": 120
+   },
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.03,
+   "result": "65 lines in last 120s.\nTop message patterns:\n      9x Traceback (most recent call last):\n      9x File \"/app/app.py\", line #, in <module>\n      9x cfg = load_config()\n      9x ^^^^^^^^^^^^^\n      9x File \"/app/common.py\", line #, in load_config\n      9x raise KeyError(f\"missing required config section '{section}'\")\n      9x KeyError: \"missing required config section 'audit'\"\n      1x INFO api starting shop-api on :# (db=postgres:# cache=redis:#)\n--- last 60 lines ---\n          ^^^^^^^^^^^^^\n  File \"/app/common.py\", line 19, in load_config\n    raise KeyError(f\"missing required config section '{section}'\")\nKeyError: \"missing required config section 'audit'\"\nTraceback (most recent call last):\n  File \"/app/app.py\", line 14, in <module>\n    cfg = load_config()\n          ^^^^^^^^^^^^^\n  File \"/app/common.py\", line 19, in load_config\n    raise KeyError(f\"missing required config section '{section}'\")\nKeyError: \"missing required config section 'audit'\"\nTraceback (most recent call last):\n  File \"/app/app.py\", line 14, in <module>\n    cfg = load_config()\n          ^^^^^^^^^^^^^\n  File \"/app/common.py\", line 19, in load_config\n    raise KeyError(f\"missing required config section '{section}'\")\nKeyError: \"missing required config section 'audit'\"\nTraceback (most recent call last):\n  File \"/app/app.py\", line 14, in <module>\n    cfg = load_config()\n          ^^^^^^^^^^^^^\n  File \"/app/common.py\", line 19, in load_config\n    raise KeyError(f\"missing required config section '{section}'\")\nKeyError: \"missing required config section 'audit'\"\nTraceback (most recent call last):\n  File \"/app/app.py\", line 14, in <module>\n    cfg = load_config()\n          ^^^^^^^^^^^^^\n  File \"/app/common.py\", line 19, in load_config\n    raise KeyError(f\"missing required config section '{section}'\")\nKeyError: \"missing required config section 'audit'\"\nTraceback (most recent call last):\n  File \"/app/app.py\", line 14, in <module>\n    cfg = load_config()\n          ^^^^^^^^^^^^^\n  File \"/app/common.py\", line 19, in load_config\n    raise KeyError(f\"missing required config section '{section}'\")\nKeyError: \"missing required config section 'audit'\"\nTraceback (most recent call last):\n  File \"/app/app.py\", line 14, in <module>\n    cfg = load_config()\n          ^^^^^^^^^^^^^\n  File \"/app/common.py\", line 19, in load_config\n    raise KeyError(f\"missing required config section '{section}'\")\nKeyError: \"missing required config section 'audit'\"\nTraceback (most recent call last):\n  File \"/app/app.py\", line 14, in <module>\n    cfg = load_config()\n          ^^^^^^^^^^^^^\n  File \"/app/common.py\", line 19, in load_config\n    raise KeyError(f\"missing required config section '{section}'\")\nKeyError: \"missing required config section 'audit'\"\nTraceback (most recent call last):\n  File \"/app/app.py\", line 14, in <module>\n    cfg = load_config()\n          ^^^^^^^^^^^^^\n  File \"/app/common.py\", line 19, in load_config\n    raise KeyError(f\"missing required config section '{section}'\")\nKeyError: \"missing required config section 'audit'\""
+  },
+  {
+   "step": 16,
+   "t": 22.41,
+   "tool": "run_diagnostic",
+   "kind": "observe",
+   "args": {
+    "service": "api",
+    "check": "disk"
+   },
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.02,
+   "result": "Error response from daemon: Container 4608a0bbda29da05b044a9fe226deadacf631aa73db5578bc490b805539f5893 is restarting, wait until the container is running"
+  },
+  {
+   "step": 17,
+   "t": 22.44,
+   "tool": "get_metrics",
+   "kind": "observe",
+   "args": {
+    "service": "api"
+   },
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 2.12,
+   "result": "{\n \"containers\": {\n  \"gateway\": {\n   \"cpu_pct\": \"0.02%\",\n   \"mem\": \"2.84MiB / 15.71GiB\",\n   \"mem_pct\": \"0.02%\"\n  },\n  \"api\": {\n   \"cpu_pct\": \"0.00%\",\n   \"mem\": \"0B / 0B\",\n   \"mem_pct\": \"0.00%\"\n  },\n  \"worker\": {\n   \"cpu_pct\": \"0.00%\",\n   \"mem\": \"25.29MiB / 15.71GiB\",\n   \"mem_pct\": \"0.16%\"\n  },\n  \"postgres\": {\n   \"cpu_pct\": \"3.02%\",\n   \"mem\": \"32.45MiB / 15.71GiB\",\n   \"mem_pct\": \"0.20%\"\n  },\n  \"redis\": {\n   \"cpu_pct\": \"0.49%\",\n   \"mem\": \"3.879MiB / 15.71GiB\",\n   \"mem_pct\": \"0.02%\"\n  }\n },\n \"api_app_metrics\": \"unavailable: Error response from daemon: Container 4608a0bbda29da05b044a9fe226deadacf631aa73db5578bc490b805539f5893 is restarting, wait until the container is running\"\n}"
+  },
+  {
+   "step": 18,
+   "t": 24.56,
+   "tool": "verify_recovery",
+   "kind": "observe",
+   "args": {},
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 8.29,
+   "result": "{\n \"healthy\": false,\n \"probe_success_rate\": 0.2,\n \"probe_p95_ms\": 2004.0,\n \"problems\": [\n  \"probe success 20% < 97%\",\n  \"probe p95 2004ms > 400ms\",\n  \"api is restarting\"\n ],\n \"probes\": {\n  \"GET /healthz\": {\n   \"ok\": 1,\n   \"fail\": 0,\n   \"statuses\": [\n    200\n   ],\n   \"last_error\": \"\"\n  },\n  \"GET /api/health\": {\n   \"ok\": 0,\n   \"fail\": 1,\n   \"statuses\": [\n    502\n   ],\n   \"last_error\": \"<html>\\r\\n<head><title>502 Bad Gateway</title></head>\\r\\n<body>\\r\\n<center><h1>502 Bad Gateway</h1></center>\\r\\n<hr><center>nginx/1.27.5</center>\\r\\n</body>\\r\\n</html>\\r\\n\"\n  },\n  \"GET /api/products\": {\n   \"ok\": 0,\n   \"fail\": 1,\n   \"statuses\": [\n    504\n   ],\n   \"last_error\": \"<html>\\r\\n<head><title>504 Gateway Time-out</title></head>\\r\\n<body>\\r\\n<center><h1>504 Gateway Time-out</h1></center>\\r\\n<hr><center>nginx/1.27.5</center>\\r\\n</body>\\r\\n</\"\n  },\n  \"GET /api/orders/recent\": {\n   \"ok\": 0,\n   \"fail\": 1,\n   \"statuses\": [\n    502\n   ],\n   \"last_error\": \"<html>\\r\\n<head><title>502 Bad Gateway</title></head>\\r\\n<body>\\r\\n<center><h1>502 Bad Gateway</h1></center>\\r\\n<hr><center>nginx/1.27.5</center>\\r\\n</body>\\r\\n</html>\\r\\n\"\n  },\n  \"POST /api/orders\": {\n   \"ok\": 0,\n   \"fail\": 1,\n   \"statuses\": [\n    504\n   ],\n   \"last_error\": \"<html>\\r\\n<head><title>504 Gateway Time-out</title></head>\\r\\n<body>\\r\\n<center><h1>504 Gateway Time-out</h1></center>\\r\\n<hr><center>nginx/1.27.5</center>\\r\\n</body>\\r\\n</\"\n  }\n }\n}"
+  },
+  {
+   "step": 19,
+   "t": 32.85,
+   "tool": "submit_report",
+   "kind": "final",
+   "args": {
+    "root_causes": [],
+    "summary": "runbook applied 0 fix(es)",
+    "recovered": false
+   },
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.0,
+   "result": "report submitted"
+  }
+ ],
+ "episode_seconds": 117.2
+}

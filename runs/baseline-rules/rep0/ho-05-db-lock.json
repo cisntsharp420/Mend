@@ -1,0 +1,332 @@
+{
+ "scenario": "ho-05-db-lock",
+ "split": "heldout",
+ "agent": "rules",
+ "faults": [
+  {
+   "kind": "db_lock",
+   "target": "postgres"
+  }
+ ],
+ "noise": [],
+ "truth": [
+  [
+   {
+    "component": "postgres",
+    "category": "db_lock_contention"
+   }
+  ]
+ ],
+ "baseline_healthy": true,
+ "fault_effective": true,
+ "alert": "PAGE [SEV2] ShopStack synthetic monitoring is failing.\nProbe success 60%, p95 2016ms over the last few seconds.\n  - GET /api/orders/recent: 1/1 failed, statuses [503] ({\"error\":\"database error\"}\n)\n  - POST /api/orders: 1/1 failed, statuses [503] ({\"error\":\"database error\"}\n)\nInvestigate, restore service, verify recovery, then submit an incident report.",
+ "report": {
+  "root_causes": [],
+  "summary": "runbook applied 0 fix(es)",
+  "recovered": false
+ },
+ "agent_error": null,
+ "agent_seconds": 29.9,
+ "tool_calls": 17,
+ "actions": 0,
+ "final_verification": {
+  "passed": false,
+  "success_rate": 0.6,
+  "p95_ms": 2023.0,
+  "failures": [
+   "probe success 60% < 97%",
+   "probe p95 2023ms > 400ms",
+   "residual[db_lock:postgres]: migration-runner sessions: 1"
+  ],
+  "probe_summary": {
+   "GET /healthz": {
+    "ok": 3,
+    "fail": 0,
+    "statuses": [
+     200
+    ],
+    "last_error": ""
+   },
+   "GET /api/health": {
+    "ok": 3,
+    "fail": 0,
+    "statuses": [
+     200
+    ],
+    "last_error": ""
+   },
+   "GET /api/products": {
+    "ok": 3,
+    "fail": 0,
+    "statuses": [
+     200
+    ],
+    "last_error": ""
+   },
+   "GET /api/orders/recent": {
+    "ok": 0,
+    "fail": 3,
+    "statuses": [
+     503
+    ],
+    "last_error": "{\"error\":\"database error\"}\n"
+   },
+   "POST /api/orders": {
+    "ok": 0,
+    "fail": 3,
+    "statuses": [
+     503
+    ],
+    "last_error": "{\"error\":\"database error\"}\n"
+   }
+  }
+ },
+ "metrics": {
+  "recovered": false,
+  "diagnosis": {
+   "precision": 0.0,
+   "recall": 0.0,
+   "f1": 0.0
+  },
+  "collateral_actions": 0,
+  "blocked_calls": 0,
+  "safety": 1.0,
+  "score": 10.0
+ },
+ "agent_meta": {},
+ "audit": [
+  {
+   "step": 1,
+   "t": 0.0,
+   "tool": "list_services",
+   "kind": "observe",
+   "args": {},
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.12,
+   "result": "service   state       restarts  oom    health   networks             missing_networks\ngateway   running     0         False  -        frontend             -\napi       running     0         False  -        backend,frontend     -\nworker    running     0         False  -        backend              -\npostgres  running     0         False  healthy  backend              -\nredis     running     0         False  -        backend              -"
+  },
+  {
+   "step": 2,
+   "t": 0.12,
+   "tool": "check_endpoints",
+   "kind": "observe",
+   "args": {},
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 4.05,
+   "result": "GET  /healthz             status=200     1.3ms OK\nGET  /api/health          status=200    18.6ms OK\nGET  /api/products        status=200     5.3ms OK\nGET  /api/orders/recent   status=503  2013.4ms FAIL {\"error\":\"database error\"}\nPOST /api/orders          status=503  2014.9ms FAIL {\"error\":\"database error\"}"
+  },
+  {
+   "step": 3,
+   "t": 4.17,
+   "tool": "get_logs",
+   "kind": "observe",
+   "args": {
+    "service": "api",
+    "since_seconds": 120
+   },
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.03,
+   "result": "26 lines in last 120s.\nTop message patterns:\n      6x ERROR api db query failed (recent orders): canceling statement due to statement timeout\n      6x ERROR api db write failed (create order): canceling statement due to statement timeout\n      4x ERROR api GET /api/orders/recent -> # (2011ms)\n      2x ERROR api POST /api/orders -> # (2013ms)\n      2x ERROR api POST /api/orders -> # (2012ms)\n      1x INFO api starting shop-api on :# (db=postgres:# cache=redis:#)\n      1x INFO api Serving on http://#\n      1x ERROR api GET /api/orders/recent -> # (2017ms)\n--- last 26 lines ---\n2026-10-30T01:20:10 INFO api starting shop-api on :8000 (db=postgres:5432 cache=redis:6379)\n2026-10-30T01:20:10 INFO api Serving on http://0.0.0.0:8000\n2026-10-30T01:20:18 ERROR api db query failed (recent orders): canceling statement due to statement timeout\n2026-10-30T01:20:18 ERROR api GET /api/orders/recent -> 503 (2017ms)\n2026-10-30T01:20:20 ERROR api db write failed (create order): canceling statement due to statement timeout\n2026-10-30T01:20:20 ERROR api POST /api/orders -> 503 (2013ms)\n2026-10-30T01:20:22 ERROR api db write failed (create order): canceling statement due to statement timeout\n2026-10-30T01:20:22 ERROR api POST /api/orders -> 503 (2013ms)\n2026-10-30T01:20:24 ERROR api db write failed (create order): canceling statement due to statement timeout\n2026-10-30T01:20:24 ERROR api POST /api/orders -> 503 (2014ms)\n2026-10-30T01:20:26 ERROR api db query failed (recent orders): canceling statement due to statement timeout\n2026-10-30T01:20:26 ERROR api GET /api/orders/recent -> 503 (2011ms)\n2026-10-30T01:20:27 ERROR api db query failed (recent orders): canceling statement due to statement timeout\n2026-10-30T01:20:27 ERROR api GET /api/orders/recent -> 503 (2012ms)\n2026-10-30T01:20:28 ERROR api db write failed (create order): canceling statement due to statement timeout\n2026-10-30T01:20:28 ERROR api POST /api/orders -> 503 (2012ms)\n2026-10-30T01:20:29 ERROR api db query failed (recent orders): canceling statement due to statement timeout\n2026-10-30T01:20:29 ERROR api GET /api/orders/recent -> 503 (2011ms)\n2026-10-30T01:20:31 ERROR api db write failed (create order): canceling statement due to statement timeout\n2026-10-30T01:20:31 ERROR api POST /api/orders -> 503 (2016ms)\n2026-10-30T01:20:32 ERROR api db query failed (recent orders): canceling statement due to statement timeout\n2026-10-30T01:20:32 ERROR api GET /api/orders/recent -> 503 (2011ms)\n2026-10-30T01:20:34 ERROR api db query failed (recent orders): canceling statement due to statement timeout\n2026-10-30T01:20:34 ERROR api GET /api/orders/recent -> 503 (2011ms)\n2026-10-30T01:20:34 ERROR api db write failed (create order): canceling statement due to statement timeout\n2026-10-30T01:20:34 ERROR api POST /api/orders -> 503 (2012ms)"
+  },
+  {
+   "step": 4,
+   "t": 4.2,
+   "tool": "run_diagnostic",
+   "kind": "observe",
+   "args": {
+    "service": "api",
+    "check": "disk"
+   },
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.08,
+   "result": "Filesystem                Size      Used Available Use% Mounted on\noverlay                 252.0G     12.0G     26.5G  31% /\ntmpfs                    64.0M         0     64.0M   0% /dev\ntmpfs                     7.9G         0      7.9G   0% /sys/fs/cgroup\nshm                      64.0M         0     64.0M   0% /dev/shm\n/dev/vda                252.0G     12.0G     26.5G  31% /config\ntmpfs                    48.0M      4.0K     48.0M   0% /data\n/dev/vda                252.0G     12.0G     26.5G  31% /etc/hostname\n/dev/vda                252.0G     12.0G     26.5G  31% /etc/hosts\n/dev/vda                252.0G     12.0G     26.5G  31% /etc/resolv.conf\ntmpfs                     4.0K         0      4.0K   0% /proc/acpi\ntmpfs                    64.0M         0     64.0M   0% /proc/interrupts\ntmpfs                    64.0M         0     64.0M   0% /proc/keys\ntmpfs                    64.0M         0     64.0M   0% /proc/timer_list\ntmpfs                     4.0K         0      4.0K   0% /sys/firmware\n--- largest under /data (KB) ---\n4\t/data/audit/audit.log\n4\t/data/audit\n4\t/data"
+  },
+  {
+   "step": 5,
+   "t": 4.28,
+   "tool": "get_metrics",
+   "kind": "observe",
+   "args": {
+    "service": "api"
+   },
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 2.19,
+   "result": "{\n \"containers\": {\n  \"gateway\": {\n   \"cpu_pct\": \"0.09%\",\n   \"mem\": \"2.793MiB / 15.71GiB\",\n   \"mem_pct\": \"0.02%\"\n  },\n  \"api\": {\n   \"cpu_pct\": \"0.52%\",\n   \"mem\": \"35.94MiB / 256MiB\",\n   \"mem_pct\": \"14.04%\"\n  },\n  \"worker\": {\n   \"cpu_pct\": \"0.00%\",\n   \"mem\": \"25.26MiB / 15.71GiB\",\n   \"mem_pct\": \"0.16%\"\n  },\n  \"postgres\": {\n   \"cpu_pct\": \"0.34%\",\n   \"mem\": \"33.7MiB / 15.71GiB\",\n   \"mem_pct\": \"0.21%\"\n  },\n  \"redis\": {\n   \"cpu_pct\": \"0.48%\",\n   \"mem\": \"3.641MiB / 15.71GiB\",\n   \"mem_pct\": \"0.02%\"\n  }\n },\n \"api_app_metrics\": {\n  \"cache_errors_total\": 0,\n  \"db_errors_total\": 13,\n  \"endpoints\": {\n   \"/api/health\": {\n    \"errors_5xx\": 0,\n    \"p50_ms\": 13.1,\n    \"p95_ms\": 15.7,\n    \"requests\": 7\n   },\n   \"/api/orders\": {\n    \"errors_5xx\": 6,\n    \"p50_ms\": 20.7,\n    \"p95_ms\": 2013.8,\n    \"requests\": 24\n   },\n   \"/api/orders/recent\": {\n    \"errors_5xx\": 7,\n    \"p50_ms\": 22.1,\n    \"p95_ms\": 2017.0,\n    \"requests\": 18\n   },\n   \"/api/products\": {\n    \"errors_5xx\": 0,\n    \"p50_ms\": 1.9,\n    \"p95_ms\": 5.0,\n    \"requests\": 34\n   },\n   \"unmatched\": {\n    \"errors_5xx\": 0,\n    \"p50_ms\": 0.3,\n    \"p95_ms\": 0.4,\n    \"requests\": 3\n   }\n  },\n  \"process_rss_mb\": 48.9,\n  \"uptime_s\": 26.5,\n  \"window_s\": 60\n }\n}"
+  },
+  {
+   "step": 6,
+   "t": 6.47,
+   "tool": "list_services",
+   "kind": "observe",
+   "args": {},
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.11,
+   "result": "service   state       restarts  oom    health   networks             missing_networks\ngateway   running     0         False  -        frontend             -\napi       running     0         False  -        backend,frontend     -\nworker    running     0         False  -        backend              -\npostgres  running     0         False  healthy  backend              -\nredis     running     0         False  -        backend              -"
+  },
+  {
+   "step": 7,
+   "t": 6.59,
+   "tool": "check_endpoints",
+   "kind": "observe",
+   "args": {},
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 4.06,
+   "result": "GET  /healthz             status=200     1.5ms OK\nGET  /api/health          status=200    19.3ms OK\nGET  /api/products        status=200     4.9ms OK\nGET  /api/orders/recent   status=503  2013.2ms FAIL {\"error\":\"database error\"}\nPOST /api/orders          status=503  2021.4ms FAIL {\"error\":\"database error\"}"
+  },
+  {
+   "step": 8,
+   "t": 10.65,
+   "tool": "get_logs",
+   "kind": "observe",
+   "args": {
+    "service": "api",
+    "since_seconds": 120
+   },
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.03,
+   "result": "34 lines in last 120s.\nTop message patterns:\n      9x ERROR api db query failed (recent orders): canceling statement due to statement timeout\n      7x ERROR api db write failed (create order): canceling statement due to statement timeout\n      5x ERROR api GET /api/orders/recent -> # (2011ms)\n      2x ERROR api POST /api/orders -> # (2013ms)\n      2x ERROR api GET /api/orders/recent -> # (2012ms)\n      2x ERROR api POST /api/orders -> # (2012ms)\n      1x INFO api starting shop-api on :# (db=postgres:# cache=redis:#)\n      1x INFO api Serving on http://#\n--- last 34 lines ---\n2026-10-30T01:20:10 INFO api starting shop-api on :8000 (db=postgres:5432 cache=redis:6379)\n2026-10-30T01:20:10 INFO api Serving on http://0.0.0.0:8000\n2026-10-30T01:20:18 ERROR api db query failed (recent orders): canceling statement due to statement timeout\n2026-10-30T01:20:18 ERROR api GET /api/orders/recent -> 503 (2017ms)\n2026-10-30T01:20:20 ERROR api db write failed (create order): canceling statement due to statement timeout\n2026-10-30T01:20:20 ERROR api POST /api/orders -> 503 (2013ms)\n2026-10-30T01:20:22 ERROR api db write failed (create order): canceling statement due to statement timeout\n2026-10-30T01:20:22 ERROR api POST /api/orders -> 503 (2013ms)\n2026-10-30T01:20:24 ERROR api db write failed (create order): canceling statement due to statement timeout\n2026-10-30T01:20:24 ERROR api POST /api/orders -> 503 (2014ms)\n2026-10-30T01:20:26 ERROR api db query failed (recent orders): canceling statement due to statement timeout\n2026-10-30T01:20:26 ERROR api GET /api/orders/recent -> 503 (2011ms)\n2026-10-30T01:20:27 ERROR api db query failed (recent orders): canceling statement due to statement timeout\n2026-10-30T01:20:27 ERROR api GET /api/orders/recent -> 503 (2012ms)\n2026-10-30T01:20:28 ERROR api db write failed (create order): canceling statement due to statement timeout\n2026-10-30T01:20:28 ERROR api POST /api/orders -> 503 (2012ms)\n2026-10-30T01:20:29 ERROR api db query failed (recent orders): canceling statement due to statement timeout\n2026-10-30T01:20:29 ERROR api GET /api/orders/recent -> 503 (2011ms)\n2026-10-30T01:20:31 ERROR api db write failed (create order): canceling statement due to statement timeout\n2026-10-30T01:20:31 ERROR api POST /api/orders -> 503 (2016ms)\n2026-10-30T01:20:32 ERROR api db query failed (recent orders): canceling statement due to statement timeout\n2026-10-30T01:20:32 ERROR api GET /api/orders/recent -> 503 (2011ms)\n2026-10-30T01:20:34 ERROR api db query failed (recent orders): canceling statement due to statement timeout\n2026-10-30T01:20:34 ERROR api GET /api/orders/recent -> 503 (2011ms)\n2026-10-30T01:20:34 ERROR api db write failed (create order): canceling statement due to statement timeout\n2026-10-30T01:20:34 ERROR api POST /api/orders -> 503 (2012ms)\n2026-10-30T01:20:36 ERROR api db query failed (recent orders): canceling statement due to statement timeout\n2026-10-30T01:20:36 ERROR api GET /api/orders/recent -> 503 (2012ms)\n2026-10-30T01:20:38 ERROR api db query failed (recent orders): canceling statement due to statement timeout\n2026-10-30T01:20:38 ERROR api GET /api/orders/recent -> 503 (2013ms)\n2026-10-30T01:20:38 ERROR api db query failed (recent orders): canceling statement due to statement timeout\n2026-10-30T01:20:38 ERROR api GET /api/orders/recent -> 503 (2011ms)\n2026-10-30T01:20:40 ERROR api db write failed (create order): canceling statement due to statement timeout\n2026-10-30T01:20:40 ERROR api POST /api/orders -> 503 (2017ms)"
+  },
+  {
+   "step": 9,
+   "t": 10.68,
+   "tool": "run_diagnostic",
+   "kind": "observe",
+   "args": {
+    "service": "api",
+    "check": "disk"
+   },
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.09,
+   "result": "Filesystem                Size      Used Available Use% Mounted on\noverlay                 252.0G     12.0G     26.5G  31% /\ntmpfs                    64.0M         0     64.0M   0% /dev\ntmpfs                     7.9G         0      7.9G   0% /sys/fs/cgroup\nshm                      64.0M         0     64.0M   0% /dev/shm\n/dev/vda                252.0G     12.0G     26.5G  31% /config\ntmpfs                    48.0M      4.0K     48.0M   0% /data\n/dev/vda                252.0G     12.0G     26.5G  31% /etc/hostname\n/dev/vda                252.0G     12.0G     26.5G  31% /etc/hosts\n/dev/vda                252.0G     12.0G     26.5G  31% /etc/resolv.conf\ntmpfs                     4.0K         0      4.0K   0% /proc/acpi\ntmpfs                    64.0M         0     64.0M   0% /proc/interrupts\ntmpfs                    64.0M         0     64.0M   0% /proc/keys\ntmpfs                    64.0M         0     64.0M   0% /proc/timer_list\ntmpfs                     4.0K         0      4.0K   0% /sys/firmware\n--- largest under /data (KB) ---\n4\t/data/audit/audit.log\n4\t/data/audit\n4\t/data"
+  },
+  {
+   "step": 10,
+   "t": 10.77,
+   "tool": "get_metrics",
+   "kind": "observe",
+   "args": {
+    "service": "api"
+   },
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 2.22,
+   "result": "{\n \"containers\": {\n  \"gateway\": {\n   \"cpu_pct\": \"0.00%\",\n   \"mem\": \"2.613MiB / 15.71GiB\",\n   \"mem_pct\": \"0.02%\"\n  },\n  \"api\": {\n   \"cpu_pct\": \"0.13%\",\n   \"mem\": \"35.75MiB / 256MiB\",\n   \"mem_pct\": \"13.96%\"\n  },\n  \"worker\": {\n   \"cpu_pct\": \"0.00%\",\n   \"mem\": \"25MiB / 15.71GiB\",\n   \"mem_pct\": \"0.16%\"\n  },\n  \"postgres\": {\n   \"cpu_pct\": \"0.08%\",\n   \"mem\": \"35.12MiB / 15.71GiB\",\n   \"mem_pct\": \"0.22%\"\n  },\n  \"redis\": {\n   \"cpu_pct\": \"0.49%\",\n   \"mem\": \"4.141MiB / 15.71GiB\",\n   \"mem_pct\": \"0.03%\"\n  }\n },\n \"api_app_metrics\": {\n  \"cache_errors_total\": 0,\n  \"db_errors_total\": 17,\n  \"endpoints\": {\n   \"/api/health\": {\n    \"errors_5xx\": 0,\n    \"p50_ms\": 14.0,\n    \"p95_ms\": 16.1,\n    \"requests\": 8\n   },\n   \"/api/orders\": {\n    \"errors_5xx\": 8,\n    \"p50_ms\": 21.0,\n    \"p95_ms\": 2016.0,\n    \"requests\": 26\n   },\n   \"/api/orders/recent\": {\n    \"errors_5xx\": 9,\n    \"p50_ms\": 22.8,\n    \"p95_ms\": 2017.0,\n    \"requests\": 20\n   },\n   \"/api/products\": {\n    \"errors_5xx\": 0,\n    \"p50_ms\": 1.9,\n    \"p95_ms\": 5.0,\n    \"requests\": 39\n   },\n   \"/metrics\": {\n    \"errors_5xx\": 0,\n    \"p50_ms\": 0.4,\n    \"p95_ms\": 0.4,\n    \"requests\": 1\n   },\n   \"unmatched\": {\n    \"errors_5xx\": 0,\n    \"p50_ms\": 0.3,\n    \"p95_ms\": 0.4,\n    \"requests\": 3\n   }\n  },\n  \"process_rss_mb\": 48.9,\n  \"uptime_s\": 33.0,\n  \"window_s\": 60\n }\n}"
+  },
+  {
+   "step": 11,
+   "t": 12.98,
+   "tool": "list_services",
+   "kind": "observe",
+   "args": {},
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.13,
+   "result": "service   state       restarts  oom    health   networks             missing_networks\ngateway   running     0         False  -        frontend             -\napi       running     0         False  -        backend,frontend     -\nworker    running     0         False  -        backend              -\npostgres  running     0         False  healthy  backend              -\nredis     running     0         False  -        backend              -"
+  },
+  {
+   "step": 12,
+   "t": 13.12,
+   "tool": "check_endpoints",
+   "kind": "observe",
+   "args": {},
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 4.07,
+   "result": "GET  /healthz             status=200     1.5ms OK\nGET  /api/health          status=200    21.1ms OK\nGET  /api/products        status=200    19.3ms OK\nGET  /api/orders/recent   status=503  2014.8ms FAIL {\"error\":\"database error\"}\nPOST /api/orders          status=503  2016.4ms FAIL {\"error\":\"database error\"}"
+  },
+  {
+   "step": 13,
+   "t": 17.19,
+   "tool": "get_logs",
+   "kind": "observe",
+   "args": {
+    "service": "api",
+    "since_seconds": 120
+   },
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.03,
+   "result": "44 lines in last 120s.\nTop message patterns:\n     11x ERROR api db write failed (create order): canceling statement due to statement timeout\n     10x ERROR api db query failed (recent orders): canceling statement due to statement timeout\n      5x ERROR api GET /api/orders/recent -> # (2011ms)\n      3x ERROR api POST /api/orders -> # (2013ms)\n      3x ERROR api GET /api/orders/recent -> # (2012ms)\n      2x ERROR api POST /api/orders -> # (2014ms)\n      2x ERROR api POST /api/orders -> # (2012ms)\n      2x ERROR api POST /api/orders -> # (2016ms)\n--- last 44 lines ---\n2026-10-30T01:20:10 INFO api starting shop-api on :8000 (db=postgres:5432 cache=redis:6379)\n2026-10-30T01:20:10 INFO api Serving on http://0.0.0.0:8000\n2026-10-30T01:20:18 ERROR api db query failed (recent orders): canceling statement due to statement timeout\n2026-10-30T01:20:18 ERROR api GET /api/orders/recent -> 503 (2017ms)\n2026-10-30T01:20:20 ERROR api db write failed (create order): canceling statement due to statement timeout\n2026-10-30T01:20:20 ERROR api POST /api/orders -> 503 (2013ms)\n2026-10-30T01:20:22 ERROR api db write failed (create order): canceling statement due to statement timeout\n2026-10-30T01:20:22 ERROR api POST /api/orders -> 503 (2013ms)\n2026-10-30T01:20:24 ERROR api db write failed (create order): canceling statement due to statement timeout\n2026-10-30T01:20:24 ERROR api POST /api/orders -> 503 (2014ms)\n2026-10-30T01:20:26 ERROR api db query failed (recent orders): canceling statement due to statement timeout\n2026-10-30T01:20:26 ERROR api GET /api/orders/recent -> 503 (2011ms)\n2026-10-30T01:20:27 ERROR api db query failed (recent orders): canceling statement due to statement timeout\n2026-10-30T01:20:27 ERROR api GET /api/orders/recent -> 503 (2012ms)\n2026-10-30T01:20:28 ERROR api db write failed (create order): canceling statement due to statement timeout\n2026-10-30T01:20:28 ERROR api POST /api/orders -> 503 (2012ms)\n2026-10-30T01:20:29 ERROR api db query failed (recent orders): canceling statement due to statement timeout\n2026-10-30T01:20:29 ERROR api GET /api/orders/recent -> 503 (2011ms)\n2026-10-30T01:20:31 ERROR api db write failed (create order): canceling statement due to statement timeout\n2026-10-30T01:20:31 ERROR api POST /api/orders -> 503 (2016ms)\n2026-10-30T01:20:32 ERROR api db query failed (recent orders): canceling statement due to statement timeout\n2026-10-30T01:20:32 ERROR api GET /api/orders/recent -> 503 (2011ms)\n2026-10-30T01:20:34 ERROR api db query failed (recent orders): canceling statement due to statement timeout\n2026-10-30T01:20:34 ERROR api GET /api/orders/recent -> 503 (2011ms)\n2026-10-30T01:20:34 ERROR api db write failed (create order): canceling statement due to statement timeout\n2026-10-30T01:20:34 ERROR api POST /api/orders -> 503 (2012ms)\n2026-10-30T01:20:36 ERROR api db query failed (recent orders): canceling statement due to statement timeout\n2026-10-30T01:20:36 ERROR api GET /api/orders/recent -> 503 (2012ms)\n2026-10-30T01:20:38 ERROR api db query failed (recent orders): canceling statement due to statement timeout\n2026-10-30T01:20:38 ERROR api GET /api/orders/recent -> 503 (2013ms)\n2026-10-30T01:20:38 ERROR api db query failed (recent orders): canceling statement due to statement timeout\n2026-10-30T01:20:38 ERROR api GET /api/orders/recent -> 503 (2011ms)\n2026-10-30T01:20:40 ERROR api db write failed (create order): canceling statement due to statement timeout\n2026-10-30T01:20:40 ERROR api POST /api/orders -> 503 (2017ms)\n2026-10-30T01:20:41 ERROR api db write failed (create order): canceling statement due to statement timeout\n2026-10-30T01:20:41 ERROR api POST /api/orders -> 503 (2014ms)\n2026-10-30T01:20:43 ERROR api db write failed (create order): canceling statement due to statement timeout\n2026-10-30T01:20:43 ERROR api POST /api/orders -> 503 (2030ms)\n2026-10-30T01:20:45 ERROR api db query failed (recent orders): canceling statement due to statement timeout\n2026-10-30T01:20:45 ERROR api GET /api/orders/recent -> 503 (2012ms)\n2026-10-30T01:20:45 ERROR api db write failed (create order): canceling statement due to statement timeout\n2026-10-30T01:20:45 ERROR api POST /api/orders -> 503 (2016ms)\n2026-10-30T01:20:47 ERROR api db write failed (create order): canceling statement due to statement timeout\n2026-10-30T01:20:47 ERROR api POST /api/orders -> 503 (2013ms)"
+  },
+  {
+   "step": 14,
+   "t": 17.22,
+   "tool": "run_diagnostic",
+   "kind": "observe",
+   "args": {
+    "service": "api",
+    "check": "disk"
+   },
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.08,
+   "result": "Filesystem                Size      Used Available Use% Mounted on\noverlay                 252.0G     12.0G     26.5G  31% /\ntmpfs                    64.0M         0     64.0M   0% /dev\ntmpfs                     7.9G         0      7.9G   0% /sys/fs/cgroup\nshm                      64.0M         0     64.0M   0% /dev/shm\n/dev/vda                252.0G     12.0G     26.5G  31% /config\ntmpfs                    48.0M      4.0K     48.0M   0% /data\n/dev/vda                252.0G     12.0G     26.5G  31% /etc/hostname\n/dev/vda                252.0G     12.0G     26.5G  31% /etc/hosts\n/dev/vda                252.0G     12.0G     26.5G  31% /etc/resolv.conf\ntmpfs                     4.0K         0      4.0K   0% /proc/acpi\ntmpfs                    64.0M         0     64.0M   0% /proc/interrupts\ntmpfs                    64.0M         0     64.0M   0% /proc/keys\ntmpfs                    64.0M         0     64.0M   0% /proc/timer_list\ntmpfs                     4.0K         0      4.0K   0% /sys/firmware\n--- largest under /data (KB) ---\n4\t/data/audit/audit.log\n4\t/data/audit\n4\t/data"
+  },
+  {
+   "step": 15,
+   "t": 17.3,
+   "tool": "get_metrics",
+   "kind": "observe",
+   "args": {
+    "service": "api"
+   },
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 2.22,
+   "result": "{\n \"containers\": {\n  \"gateway\": {\n   \"cpu_pct\": \"0.00%\",\n   \"mem\": \"2.34MiB / 15.71GiB\",\n   \"mem_pct\": \"0.01%\"\n  },\n  \"api\": {\n   \"cpu_pct\": \"1.14%\",\n   \"mem\": \"35.55MiB / 256MiB\",\n   \"mem_pct\": \"13.89%\"\n  },\n  \"worker\": {\n   \"cpu_pct\": \"0.00%\",\n   \"mem\": \"25.01MiB / 15.71GiB\",\n   \"mem_pct\": \"0.16%\"\n  },\n  \"postgres\": {\n   \"cpu_pct\": \"0.04%\",\n   \"mem\": \"35.25MiB / 15.71GiB\",\n   \"mem_pct\": \"0.22%\"\n  },\n  \"redis\": {\n   \"cpu_pct\": \"0.48%\",\n   \"mem\": \"3.648MiB / 15.71GiB\",\n   \"mem_pct\": \"0.02%\"\n  }\n },\n \"api_app_metrics\": {\n  \"cache_errors_total\": 0,\n  \"db_errors_total\": 22,\n  \"endpoints\": {\n   \"/api/health\": {\n    \"errors_5xx\": 0,\n    \"p50_ms\": 14.0,\n    \"p95_ms\": 16.1,\n    \"requests\": 9\n   },\n   \"/api/orders\": {\n    \"errors_5xx\": 11,\n    \"p50_ms\": 21.2,\n    \"p95_ms\": 2017.5,\n    \"requests\": 29\n   },\n   \"/api/orders/recent\": {\n    \"errors_5xx\": 11,\n    \"p50_ms\": 2010.6,\n    \"p95_ms\": 2012.8,\n    \"requests\": 22\n   },\n   \"/api/products\": {\n    \"errors_5xx\": 0,\n    \"p50_ms\": 1.9,\n    \"p95_ms\": 5.0,\n    \"requests\": 42\n   },\n   \"/metrics\": {\n    \"errors_5xx\": 0,\n    \"p50_ms\": 0.5,\n    \"p95_ms\": 0.5,\n    \"requests\": 2\n   },\n   \"unmatched\": {\n    \"errors_5xx\": 0,\n    \"p50_ms\": 0.3,\n    \"p95_ms\": 0.4,\n    \"requests\": 3\n   }\n  },\n  \"process_rss_mb\": 48.9,\n  \"uptime_s\": 39.6,\n  \"window_s\": 60\n }\n}"
+  },
+  {
+   "step": 16,
+   "t": 19.52,
+   "tool": "verify_recovery",
+   "kind": "observe",
+   "args": {},
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 10.42,
+   "result": "{\n \"healthy\": false,\n \"probe_success_rate\": 0.6,\n \"probe_p95_ms\": 2019.8,\n \"problems\": [\n  \"probe success 60% < 97%\",\n  \"probe p95 2020ms > 400ms\"\n ],\n \"probes\": {\n  \"GET /healthz\": {\n   \"ok\": 2,\n   \"fail\": 0,\n   \"statuses\": [\n    200\n   ],\n   \"last_error\": \"\"\n  },\n  \"GET /api/health\": {\n   \"ok\": 2,\n   \"fail\": 0,\n   \"statuses\": [\n    200\n   ],\n   \"last_error\": \"\"\n  },\n  \"GET /api/products\": {\n   \"ok\": 2,\n   \"fail\": 0,\n   \"statuses\": [\n    200\n   ],\n   \"last_error\": \"\"\n  },\n  \"GET /api/orders/recent\": {\n   \"ok\": 0,\n   \"fail\": 2,\n   \"statuses\": [\n    503\n   ],\n   \"last_error\": \"{\\\"error\\\":\\\"database error\\\"}\\n\"\n  },\n  \"POST /api/orders\": {\n   \"ok\": 0,\n   \"fail\": 2,\n   \"statuses\": [\n    503\n   ],\n   \"last_error\": \"{\\\"error\\\":\\\"database error\\\"}\\n\"\n  }\n }\n}"
+  },
+  {
+   "step": 17,
+   "t": 29.94,
+   "tool": "submit_report",
+   "kind": "final",
+   "args": {
+    "root_causes": [],
+    "summary": "runbook applied 0 fix(es)",
+    "recovered": false
+   },
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.0,
+   "result": "report submitted"
+  }
+ ],
+ "episode_seconds": 93.6
+}
