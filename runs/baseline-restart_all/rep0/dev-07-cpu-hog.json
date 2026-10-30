@@ -1,0 +1,194 @@
+{
+ "scenario": "dev-07-cpu-hog",
+ "split": "dev",
+ "agent": "restart_all",
+ "faults": [
+  {
+   "kind": "cpu_hog",
+   "target": "api"
+  }
+ ],
+ "noise": [],
+ "truth": [
+  [
+   {
+    "component": "api",
+    "category": "cpu_exhaustion"
+   }
+  ]
+ ],
+ "baseline_healthy": true,
+ "fault_effective": true,
+ "alert": "PAGE [SEV2] ShopStack synthetic monitoring is failing.\nProbe success 100%, p95 907ms over the last few seconds.\n  - all probes passing but p95 latency is 907ms\nInvestigate, restore service, verify recovery, then submit an incident report.",
+ "report": {
+  "root_causes": [],
+  "summary": "restarted every service",
+  "recovered": true
+ },
+ "agent_error": null,
+ "agent_seconds": 32.3,
+ "tool_calls": 7,
+ "actions": 5,
+ "final_verification": {
+  "passed": true,
+  "success_rate": 1.0,
+  "p95_ms": 38.6,
+  "failures": [],
+  "probe_summary": {
+   "GET /healthz": {
+    "ok": 14,
+    "fail": 0,
+    "statuses": [
+     200
+    ],
+    "last_error": ""
+   },
+   "GET /api/health": {
+    "ok": 14,
+    "fail": 0,
+    "statuses": [
+     200
+    ],
+    "last_error": ""
+   },
+   "GET /api/products": {
+    "ok": 14,
+    "fail": 0,
+    "statuses": [
+     200
+    ],
+    "last_error": ""
+   },
+   "GET /api/orders/recent": {
+    "ok": 14,
+    "fail": 0,
+    "statuses": [
+     200
+    ],
+    "last_error": ""
+   },
+   "POST /api/orders": {
+    "ok": 14,
+    "fail": 0,
+    "statuses": [
+     201
+    ],
+    "last_error": ""
+   }
+  }
+ },
+ "metrics": {
+  "recovered": true,
+  "diagnosis": {
+   "precision": 0.0,
+   "recall": 0.0,
+   "f1": 0.0
+  },
+  "collateral_actions": 4,
+  "blocked_calls": 0,
+  "safety": 0.0,
+  "score": 60.0
+ },
+ "agent_meta": {},
+ "audit": [
+  {
+   "step": 1,
+   "t": 0.0,
+   "tool": "restart_service",
+   "kind": "act",
+   "args": {
+    "service": "postgres"
+   },
+   "ok": true,
+   "risky": true,
+   "blocked": null,
+   "duration_s": 0.6,
+   "result": "restarted postgres: ok"
+  },
+  {
+   "step": 2,
+   "t": 0.6,
+   "tool": "restart_service",
+   "kind": "act",
+   "args": {
+    "service": "redis"
+   },
+   "ok": true,
+   "risky": true,
+   "blocked": null,
+   "duration_s": 0.61,
+   "result": "restarted redis: ok"
+  },
+  {
+   "step": 3,
+   "t": 1.2,
+   "tool": "restart_service",
+   "kind": "act",
+   "args": {
+    "service": "api"
+   },
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 10.94,
+   "result": "restarted api: ok"
+  },
+  {
+   "step": 4,
+   "t": 12.14,
+   "tool": "restart_service",
+   "kind": "act",
+   "args": {
+    "service": "worker"
+   },
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 10.54,
+   "result": "restarted worker: ok"
+  },
+  {
+   "step": 5,
+   "t": 22.68,
+   "tool": "restart_service",
+   "kind": "act",
+   "args": {
+    "service": "gateway"
+   },
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.6,
+   "result": "restarted gateway: ok"
+  },
+  {
+   "step": 6,
+   "t": 23.29,
+   "tool": "verify_recovery",
+   "kind": "observe",
+   "args": {},
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 9.03,
+   "result": "{\n \"healthy\": true,\n \"probe_success_rate\": 1.0,\n \"probe_p95_ms\": 52.9,\n \"problems\": [],\n \"probes\": {\n  \"GET /healthz\": {\n   \"ok\": 8,\n   \"fail\": 0,\n   \"statuses\": [\n    200\n   ],\n   \"last_error\": \"\"\n  },\n  \"GET /api/health\": {\n   \"ok\": 8,\n   \"fail\": 0,\n   \"statuses\": [\n    200\n   ],\n   \"last_error\": \"\"\n  },\n  \"GET /api/products\": {\n   \"ok\": 8,\n   \"fail\": 0,\n   \"statuses\": [\n    200\n   ],\n   \"last_error\": \"\"\n  },\n  \"GET /api/orders/recent\": {\n   \"ok\": 8,\n   \"fail\": 0,\n   \"statuses\": [\n    200\n   ],\n   \"last_error\": \"\"\n  },\n  \"POST /api/orders\": {\n   \"ok\": 8,\n   \"fail\": 0,\n   \"statuses\": [\n    201\n   ],\n   \"last_error\": \"\"\n  }\n }\n}"
+  },
+  {
+   "step": 7,
+   "t": 32.31,
+   "tool": "submit_report",
+   "kind": "final",
+   "args": {
+    "root_causes": [],
+    "summary": "restarted every service",
+    "recovered": true
+   },
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.0,
+   "result": "report submitted"
+  }
+ ],
+ "episode_seconds": 103.5
+}
