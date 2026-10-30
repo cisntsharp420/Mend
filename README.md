@@ -5,13 +5,13 @@
 <p align="center">
   <img src="https://img.shields.io/badge/incidents-22-c6f24e?style=flat-square&labelColor=04110f" alt="22 incidents">
   <img src="https://img.shields.io/badge/fault%20types-12-3fc1b0?style=flat-square&labelColor=04110f" alt="12 fault types">
-  <img src="https://img.shields.io/badge/recorded%20runs-66-7cc7d9?style=flat-square&labelColor=04110f" alt="66 recorded runs">
-  <img src="https://img.shields.io/badge/tests-25%20passing-86e39a?style=flat-square&labelColor=04110f" alt="25 tests passing">
+  <img src="https://img.shields.io/badge/recorded%20runs-100-7cc7d9?style=flat-square&labelColor=04110f" alt="100 recorded runs">
+  <img src="https://img.shields.io/badge/tests-33%20passing-86e39a?style=flat-square&labelColor=04110f" alt="33 tests passing">
   <img src="https://img.shields.io/badge/python-3.10%2B-e9f3f0?style=flat-square&labelColor=04110f" alt="Python 3.10+">
 </p>
 
 <p align="center">
-  <b><a href="https://cisntsharp420.github.io/Mend/">Open the web app</a></b> ·
+  <b><a href="https://cisntsharp420.github.io/Mend/docs/mend.html">Open the web app</a></b> ·
   <a href="#the-idea-from-scratch">The idea</a> ·
   <a href="#what-we-found">Results</a> ·
   <a href="#zero-to-hero">Zero to hero</a> ·
@@ -76,7 +76,8 @@ fixed it?*
 | **Idle Agent** | `noop` | Does nothing. The floor every agent must beat, and proof each fault is real and persistent. |
 | **Restart Agent** | `restart_all` | Restarts every service: the classic "turn it off and on again". |
 | **Runbook Agent** | `rules` | A hand-written runbook built only from the dev incidents. |
-| **Mend AI** | `llm` | Claude reasoning over the same toolbox. Implemented and unit-tested; not yet scored (see [Limitations](#limitations)). |
+| **Mend AI** | `reasoner` | **The project's agent.** A reasoning engine that turns logs, metrics and diagnostics into ranked hypotheses, applies the gentlest fix for the most likely cause, re-checks, and keeps going until the verifier passes. Runs offline: no API key, no cost. |
+| **Mend AI (Claude)** | `llm` | The same job done by Claude through the same toolbox. Implemented and unit-tested; needs an Anthropic API key, so not scored yet. |
 
 ---
 
@@ -88,7 +89,8 @@ fixed it?*
 |---|---|---|---|
 | Idle Agent | 0% recovered · score 10.0 | 0% · 10.0 | 0 |
 | Restart Agent | 50% · 30.0 | 17% · **10.3** | **81** |
-| Runbook Agent | **100% · 99.0** | **25% · 35.4** | 0 |
+| Runbook Agent | 100% · 99.0 | 25% · 35.4 | 0 |
+| **Mend AI** | **100% · 99.0** | **96% · 96.6** (23 of 24 runs) | **0** |
 
 - **Restarting can't game the benchmark.** The Restart Agent fixes half of the easy faults, but on
   new ones it scores about the same as doing nothing (10.3 vs 10.0), and it restarts healthy
@@ -97,8 +99,13 @@ fixed it?*
   written from and drops to 35 on unseen ones. It only recovers held-out faults that resemble dev
   faults, and none of the new fault types (DNS, crash loop, memory leak, database lock, connection
   exhaustion).
-- **That gap is what an AI agent has to close:** diagnosing failures nobody wrote a rule for,
-  without collateral damage. The bar on never-seen incidents is **25% recovery / 35.4 points**.
+- **Mend AI closes that gap.** On the 12 never-seen incidents, run twice each, it recovers 23 of 24
+  (96%, mean score 96.6) with zero collateral damage, including the rollback trap, masked faults and
+  a triple fault. An independent re-run in a fresh environment recovered 5 of 5 (mean 98.8).
+- **How to read the 96% honestly.** Mend AI never reads the answers: it sees only what the toolbox
+  shows. But it was designed knowing the catalogue of 12 fault types, including the types that
+  appear only in the held-out incidents. So the held-out score measures recovery in new situations
+  (new combinations, red herrings, traps), not on fault types nobody had heard of.
 
 Per-incident results: [`docs/results.md`](docs/results.md). Raw episode records: [`runs/`](runs/).
 
@@ -112,7 +119,7 @@ Start at any level. Levels 0 to 2 need nothing installed; levels 3 to 5 need Doc
 
 ### Level 0 · Look
 
-The **Mend web app** is live at **[cisntsharp420.github.io/Mend](https://cisntsharp420.github.io/Mend/)**.
+The **Mend web app** is live at **[cisntsharp420.github.io/Mend/docs/mend.html](https://cisntsharp420.github.io/Mend/docs/mend.html)**.
 Open it in any browser, on a computer or a phone, with nothing to install.
 
 It is also a single file, [`docs/mend.html`](docs/mend.html), that holds every recorded run and
@@ -131,8 +138,8 @@ works offline:
 Everything on the page really happened. Here is how to read it:
 
 1. **Results** (top) compares the agents on dev and never-seen incidents.
-2. **Replay** (below) has the incident list on the left. The three dots on each row are the three
-   agents, left to right: filled green means recovered, red outline means still broken. Use
+2. **Replay** (below) has the incident list on the left. The dots on each row are the agents, left
+   to right: filled green means recovered, red outline means still broken. Use
    **All 22 / Dev / Held-out** to filter.
 3. Pick an **incident**, then an **agent** with the buttons at the top right of the replay.
 4. Press **▶ Play** to watch the agent work step by step, **Next step** to go one at a time, or
@@ -145,11 +152,11 @@ Everything on the page really happened. Here is how to read it:
 <p align="center"><img src="docs/images/app-replay.jpg" alt="Replaying an incident step by step" width="100%"></p>
 
 **A two-minute tour**
-- `ho-08-rollback-trap` with the **Runbook Agent**: a bad deploy hidden under a harmless one. It
-  rolls back, re-checks, sees it is still broken, rolls back one more version, and scores 100.
+- `ho-08-rollback-trap` with **Mend AI**: a bad deploy hidden under a harmless one. It reads the
+  config diffs, rolls back past the bad deploy in one step, re-checks, and scores 100.
 - Same incident, **Restart Agent**: five restarts, nothing fixed, 0 points, 4 healthy services hit.
-- `ho-05-db-lock` with the **Runbook Agent**: it fails, and the recommendations show exactly what
-  is still needed.
+- `ho-05-db-lock`: the **Runbook Agent** fails (its recommendations show what is still needed);
+  **Mend AI** finds the session holding the lock, ends only that session, and scores 100.
 
 ### Level 2 · Report
 
@@ -160,7 +167,7 @@ Every incident ends in an incident report. Download them from the web app:
 | **Download this incident** (under the incident name) | A short PDF for the selected incident and agent. |
 | **PDF: Report** (Incident reports bar) | The selected agent's full report: cover, overview of all 22 incidents, one page per incident. |
 | **CSV: Spreadsheet** | The selected agent's 22 incidents, one row each, ready for Excel. |
-| **CSV: All agents** | All 66 runs in one spreadsheet. |
+| **CSV: All agents** | Every recorded run, all agents, in one spreadsheet. |
 
 <table>
   <tr>
@@ -199,7 +206,7 @@ git clone https://github.com/cisntsharp420/Mend.git
 cd Mend
 python3 -m venv .venv && source .venv/bin/activate
 make install          # the package, test tools and PDF support
-make test             # 25 unit tests, no Docker needed
+make test             # 33 unit tests, no Docker needed
 ```
 
 Start the shop and check it is healthy (the first build takes a few minutes):
@@ -230,6 +237,8 @@ Score agents on all 22 incidents and turn the results into reports and the web a
 
 ```bash
 make baselines        # Idle, Restart and Runbook Agents on all 22 incidents (about 2 hours)
+make reasoner-dev reasoner-heldout   # Mend AI: dev, then held-out twice (offline, no key)
+make reasoner-ablations              # Mend AI with one evidence source switched off at a time
 make report           # docs/results.md: comparison tables
 make reports          # docs/reports/: PDF + CSV incident reports
 make webapp           # docs/mend.html: the Mend web app, rebuilt from runs/
@@ -249,6 +258,10 @@ Useful options for `python -m recovery run`:
 To build reports and the app from other runs, pass them as tags, for example
 `make webapp TAGS="baseline-rules my-first-run"`. Add `--per-incident` to `python -m recovery
 export` for one short PDF per incident.
+
+Ask Mend AI for a diagnosis without letting it change anything: break the system with
+`python -m recovery inject <incident>`, then run `python -m recovery diagnose`. It prints the
+ranked causes, the evidence behind each, the fix it would apply and how to prevent a repeat.
 
 ### Level 5 · Extend
 
@@ -291,13 +304,13 @@ agents) or [`scenarios/heldout.yaml`](scenarios/heldout.yaml) (never tune on the
   noise: [benign_api_deploy]
 ```
 
-**Run Mend AI.** Put an Anthropic API key in `.env` (copy [`.env.example`](.env.example)), then:
+**Run Mend AI (Claude).** Put an Anthropic API key in `.env` (copy [`.env.example`](.env.example)), then:
 
 ```bash
 make llm-dev          # tune on dev incidents only
-make llm-heldout      # the headline number: never-seen incidents, 2 repeats
+make llm-heldout      # never-seen incidents, 2 repeats
 make ablations        # switch off one capability at a time and measure what it was worth
-make webapp TAGS="baseline-noop baseline-restart_all baseline-rules llm-heldout"
+make webapp TAGS="baseline-noop baseline-restart_all baseline-rules reasoner-dev reasoner-heldout llm-heldout"
 ```
 
 Every model response is recorded, so `python -m recovery run --agent llm --replay runs/<tag>/rep0`
@@ -311,7 +324,7 @@ replays a run with no API calls.
 flowchart LR
     subgraph Harness["recovery/ (episode runner)"]
         S[Scenarios<br/>dev.yaml · heldout.yaml] --> F[faults.py<br/>inject faults + red herrings]
-        A[Agents<br/>Idle · Restart · Runbook · Mend AI] -->|only interface| T[tools.py<br/>17 tools · guardrails · budgets · audit]
+        A[Agents<br/>Idle · Restart · Runbook · Mend AI · Mend AI Claude] -->|only interface| T[tools.py<br/>17 tools · guardrails · budgets · audit]
         V[verifier.py<br/>independent soak check] --> SC[scoring.py]
         T --> SC
         SC --> R[export.py · webapp/<br/>PDF · CSV · Mend web app]
@@ -334,7 +347,7 @@ flowchart LR
 | `recovery/tools.py` | The toolbox: 8 observe tools, 8 act tools and `submit_report`, with guardrails, budgets, approval, dry run and audit trail. |
 | `recovery/verifier.py` | User journeys over a soak window (≥ 97% success, p95 ≤ 400 ms), services up with no new restarts, dependencies healthy, residual checks passing. |
 | `recovery/scoring.py` | 60 recovery + 30 diagnosis F1 + 10 safety. Pure functions, unit-tested. |
-| `recovery/agents/` | Idle, Restart and Runbook Agents, and Mend AI (Claude, with ablation variants and record/replay). |
+| `recovery/agents/` | Idle, Restart and Runbook Agents; Mend AI (`reasoner.py`, hypothesis-driven, with ablation variants and a read-only diagnose mode); Mend AI (Claude) (`llm.py`, with ablation variants and record/replay). |
 | `recovery/playbook.py` | The immediate fix and prevention advice for every fault type. |
 | `recovery/export.py` | CSV and PDF incident reports in the Mend design. |
 | `webapp/` | Source of the Mend web app and the README images. |
@@ -381,19 +394,25 @@ budget (12) and a time budget (420 s), `--approve` puts a human in the loop for 
 
 ## Evaluation design
 
-- **Dev and never-seen splits.** `scenarios/dev.yaml` (10 incidents) is the only split used to
-  build the Runbook Agent and the Mend AI prompt. `scenarios/heldout.yaml` (12) was never used for
-  tuning: it has new fault types, variants of dev faults, traps (a bad deploy hidden under a
-  harmless one) and multi-fault combinations.
+- **Dev and never-seen splits.** `scenarios/dev.yaml` (10 incidents) is the only split the agents
+  were run and tuned on while being built. `scenarios/heldout.yaml` (12) was never used for tuning:
+  it has fault types absent from dev, variants of dev faults, traps (a bad deploy hidden under a
+  harmless one) and multi-fault combinations. Mend AI's detectors were written from general SRE
+  knowledge of the full fault catalogue, so for Mend AI the held-out set tests new situations
+  rather than unheard-of fault types.
+- **Repeats and an independent re-run.** Mend AI ran the held-out set twice (23 of 24 recovered).
+  Five held-out incidents were then re-run from the same code in a fresh environment: 5 of 5.
 - **Independent verification.** Only the verifier's soak window and residual checks decide
   recovery. Restarting a service that has a bad config does not count.
 - **Safety is scored.** Actions on services that are not part of any root cause count as
   collateral damage and cost points.
 - **Validity checks.** Every fault was validated break → fix. Each episode records whether the
-  system was healthy before injection and whether the fault took effect. All 66 baseline episodes
+  system was healthy before injection and whether the fault took effect. All 100 recorded episodes
   were valid, with no agent errors.
-- **Ablations built in.** Mend AI variants `no_verify`, `no_changes`, `no_diagnostics` and
-  `minimal_prompt` each switch off one capability to measure what it contributes.
+- **Ablations built in.** Mend AI variants `no_logs`, `no_metrics`, `no_diagnostics`, `no_changes`
+  and `single_pass` (no re-check loop) each switch off one capability to measure what it
+  contributes (`make reasoner-ablations`). Mend AI (Claude) has its own: `no_verify`, `no_changes`,
+  `no_diagnostics`, `minimal_prompt`.
 
 ## Command reference
 
@@ -403,6 +422,7 @@ budget (12) and a time budget (420 s), `--approve` puts a human in the loop for 
 | `python -m recovery status` | Service states and endpoint probes. |
 | `python -m recovery inject <incident>` | Reset, then break the system the way an incident does. |
 | `python -m recovery run --agent <id> --scenarios <sel> --tag <name>` | Run and score an agent. |
+| `python -m recovery diagnose` | Read-only: Mend AI's ranked causes, evidence, fix and prevention for the live system. |
 | `python -m recovery report <tags...> --out docs/results.md` | Comparison tables. |
 | `python -m recovery export <tags...> [--per-incident]` | PDF and CSV incident reports. |
 | `python webapp/build.py <tags...>` | Rebuild the Mend web app. |
@@ -417,14 +437,14 @@ Mend/
 ├── Makefile             shortcuts: install, test, baselines, reports, webapp, ...
 ├── pyproject.toml       Python package and optional extras (dev, export)
 ├── recovery/            the benchmark (python -m recovery)
-│   ├── agents/          Idle, Restart and Runbook Agents, Mend AI
+│   ├── agents/          Idle, Restart, Runbook Agents; Mend AI (reasoner.py) and Mend AI (Claude) (llm.py)
 │   ├── assets/fonts/    fonts for the PDF reports (SIL Open Font License)
 │   ├── faults.py  tools.py  verifier.py  scoring.py  harness.py
 │   ├── playbook.py      fix and prevention advice per fault type
 │   └── export.py  report.py  cli.py
 ├── sandbox/             ShopStack: docker compose, api code, configs, database schema
 ├── scenarios/           dev.yaml (10 incidents) and heldout.yaml (12)
-├── tests/               unit tests (scoring, guardrails, scenarios, Mend AI replay, reports)
+├── tests/               unit tests (scoring, guardrails, scenarios, Mend AI, Mend AI (Claude) replay, reports)
 ├── webapp/              Mend web app source (template.html, build.py) and README image script
 ├── scripts/             bootstrap_cloud.sh for locked-down cloud containers
 ├── runs/                every recorded episode, committed as evidence
@@ -439,10 +459,13 @@ Mend/
 
 ## Limitations
 
-- **Mend AI has not been scored yet:** there was no API access during the hackathon. Its code,
-  ablations and replay tests are ready (`recovery/agents/llm.py`, `tests/test_llm_agent.py`).
+- **Mend AI knew the fault catalogue.** It never sees the answers, but its detectors cover all 12
+  fault types, so its held-out score shows recovery in new situations, not on brand-new faults.
+- **Mend AI's ablations have not been run yet** (`make reasoner-ablations`, about 2.5 hours, free).
+- **Mend AI (Claude) has not been scored:** there was no working API key during the hackathon. Its
+  code, ablations and replay tests are ready (`recovery/agents/llm.py`, `tests/test_llm_agent.py`).
 - The cloud kernel had no `netem`, so there are no latency or packet-loss faults.
-- Each baseline ran once. The baselines are deterministic, but a stochastic agent needs repeats.
+- Each baseline ran once and Mend AI's held-out set twice; more repeats would tighten the numbers.
 - ShopStack is small (five services). Real incidents have more noise, more services and faults
   that unfold over hours.
 
