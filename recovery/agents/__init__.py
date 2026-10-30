@@ -1,4 +1,4 @@
-"""Agent registry. The LLM agent is imported lazily so baselines run without an API key."""
+"""Agent registry. The LLM agents are imported lazily so baselines run without an API key."""
 
 
 def make_agent(name: str, **kwargs):
@@ -14,7 +14,10 @@ def make_agent(name: str, **kwargs):
     if name == "llm":
         from .llm import LLMAgent
         return LLMAgent(**kwargs)
-    raise ValueError(f"unknown agent '{name}'; choose from noop, restart_all, rules, llm")
+    if name == "llm_openai":
+        from .openai_agent import OpenAIAgent
+        return OpenAIAgent(**kwargs)
+    raise ValueError(f"unknown agent '{name}'; choose from {', '.join(AGENTS)}")
 
 
-AGENTS = ["noop", "restart_all", "rules", "llm"]
+AGENTS = ["noop", "restart_all", "rules", "llm", "llm_openai"]

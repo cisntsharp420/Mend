@@ -1,4 +1,6 @@
 PY ?= python3
+# LLM backend for the llm-* targets: llm (Claude) or llm_openai (OpenAI).
+AGENT ?= llm
 # Load .env if present (for ANTHROPIC_API_KEY).
 -include .env
 export
@@ -28,14 +30,14 @@ baselines:          ## noop / restart_all / rules on all 22 scenarios
 	for a in noop restart_all rules; do $(PY) -m recovery run --agent $$a --scenarios all --tag baseline-$$a; done
 
 llm-dev:            ## LLM agent on the dev split
-	$(PY) -m recovery run --agent llm --scenarios dev --tag llm-dev
+	$(PY) -m recovery run --agent $(AGENT) --scenarios dev --tag $(AGENT)-dev
 
 llm-heldout:        ## LLM agent on the held-out split, 2 repeats
-	$(PY) -m recovery run --agent llm --scenarios heldout --repeats 2 --tag llm-heldout
+	$(PY) -m recovery run --agent $(AGENT) --scenarios heldout --repeats 2 --tag $(AGENT)-heldout
 
 ablations:          ## LLM ablations on the held-out split
 	for v in no_verify no_changes no_diagnostics minimal_prompt; do \
-	  $(PY) -m recovery run --agent llm --variant $$v --scenarios heldout --tag ablation-$$v; done
+	  $(PY) -m recovery run --agent $(AGENT) --variant $$v --scenarios heldout --tag $(AGENT)-ablation-$$v; done
 
 report:             ## regenerate docs/results.md from the runs in runs/
 	$(PY) -m recovery report $(TAGS) --out docs/results.md

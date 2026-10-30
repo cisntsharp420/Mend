@@ -17,6 +17,6 @@ for img in postgres:16-alpine redis:7-alpine nginx:1.27-alpine python:3.12-alpin
 done
 
 ls sandbox/api/wheels/*.whl >/dev/null 2>&1 || make wheels
-python3 -m pip install -q pyyaml anthropic pytest 2>&1 | grep -v "root user" || true
+python3 -m pip install -q pyyaml anthropic openai pytest 2>&1 | grep -v "root user" || true
 python3 -m recovery up
 python3 -m pytest -q

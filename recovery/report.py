@@ -13,9 +13,9 @@ def _load(tag: str) -> dict:
 
 def _label(s: dict) -> str:
     m = s.get("agent_meta") or {}
-    if s["agent"] != "llm":
+    if not s["agent"].startswith("llm"):
         return s["agent"]
-    return f"llm:{m.get('model', '?').removeprefix('claude-')}:{m.get('variant', 'full')}"
+    return f"{s['agent']}:{m.get('model', '?').removeprefix('claude-')}:{m.get('variant', 'full')}"
 
 
 def build(tags: list[str]) -> str:

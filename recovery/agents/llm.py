@@ -89,8 +89,11 @@ class LLMAgent(Agent):
         self.recording: list[dict] = []    # raw responses (for replay)
         self.stop = None
         if not self.replay:
-            import anthropic
-            self.client = anthropic.Anthropic(max_retries=4)
+            self.client = self._make_client()
+
+    def _make_client(self):
+        import anthropic
+        return anthropic.Anthropic(max_retries=4)
 
     # ------------------------------------------------------------------ model call
     def _call(self, system: str, tools: list, messages: list) -> dict:

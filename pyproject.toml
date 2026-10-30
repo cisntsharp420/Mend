@@ -7,6 +7,7 @@ dependencies = ["pyyaml>=6", "anthropic>=2.3"]
 
 [project.optional-dependencies]
 dev = ["pytest>=8"]
+openai = ["openai>=3.41"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

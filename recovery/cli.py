@@ -53,7 +53,7 @@ def cmd_inject(a):
 
 
 def _agent_kwargs(a, scenario_id: str) -> dict:
-    if a.agent != "llm":
+    if not a.agent.startswith("llm"):
         return {}
     kw = {"model": a.model, "variant": a.variant, "effort": a.effort}
     if a.replay:
@@ -139,7 +139,7 @@ def main(argv=None):
     r.add_argument("--scenarios", default="dev", help="dev | heldout | all | comma-separated ids/prefixes")
     r.add_argument("--repeats", type=int, default=1)
     r.add_argument("--tag", help="name of the results folder under runs/")
-    r.add_argument("--model", help="LLM model id (llm agent)")
+    r.add_argument("--model", help="LLM model id (llm: Claude, llm_openai: OpenAI)")
     r.add_argument("--variant", default="full",
                    help="LLM ablation: full | no_verify | no_changes | no_diagnostics | minimal_prompt")
     r.add_argument("--effort", default="high", choices=["low", "medium", "high", "xhigh", "max"])
