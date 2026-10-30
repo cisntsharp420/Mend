@@ -1,11 +1,11 @@
 PY ?= python3
 # Runs that reports and the web app are built from (override: make webapp TAGS="baseline-rules llm-heldout").
-TAGS ?= baseline-noop baseline-restart_all baseline-rules
+TAGS ?= baseline-noop baseline-restart_all baseline-rules reasoner-dev reasoner-heldout
 # Load .env if present (for ANTHROPIC_API_KEY).
 -include .env
 export
 
-.PHONY: install wheels up down status test baselines llm-dev llm-heldout ablations report reports webapp clean
+.PHONY: install wheels up down status test baselines reasoner-dev reasoner-heldout reasoner-ablations diagnose llm-dev llm-heldout ablations report reports webapp clean
 
 install:            ## install python dependencies
 	$(PY) -m pip install -e '.[dev,export]'
@@ -29,13 +29,26 @@ test:               ## unit tests (no docker, no API key)
 baselines:          ## noop / restart_all / rules on all 22 scenarios
 	for a in noop restart_all rules; do $(PY) -m recovery run --agent $$a --scenarios all --tag baseline-$$a; done
 
+reasoner-dev:       ## Reasoning Agent on the dev split (offline, no API key)
+	$(PY) -m recovery run --agent reasoner --scenarios dev --tag reasoner-dev
+
+reasoner-heldout:   ## Reasoning Agent on the held-out split, 2 repeats
+	$(PY) -m recovery run --agent reasoner --scenarios heldout --repeats 2 --tag reasoner-heldout
+
+reasoner-ablations: ## Reasoning Agent with one evidence source (or the re-check loop) switched off, held-out
+	for v in no_logs no_metrics no_diagnostics no_changes single_pass; do \
+	  $(PY) -m recovery run --agent reasoner --variant $$v --scenarios heldout --tag reasoner-ablation-$$v; done
+
+diagnose:           ## read-only: print the recommended solution for the live system
+	$(PY) -m recovery diagnose
+
 llm-dev:            ## LLM agent on the dev split
 	$(PY) -m recovery run --agent llm --scenarios dev --tag llm-dev
 
 llm-heldout:        ## LLM agent on the held-out split, 2 repeats
 	$(PY) -m recovery run --agent llm --scenarios heldout --repeats 2 --tag llm-heldout
 
-ablations:          ## LLM ablations on the held-out split
+ablations:          ## Mend AI (LLM) ablations on the held-out split
 	for v in no_verify no_changes no_diagnostics minimal_prompt; do \
 	  $(PY) -m recovery run --agent llm --variant $$v --scenarios heldout --tag ablation-$$v; done
 

@@ -242,7 +242,7 @@ footer.site .wordmark { font-size: .95rem; color: var(--ink) }
 <main class="page gutter">
   <div class="inner" style="display:grid;gap:28px">
     <section id="results" style="display:grid;gap:14px">
-      <div class="section-title"><h2>Results</h2><p>22 incidents. Dev incidents were used to build the agents; held-out incidents were never seen.</p></div>
+      <div class="section-title"><h2>Results</h2><p>22 incidents. Dev incidents were used to build the agents; held-out incidents were never used to tune them. Runs counts every repeat; replays show each incident's first run.</p></div>
       <div class="board glass" aria-label="Scoreboard"><table id="board"></table></div>
     </section>
 
@@ -296,6 +296,8 @@ const state = { split: "all", id: null, agent: null, timer: null };
 const byId = Object.fromEntries(DATA.scenarios.map(s => [s.id, s]));
 
 function summary(agent, split) {
+  const st = DATA.summary?.[agent]?.[split];   // the run's own summary counts every repeat
+  if (st) return { n: st.episodes, rec: st.recovery_rate, f1: st.diagnosis_f1, score: st.mean_score, coll: st.collateral_actions };
   const eps = DATA.scenarios.filter(s => s.split === split && s.runs[agent]).map(s => s.runs[agent]);
   const n = eps.length || 1;
   return {
@@ -308,7 +310,7 @@ function summary(agent, split) {
 }
 
 function renderBoard() {
-  let h = `<thead><tr><th>Agent</th><th>Split</th><th>Incidents</th><th>Recovered</th><th>Diagnosis F1</th><th>Mean score</th><th>Collateral actions</th></tr></thead><tbody>`;
+  let h = `<thead><tr><th>Agent</th><th>Split</th><th>Runs</th><th>Recovered</th><th>Diagnosis F1</th><th>Mean score</th><th>Collateral actions</th></tr></thead><tbody>`;
   for (const a of DATA.agents) for (const sp of ["dev", "heldout"]) {
     const m = summary(a, sp);
     h += `<tr class="${a === state.agent ? "hl" : ""}"><td class="agent">${esc(NAME(a))}</td><td class="split">${sp === "dev" ? "dev" : "held-out"}</td>
@@ -377,7 +379,7 @@ function renderIncident() {
       </section>
     </div>
     <section class="card">
-      <div class="tl-head"><h3>What the ${esc(NAME(state.agent))} did, step by step <span style="text-transform:none;letter-spacing:0;font-weight:400">(${esc(AGENT_NOTE[state.agent] || "")})</span></h3>
+      <div class="tl-head"><h3>What ${NAME(state.agent).endsWith("Agent") ? "the " : ""}${esc(NAME(state.agent))} did, step by step <span style="text-transform:none;letter-spacing:0;font-weight:400">(${esc(AGENT_NOTE[state.agent] || "")})</span></h3>
         <div class="ctrl"><button type="button" class="primary" id="play">▶ Play</button><button type="button" id="next">Next step</button><button type="button" id="all">Show all</button></div></div>
       ${run.error ? `<p class="empty">Agent error: ${esc(run.error)}</p>` : ""}
       ${steps ? `<ol class="steps" id="steps">${steps}</ol>` : `<p class="empty">No tool calls.</p>`}
@@ -497,10 +499,11 @@ document.addEventListener("click", e => {
   else if (t.id === "all") showAll();
 });
 addEventListener("hashchange", () => select(location.hash.slice(1)));
-select(byId[location.hash.slice(1)] ? location.hash.slice(1) : "ho-08-rollback-trap", "rules");
+select(byId[location.hash.slice(1)] ? location.hash.slice(1) : "ho-08-rollback-trap", DATA.agents.includes("reasoner") ? "reasoner" : "rules");
 
 function renderStats() {
-  const runs = DATA.scenarios.reduce((n, s) => n + Object.keys(s.runs).length, 0);
+  const runs = DATA.summary ? Object.values(DATA.summary).flatMap(Object.values).reduce((n, st) => n + st.episodes, 0)
+    : DATA.scenarios.reduce((n, s) => n + Object.keys(s.runs).length, 0);
   const kinds = new Set(DATA.scenarios.flatMap(s => s.faults.map(f => f.kind))).size;
   const held = DATA.scenarios.filter(s => s.split === "heldout").length;
   $("#stats").innerHTML = [[DATA.scenarios.length, "incidents"], [kinds, "fault types"], [held, "never-seen tests"], [runs, "recorded runs"]]

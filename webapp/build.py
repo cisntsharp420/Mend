@@ -49,11 +49,12 @@ def episode(rec: dict) -> dict:
 def build(tags: list[str]) -> dict:
     scenarios: dict[str, dict] = {}
     agents = []
+    summary: dict[str, dict] = {}   # agent -> split -> stats over every repeat (the scoreboard)
     for tag in tags:
         files = sorted((ROOT / "runs" / tag / "rep0").glob("*.json"))
         if not files:
             raise SystemExit(f"no episodes under runs/{tag}/rep0")
-        for f in files:
+        for f in files:   # the replay shows the first run of each incident
             rec = json.loads(f.read_text())
             agent = rec["agent"]
             if agent not in agents:
@@ -63,35 +64,43 @@ def build(tags: list[str]) -> dict:
                 "faults": [{**fl, "about": FAULTS[fl["kind"]].description} for fl in rec["faults"]],
                 "truth": rec["truth"], "advice": recommendations(rec["faults"]), "runs": {}})
             sc["runs"][agent] = episode(rec)
+        run = json.loads((ROOT / "runs" / tag / "summary.json").read_text())
+        for split, st in run["by_split"].items():
+            summary.setdefault(run["agent"], {})[split] = {**st, "repeats": run.get("repeats", 1)}
     order = sorted(scenarios.values(), key=lambda s: (s["split"] != "dev", s["id"]))
-    return {"agents": agents, "weights": WEIGHTS, "scenarios": order, "reports": reports(tags),
+    return {"agents": agents, "weights": WEIGHTS, "scenarios": order, "reports": reports(tags), "summary": summary,
             "names": {a: display_name(a) for a in agents}, "notes": {a: DESCRIPTIONS.get(a, "") for a in agents}}
 
 
 def reports(tags: list[str]) -> dict:
-    """The same CSV and PDF files `python -m recovery export` writes, embedded for the download buttons."""
+    """The same CSV and PDF files `python -m recovery export` writes, embedded for the download buttons.
+    An agent's runs are merged (e.g. its dev and held-out runs) into one report per agent."""
+    by_agent: dict[str, list] = {}
+    for tag in tags:
+        for rec in export.load(tag):
+            by_agent.setdefault(rec["agent"], []).append(rec)
     out: dict = {"runs": {}}
     with tempfile.TemporaryDirectory() as tmp:
-        every = []
-        for tag in tags:
-            recs = export.load(tag)
-            every += recs
-            csv_path, pdf_path = Path(tmp) / f"{tag}.csv", Path(tmp) / f"{tag}.pdf"
+        for agent, recs in by_agent.items():
+            recs.sort(key=lambda r: (r["split"] != "dev", r["scenario"], r["_repeat"]))
+            csv_path, pdf_path = Path(tmp) / f"{agent}.csv", Path(tmp) / f"{agent}.pdf"
             export.write_csv(recs, csv_path)
-            entry = {"tag": tag, "csv": csv_path.read_text(encoding="utf-8-sig")}
+            entry = {"csv": csv_path.read_text(encoding="utf-8-sig")}
             try:
-                export.write_pdf(recs, pdf_path, f"Mend incident report: {display_name(recs[0]['agent'])}")
+                export.write_pdf(recs, pdf_path, f"Mend incident report: {display_name(agent)}")
                 entry["pdf"] = base64.b64encode(pdf_path.read_bytes()).decode()
                 entry["incidents"] = {}
-                for rec in recs:   # the short one-incident reports behind "Download this incident"
-                    one = Path(tmp) / f"{tag}-{rec['scenario']}.pdf"
+                for rec in recs:   # the short one-incident reports behind "Download this incident" (first run)
+                    if rec["_repeat"] != 0:
+                        continue
+                    one = Path(tmp) / f"{agent}-{rec['scenario']}.pdf"
                     export.write_pdf([rec], one, export.incident_title(rec), single=True)
                     entry["incidents"][rec["scenario"]] = base64.b64encode(one.read_bytes()).decode()
             except SystemExit:   # reportlab not installed: ship the CSV only
                 pass
-            out["runs"][recs[0]["agent"]] = entry
+            out["runs"][agent] = entry
         all_path = Path(tmp) / "all.csv"
-        export.write_csv(every, all_path)
+        export.write_csv([r for recs in by_agent.values() for r in recs], all_path)
         out["all_csv"] = all_path.read_text(encoding="utf-8-sig")
     return out
 

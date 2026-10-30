@@ -53,12 +53,39 @@ def cmd_inject(a):
 
 
 def _agent_kwargs(a, scenario_id: str) -> dict:
+    if a.agent == "reasoner":
+        return {"variant": a.variant, "mode": a.mode}
     if a.agent != "llm":
         return {}
     kw = {"model": a.model, "variant": a.variant, "effort": a.effort}
     if a.replay:
         kw["replay"] = Path(a.replay) / f"{scenario_id}.json"
     return kw
+
+
+def cmd_diagnose(a):
+    """Read-only: analyse logs and metrics of the live system and print the recommended solution."""
+    from .agents.reasoner import ReasonerAgent
+    from .tools import Toolbox
+    tb = Toolbox(Sandbox())
+    agent = ReasonerAgent(mode="recommend")
+    agent.run(tb, "manual diagnosis")
+    recs = agent.rounds[-1]["recommendations"] if agent.rounds else []
+    if a.json:
+        print(json.dumps(recs, indent=1))
+        return
+    failing = agent.rounds[-1]["failing_endpoints"] if agent.rounds else []
+    print(f"Failing endpoints: {', '.join(failing) or 'none'}\n")
+    if not recs:
+        print("No failure mode identified from logs and metrics.")
+    for i, r in enumerate(recs, 1):
+        print(f"{i}. {r['category']} on {r['component']}  (confidence {r['confidence']:.2f})")
+        for e in r["evidence"]:
+            print(f"     evidence: {e}")
+        print(f"   RECOMMENDED: {r['recommended_action']}")
+        for c in r["remedy"]:
+            print(f"     -> {c['tool']}({json.dumps(c['args'])})")
+        print(f"   PREVENT: {r['prevention']}\n")
 
 
 def _print_episode(r):
@@ -147,7 +174,10 @@ def main(argv=None):
     r.add_argument("--tag", help="name of the results folder under runs/")
     r.add_argument("--model", help="LLM model id (llm agent)")
     r.add_argument("--variant", default="full",
-                   help="LLM ablation: full | no_verify | no_changes | no_diagnostics | minimal_prompt")
+                   help="ablation. llm: full | no_verify | no_changes | no_diagnostics | minimal_prompt; "
+                   "reasoner: full | no_logs | no_metrics | no_diagnostics | no_changes | single_pass")
+    r.add_argument("--mode", default="act", choices=["act", "recommend"],
+                   help="reasoner: act = apply the recommended fixes; recommend = diagnose only, change nothing")
     r.add_argument("--effort", default="high", choices=["low", "medium", "high", "xhigh", "max"])
     r.add_argument("--replay", help="folder of recorded episodes (e.g. runs/<tag>/rep0): replay the "
                    "LLM's recorded decisions without an API key")
@@ -156,6 +186,9 @@ def main(argv=None):
     r.add_argument("--approve", action="store_true", help="ask a human before risky actions")
     r.add_argument("--dry-run", action="store_true", help="agent actions are described, not executed")
     r.set_defaults(fn=cmd_run)
+    dg = sub.add_parser("diagnose", help="read-only: analyse the live system and print the recommended solution")
+    dg.add_argument("--json", action="store_true")
+    dg.set_defaults(fn=cmd_diagnose)
     rp = sub.add_parser("report", help="compare runs: python -m recovery report <tag> [<tag> ...]")
     rp.add_argument("tags", nargs="+")
     rp.add_argument("--out", help="write markdown to this file")

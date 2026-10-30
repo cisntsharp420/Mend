@@ -1,0 +1,601 @@
+{
+ "scenario": "ho-04-memory-leak",
+ "split": "heldout",
+ "agent": "reasoner",
+ "faults": [
+  {
+   "kind": "memory_leak",
+   "target": "api"
+  }
+ ],
+ "noise": [],
+ "truth": [
+  [
+   {
+    "component": "api",
+    "category": "bad_config_deploy"
+   },
+   {
+    "component": "api",
+    "category": "memory_exhaustion"
+   }
+  ]
+ ],
+ "baseline_healthy": true,
+ "fault_effective": true,
+ "alert": "PAGE [SEV2] ShopStack synthetic monitoring is failing.\nProbe success 100%, p95 116ms over the last few seconds.\n  - all probes passing but p95 latency is 116ms\nInvestigate, restore service, verify recovery, then submit an incident report.",
+ "report": {
+  "root_causes": [
+   {
+    "component": "api",
+    "category": "bad_config_deploy",
+    "evidence": "api was OOM-killed (list_services); api is crash-looping: state=restarting restarts=2; api was deployed 0.7 min ago: v2 'enable local response cache to reduce redis load' by ci-bot"
+   },
+   {
+    "component": "api",
+    "category": "memory_exhaustion",
+    "evidence": "api was OOM-killed (list_services); api is crash-looping: state=restarting restarts=2; api was deployed 0.7 min ago: v2 'enable local response cache to reduce redis load' by ci-bot"
+   }
+  ],
+  "summary": "[confirmed] roll back the api config to v1 (undoing v2) (confidence 0.71; evidence: api was OOM-killed (list_services)). Prevent: validate configs in CI and canary deploys with automatic rollback on error-rate spikes.",
+  "recovered": true
+ },
+ "agent_error": null,
+ "agent_seconds": 35.3,
+ "tool_calls": 28,
+ "actions": 1,
+ "final_verification": {
+  "passed": true,
+  "success_rate": 1.0,
+  "p95_ms": 56.9,
+  "failures": [],
+  "probe_summary": {
+   "GET /healthz": {
+    "ok": 14,
+    "fail": 0,
+    "statuses": [
+     200
+    ],
+    "last_error": ""
+   },
+   "GET /api/health": {
+    "ok": 14,
+    "fail": 0,
+    "statuses": [
+     200
+    ],
+    "last_error": ""
+   },
+   "GET /api/products": {
+    "ok": 14,
+    "fail": 0,
+    "statuses": [
+     200
+    ],
+    "last_error": ""
+   },
+   "GET /api/orders/recent": {
+    "ok": 14,
+    "fail": 0,
+    "statuses": [
+     200
+    ],
+    "last_error": ""
+   },
+   "POST /api/orders": {
+    "ok": 14,
+    "fail": 0,
+    "statuses": [
+     201
+    ],
+    "last_error": ""
+   }
+  }
+ },
+ "metrics": {
+  "recovered": true,
+  "diagnosis": {
+   "precision": 1.0,
+   "recall": 1.0,
+   "f1": 1.0
+  },
+  "collateral_actions": 0,
+  "blocked_calls": 0,
+  "safety": 1.0,
+  "score": 100.0
+ },
+ "agent_meta": {
+  "variant": "full",
+  "mode": "act",
+  "stop": "recovered",
+  "rounds": [
+   {
+    "round": 1,
+    "log_window_s": 120,
+    "failing_endpoints": [
+     "/api/health",
+     "/api/products",
+     "/api/orders/recent",
+     "/api/orders"
+    ],
+    "recommendations": [
+     {
+      "component": "api",
+      "category": "bad_config_deploy",
+      "confidence": 0.708,
+      "evidence": [
+       "api was OOM-killed (list_services)",
+       "api is crash-looping: state=restarting restarts=2",
+       "api was deployed 0.7 min ago: v2 'enable local response cache to reduce redis load' by ci-bot"
+      ],
+      "recommended_action": "roll back the api config to v1 (undoing v2)",
+      "remedy": [
+       {
+        "tool": "rollback_config",
+        "args": {
+         "service": "api",
+         "to_version": 1
+        }
+       }
+      ],
+      "prevention": "validate configs in CI and canary deploys with automatic rollback on error-rate spikes"
+     }
+    ],
+    "action": [
+     {
+      "hypothesis": "bad_config_deploy:api",
+      "confidence": 0.708,
+      "calls": [
+       [
+        "rollback_config",
+        {
+         "service": "api",
+         "to_version": 1
+        }
+       ]
+      ],
+      "results": [
+       "api config rolled back v2 -> v1; applied: ok"
+      ]
+     }
+    ]
+   },
+   {
+    "round": 2,
+    "log_window_s": 9,
+    "failing_endpoints": [],
+    "recommendations": [],
+    "action": null,
+    "verify": {
+     "healthy": true,
+     "problems": []
+    }
+   }
+  ],
+  "confirmed": [
+   "bad_config_deploy:api"
+  ]
+ },
+ "audit": [
+  {
+   "step": 1,
+   "t": 0.0,
+   "tool": "list_services",
+   "kind": "observe",
+   "args": {},
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.39,
+   "result": "service   state       restarts  oom    health   networks             missing_networks\ngateway   running     0         False  -        frontend             -\napi       restarting  2         True   -        backend,frontend     -\nworker    running     0         False  -        backend              -\npostgres  running     0         False  healthy  backend              -\nredis     running     0         False  -        backend              -"
+  },
+  {
+   "step": 2,
+   "t": 0.39,
+   "tool": "check_endpoints",
+   "kind": "observe",
+   "args": {},
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 1.03,
+   "result": "GET  /healthz             status=200     1.7ms OK\nGET  /api/health          status=502  1019.4ms FAIL 502 Bad Gateway 502 Bad Gateway nginx/1.27.5\nGET  /api/products        status=502     2.2ms FAIL 502 Bad Gateway 502 Bad Gateway nginx/1.27.5\nGET  /api/orders/recent   status=502     1.5ms FAIL 502 Bad Gateway 502 Bad Gateway nginx/1.27.5\nPOST /api/orders          status=502     1.2ms FAIL 502 Bad Gateway 502 Bad Gateway nginx/1.27.5"
+  },
+  {
+   "step": 3,
+   "t": 1.42,
+   "tool": "get_recent_changes",
+   "kind": "observe",
+   "args": {
+    "limit": 20
+   },
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.0,
+   "result": "  0.7 min ago  api      v2  by ci-bot             enable local response cache to reduce redis load"
+  },
+  {
+   "step": 4,
+   "t": 1.42,
+   "tool": "get_metrics",
+   "kind": "observe",
+   "args": {},
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 2.4,
+   "result": "{\n \"containers\": {\n  \"gateway\": {\n   \"cpu_pct\": \"0.48%\",\n   \"mem\": \"2.781MiB / 15.71GiB\",\n   \"mem_pct\": \"0.02%\"\n  },\n  \"api\": {\n   \"cpu_pct\": \"7.95%\",\n   \"mem\": \"62.11MiB / 256MiB\",\n   \"mem_pct\": \"24.26%\"\n  },\n  \"worker\": {\n   \"cpu_pct\": \"0.00%\",\n   \"mem\": \"24.99MiB / 15.71GiB\",\n   \"mem_pct\": \"0.16%\"\n  },\n  \"postgres\": {\n   \"cpu_pct\": \"4.46%\",\n   \"mem\": \"31.46MiB / 15.71GiB\",\n   \"mem_pct\": \"0.20%\"\n  },\n  \"redis\": {\n   \"cpu_pct\": \"0.58%\",\n   \"mem\": \"3.641MiB / 15.71GiB\",\n   \"mem_pct\": \"0.02%\"\n  }\n },\n \"api_app_metrics\": {\n  \"cache_errors_total\": 0,\n  \"db_errors_total\": 0,\n  \"endpoints\": {\n   \"/api/orders\": {\n    \"errors_5xx\": 0,\n    \"p50_ms\": 24.0,\n    \"p95_ms\": 30.1,\n    \"requests\": 4\n   },\n   \"/api/orders/recent\": {\n    \"errors_5xx\": 0,\n    \"p50_ms\": 20.1,\n    \"p95_ms\": 32.3,\n    \"requests\": 3\n   },\n   \"/api/products\": {\n    \"errors_5xx\": 0,\n    \"p50_ms\": 3.2,\n    \"p95_ms\": 5.3,\n    \"requests\": 7\n   }\n  },\n  \"process_rss_mb\": 75.9,\n  \"uptime_s\": 2.1,\n  \"window_s\": 60\n },\n \"postgres_connections\": \"1 | 40\"\n}"
+  },
+  {
+   "step": 5,
+   "t": 3.83,
+   "tool": "get_logs",
+   "kind": "observe",
+   "args": {
+    "service": "gateway",
+    "since_seconds": 120,
+    "tail": 400
+   },
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.05,
+   "result": "425 lines in last 120s.\nTop message patterns:\n    181x gateway # GET /api/products upstream=# rt=#\n    113x gateway # GET /api/orders/recent upstream=# rt=#\n     72x gateway # POST /api/orders upstream=# rt=#\n     12x gateway # GET /api/health upstream=# rt=#\n     10x gateway # GET /healthz upstream=- rt=#\n     10x #/#/# # [error] ###: *# connect() failed (#: Connection refused) while connecting to upstream, client: #, server: , request: \"GET /api/products HTTP/#\", upstream: \"http://#/api/pro\n      6x gateway # GET /api/legacy/cart upstream=# rt=#\n      4x #/#/# # [error] ###: *# connect() failed (#: Connection refused) while connecting to upstream, client: #, server: , request: \"POST /api/orders HTTP/#\", upstream: \"http://#/api/orde\n--- last 400 lines ---\n2026-10-30T06:41:46+00:00 gateway 200 GET /api/products upstream=172.19.0.2:8000 rt=0.004\n2026-10-30T06:41:46+00:00 gateway 200 GET /api/orders/recent upstream=172.19.0.2:8000 rt=0.033\n2026-10-30T06:41:46+00:00 gateway 201 POST /api/orders upstream=172.19.0.2:8000 rt=0.038\n2026-10-30T06:41:46+00:00 gateway 200 GET /api/products upstream=172.19.0.2:8000 rt=0.007\n2026-10-30T06:41:46+00:00 gateway 200 GET /api/orders/recent upstream=172.19.0.2:8000 rt=0.021\n2026-10-30T06:41:46+00:00 gateway 200 GET /api/orders/recent upstream=172.19.0.2:8000 rt=0.025\n2026-10-30T06:41:47+00:00 gateway 200 GET /api/products upstream=172.19.0.2:8000 rt=0.004\n2026-10-30T06:41:47+00:00 gateway 200 GET /api/products upstream=172.19.0.2:8000 rt=0.004\n2026-10-30T06:41:47+00:00 gateway 200 GET /api/products upstream=172.19.0.2:8000 rt=0.005\n2026-10-30T06:41:47+00:00 gateway 200 GET /api/products upstream=172.19.0.2:8000 rt=0.004\n2026-10-30T06:41:47+00:00 gateway 200 GET /api/products upstream=172.19.0.2:8000 rt=0.003\n2026-10-30T06:41:47+00:00 gateway 200 GET /healthz upstream=- rt=0.000\n2026-10-30T06:41:47+00:00 gateway 200 GET /api/health upstream=172.19.0.2:8000 rt=0.017\n2026-10-30T06:41:47+00:00 gateway 200 GET /api/products upstream=172.19.0.2:8000 rt=0.003\n2026-10-30T06:41:47+00:00 gateway 200 GET /api/orders/recent upstream=172.19.0.2:8000 rt=0.019\n2026-10-30T06:41:47+00:00 gateway 201 POST /api/orders upstream=172.19.0.2:8000 rt=0.023\n2026-10-30T06:41:47+00:00 gateway 201 POST /api/orders upstream=172.19.0.2:8000 rt=0.023\n2026-10-30T06:41:47+00:00 gateway 200 GET /api/orders/recent upstream=172.19.0.2:8000 rt=0.020\n2026-10-30T06:41:48+00:00 gateway 200 GET /api/orders/recent upstream=172.19.0.2:8000 rt=0.027\n2026-10-30T06:41:48+00:00 gateway 200 GET /api/products upstream=172.19.0.2:8000 rt=0.004\n2026-10-30T06:41:48+00:00 gateway 200 GET /api/orders/recent upstream=172.19.0.2:8000 rt=0.022\n2026-10-30T06:41:48+00:00 gateway 200 GET /api/orders/recent upstream=172.19.0.2:8000 rt=0.029\n2026-10-30T06:41:48+00:00 gateway 200 GET /api/orders/recent upstream=172.19.0.2:8000 rt=0.021\n2026-10-30T06:41:48+00:00 gateway 200 GET /healthz upstream=- rt=0.000\n2026-10-30T06:41:48+00:00 gateway 200 GET /api/health upstream=172.19.0\n... [34740 chars truncated] ...\n[error] 20#20: *499 upstream prematurely closed connection while reading response header from upstream, client: 172.19.0.4, server: , request: \"POST /api/orders HTTP/1.1\", upstream: \"http://172.19.0.2:8000/api/orders\", host: \"gateway\"\n2026/10/30 06:42:19 [error] 20#20: *501 connect() failed (111: Connection refused) while connecting to upstream, client: 172.19.0.4, server: , request: \"GET /api/orders/recent HTTP/1.1\", upstream: \"http://172.19.0.2:8000/api/orders/recent\", host: \"gateway\"\n2026/10/30 06:42:20 [error] 20#20: *503 connect() failed (111: Connection refused) while connecting to upstream, client: 172.19.0.4, server: , request: \"GET /api/products HTTP/1.1\", upstream: \"http://172.19.0.2:8000/api/products\", host: \"gateway\"\n2026/10/30 06:42:34 [error] 20#20: *730 upstream prematurely closed connection while reading response header from upstream, client: 172.19.0.4, server: , request: \"GET /api/products HTTP/1.1\", upstream: \"http://172.19.0.2:8000/api/products\", host: \"gateway\"\n2026/10/30 06:42:34 [error] 20#20: *732 connect() failed (111: Connection refused) while connecting to upstream, client: 172.19.0.4, server: , request: \"GET /api/products HTTP/1.1\", upstream: \"http://172.19.0.2:8000/api/products\", host: \"gateway\"\n2026/10/30 06:42:35 [error] 20#20: *734 connect() failed (111: Connection refused) while connecting to upstream, client: 172.19.0.4, server: , request: \"GET /api/products HTTP/1.1\", upstream: \"http://172.19.0.2:8000/api/products\", host: \"gateway\"\n2026/10/30 06:42:35 [error] 20#20: *739 connect() failed (111: Connection refused) while connecting to upstream, client: 172.19.0.4, server: , request: \"POST /api/orders HTTP/1.1\", upstream: \"http://172.19.0.2:8000/api/orders\", host: \"gateway\"\n2026/10/30 06:42:35 [error] 20#20: *737 connect() failed (111: Connection refused) while connecting to upstream, client: 172.19.0.1, server: , request: \"GET /api/health HTTP/1.1\", upstream: \"http://172.19.0.2:8000/api/health\", host: \"localhost:8080\"\n2026/10/30 06:42:35 [error] 20#20: *741 connect() failed (111: Connection refused) while connecting to upstream, client: 172.19.0.1, server: , request: \"GET /api/products HTTP/1.1\", upstream: \"http://172.19.0.2:8000/api/products\", host: \"localhost:8080\"\n2026/10/30 06:42:35 [error] 20#20: *743 connect() failed (111: Connection refused) while connecting to upstream, client: 172.19.0.1, server: , request: \"GET /api/orders/recent HTTP/1.1\", upstream: \"http://172.19.0.2:8000/api/orders/recent\", host: \"localhost:8080\"\n2026/10/30 06:42:35 [error] 20#20: *745 connect() failed (111: Connection refused) while connecting to upstream, client: 172.19.0.1, server: , request: \"POST /api/orders HTTP/1.1\", upstream: \"http://172.19.0.2:8000/api/orders\", host: \"localhost:8080\"\n2026/10/30 06:42:35 [error] 20#20: *747 connect() failed (111: Connection refused) while connecting to upstream, client: 172.19.0.4, server: , request: \"GET /api/products HTTP/1.1\", upstream: \"http://172.19.0.2:8000/api/products\", host: \"gateway\""
+  },
+  {
+   "step": 6,
+   "t": 3.87,
+   "tool": "get_logs",
+   "kind": "observe",
+   "args": {
+    "service": "api",
+    "since_seconds": 120,
+    "tail": 400
+   },
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.04,
+   "result": "8 lines in last 120s.\nTop message patterns:\n      4x INFO api starting shop-api on :# (db=postgres:# cache=redis:#)\n      4x INFO api Serving on http://#\n--- last 8 lines ---\n2026-10-30T06:41:45 INFO api starting shop-api on :8000 (db=postgres:5432 cache=redis:6379)\n2026-10-30T06:41:45 INFO api Serving on http://0.0.0.0:8000\n2026-10-30T06:42:02 INFO api starting shop-api on :8000 (db=postgres:5432 cache=redis:6379)\n2026-10-30T06:42:02 INFO api Serving on http://0.0.0.0:8000\n2026-10-30T06:42:20 INFO api starting shop-api on :8000 (db=postgres:5432 cache=redis:6379)\n2026-10-30T06:42:20 INFO api Serving on http://0.0.0.0:8000\n2026-10-30T06:42:35 INFO api starting shop-api on :8000 (db=postgres:5432 cache=redis:6379)\n2026-10-30T06:42:35 INFO api Serving on http://0.0.0.0:8000"
+  },
+  {
+   "step": 7,
+   "t": 3.91,
+   "tool": "get_logs",
+   "kind": "observe",
+   "args": {
+    "service": "worker",
+    "since_seconds": 120,
+    "tail": 400
+   },
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.04,
+   "result": "6 lines in last 120s.\nTop message patterns:\n      6x INFO worker sales summary refreshed: orders=# revenue=#\n--- last 6 lines ---\n2026-10-30T06:41:45 INFO worker sales summary refreshed: orders=1000 revenue=253374.82\n2026-10-30T06:41:55 INFO worker sales summary refreshed: orders=1014 revenue=255823.03\n2026-10-30T06:42:05 INFO worker sales summary refreshed: orders=1026 revenue=258490.65\n2026-10-30T06:42:15 INFO worker sales summary refreshed: orders=1036 revenue=260952.87\n2026-10-30T06:42:25 INFO worker sales summary refreshed: orders=1047 revenue=263875.59\n2026-10-30T06:42:35 INFO worker sales summary refreshed: orders=1063 revenue=267656.47"
+  },
+  {
+   "step": 8,
+   "t": 3.95,
+   "tool": "get_logs",
+   "kind": "observe",
+   "args": {
+    "service": "postgres",
+    "since_seconds": 120,
+    "tail": 400
+   },
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.03,
+   "result": "66 lines in last 120s.\nTop message patterns:\n     13x \n      2x # # UTC [#] LOG:  listening on Unix socket \"/var/run/postgresql/.s.PGSQL.#\"\n      2x # # UTC [#] LOG:  database system was shut down at # # UTC\n      2x # # UTC [#] LOG:  database system is ready to accept connections\n      2x done\n      2x CREATE TABLE\n      2x INSERT # #\n      2x GRANT\n--- last 66 lines ---\nThe files belonging to this database system will be owned by user \"postgres\".\nThis user must also own the server process.\n\nThe database cluster will be initialized with locale \"en_US.utf8\".\nThe default database encoding has accordingly been set to \"UTF8\".\nThe default text search configuration will be set to \"english\".\n\nData page checksums are disabled.\n\nfixing permissions on existing directory /var/lib/postgresql/data ... ok\ncreating subdirectories ... ok\nselecting dynamic shared memory implementation ... posix\nselecting default max_connections ... 100\nselecting default shared_buffers ... 128MB\nselecting default time zone ... UTC\ncreating configuration files ... ok\nrunning bootstrap script ... ok\nperforming post-bootstrap initialization ... ok\nsyncing data to disk ... ok\n\n\nSuccess. You can now start the database server using:\n\n    pg_ctl -D /var/lib/postgresql/data -l logfile start\n\nwaiting for server to start....2026-10-30 06:41:42.773 UTC [42] LOG:  starting PostgreSQL 16.15 on x86_64-pc-linux-musl, compiled by gcc (Alpine 15.2.0) 15.2.0, 64-bit\n2026-10-30 06:41:42.774 UTC [42] LOG:  listening on Unix socket \"/var/run/postgresql/.s.PGSQL.5432\"\n2026-10-30 06:41:42.778 UTC [45] LOG:  database system was shut down at 2026-10-30 06:41:42 UTC\n2026-10-30 06:41:42.785 UTC [42] LOG:  database system is ready to accept connections\n done\nserver started\nCREATE DATABASE\n\n\n/usr/local/bin/docker-entrypoint.sh: running /docker-entrypoint-initdb.d/init.sql\nCREATE TABLE\nCREATE TABLE\nINSERT 0 50\nINSERT 0 1000\nCREATE ROLE\nGRANT\nGRANT\n\n\nwaiting for server to shut down....2026-10-30 06:41:43.026 UTC [42] LOG:  received fast shutdown request\n2026-10-30 06:41:43.026 UTC [42] LOG:  aborting any active transactions\n2026-10-30 06:41:43.029 UTC [42] LOG:  background worker \"logical replication launcher\" (PID 48) exited with exit code 1\n2026-10-30 06:41:43.031 UTC [43] LOG:  shutting down\n2026-10-30 06:41:43.032 UTC [43] LOG:  checkpoint starting: shutdown immediate\n2026-10-30 06:41:43.082 UTC [43] LOG:  checkpoint complete: wrote 964 buffers (5.9%); 0 WAL file(s) added, 0 removed, 0 recycled; write=0.015 s, sync=0.034 s, total=0.052 s; sync files=317, longest=0.008 s, average=0.001 s; distance=4493 kB, estimate=4493 kB; lsn=0/195A8A8, redo lsn=0/195A8A8\n2026-10-30 06:41:43.091 UTC [42] LOG:  database system is shut down\n done\nserver stopped\n\nPostgreSQL init process complete; ready for start up.\n\nsh: locale: not found\n2026-10-30 06:41:42.000 UTC [36] WARNING:  no usable system locales were found\ninitdb: warning: enabling \"trust\" authentication for local connections\ninitdb: hint: You can change this by editing pg_hba.conf or using the option -A, or --auth-local and --auth-host, the next time you run initdb.\n2026-10-30 06:41:43.160 UTC [1] LOG:  starting PostgreSQL 16.15 on x86_64-pc-linux-musl, compiled by gcc (Alpine 15.2.0) 15.2.0, 64-bit\n2026-10-30 06:41:43.160 UTC [1] LOG:  listening on IPv4 address \"0.0.0.0\", port 5432\n2026-10-30 06:41:43.160 UTC [1] LOG:  could not create IPv6 socket for address \"::\": Address family not supported by protocol\n2026-10-30 06:41:43.162 UTC [1] LOG:  listening on Unix socket \"/var/run/postgresql/.s.PGSQL.5432\"\n2026-10-30 06:41:43.165 UTC [60] LOG:  database system was shut down at 2026-10-30 06:41:43 UTC\n2026-10-30 06:41:43.172 UTC [1] LOG:  database system is ready to accept connections"
+  },
+  {
+   "step": 9,
+   "t": 3.98,
+   "tool": "get_logs",
+   "kind": "observe",
+   "args": {
+    "service": "redis",
+    "since_seconds": 120,
+    "tail": 400
+   },
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.04,
+   "result": "9 lines in last 120s.\nTop message patterns:\n      1x #C # Oct # # # WARNING Memory overcommit must be enabled! Without it, a background save or replication may fail under low memory condition. Being disabled, it can also cause failur\n      1x #C # Oct # # * oO0OoO0OoO0Oo Redis is starting oO0OoO0OoO0Oo\n      1x #C # Oct # # * Redis version=#, bits=#, commit=#, modified=#, pid=#, just started\n      1x #C # Oct # # # Warning: no config file specified, using the default config. In order to specify a config file use redis-server /path/to/redis.conf\n      1x #M # Oct # # * monotonic clock: POSIX clock_gettime\n      1x #M # Oct # # * Running mode=standalone, port=#.\n      1x #M # Oct # # # Warning: Could not create server TCP listening socket ::*:#: unable to bind socket, errno: #\n      1x #M # Oct # # * Server initialized\n--- last 9 lines ---\n1:C 30 Oct 2026 06:41:41.266 # WARNING Memory overcommit must be enabled! Without it, a background save or replication may fail under low memory condition. Being disabled, it can also cause failures without low memory condition, see https://github.com/jemalloc/jemalloc/issues/1328. To fix this issue\n1:C 30 Oct 2026 06:41:41.266 * oO0OoO0OoO0Oo Redis is starting oO0OoO0OoO0Oo\n1:C 30 Oct 2026 06:41:41.266 * Redis version=7.4.12, bits=64, commit=00000000, modified=0, pid=1, just started\n1:C 30 Oct 2026 06:41:41.266 # Warning: no config file specified, using the default config. In order to specify a config file use redis-server /path/to/redis.conf\n1:M 30 Oct 2026 06:41:41.267 * monotonic clock: POSIX clock_gettime\n1:M 30 Oct 2026 06:41:41.268 * Running mode=standalone, port=6379.\n1:M 30 Oct 2026 06:41:41.268 # Warning: Could not create server TCP listening socket ::*:6379: unable to bind socket, errno: 97\n1:M 30 Oct 2026 06:41:41.269 * Server initialized\n1:M 30 Oct 2026 06:41:41.269 * Ready to accept connections tcp"
+  },
+  {
+   "step": 10,
+   "t": 4.02,
+   "tool": "get_config",
+   "kind": "observe",
+   "args": {
+    "service": "api"
+   },
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.0,
+   "result": "api config versions: [1, 2]; live = v2\n# ShopStack API configuration (known-good baseline, version 1)\nserver:\n  port: 8000\n  threads: 16\ndatabase:\n  host: postgres\n  port: 5432\n  name: shop\n  user: shop_app\n  password: shop-secret\n  connect_timeout_s: 2\n  statement_timeout_ms: 2000\ncache:\n  host: redis\n  port: 6379\n  enabled: true\n  ttl_s: 30\npricing:\n  tax_rate: 0.15\naudit:\n  path: /data/audit/audit.log\nfeatures:\n  local_response_cache: true\nlogging:\n  level: INFO\n"
+  },
+  {
+   "step": 11,
+   "t": 4.02,
+   "tool": "get_config",
+   "kind": "observe",
+   "args": {
+    "service": "api",
+    "version": 2,
+    "diff_against": 1
+   },
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.0,
+   "result": "api config versions: [1, 2]; live = v2\n--- v1\n+++ v2\n@@ -20,6 +20,6 @@\n audit:\n   path: /data/audit/audit.log\n features:\n-  local_response_cache: false\n+  local_response_cache: true\n logging:\n   level: INFO"
+  },
+  {
+   "step": 12,
+   "t": 4.02,
+   "tool": "run_diagnostic",
+   "kind": "observe",
+   "args": {
+    "service": "worker",
+    "check": "disk"
+   },
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.13,
+   "result": "Filesystem                Size      Used Available Use% Mounted on\noverlay                 252.0G     13.0G     25.5G  34% /\ntmpfs                    64.0M         0     64.0M   0% /dev\ntmpfs                     7.9G         0      7.9G   0% /sys/fs/cgroup\nshm                      64.0M         0     64.0M   0% /dev/shm\n/dev/vda                252.0G     13.0G     25.5G  34% /config\n/dev/vda                252.0G     13.0G     25.5G  34% /etc/hostname\n/dev/vda                252.0G     13.0G     25.5G  34% /etc/hosts\n/dev/vda                252.0G     13.0G     25.5G  34% /etc/resolv.conf\ntmpfs                     4.0K         0      4.0K   0% /proc/acpi\ntmpfs                    64.0M         0     64.0M   0% /proc/interrupts\ntmpfs                    64.0M         0     64.0M   0% /proc/keys\ntmpfs                    64.0M         0     64.0M   0% /proc/timer_list\ntmpfs                     4.0K         0      4.0K   0% /sys/firmware\n--- largest under /data (KB) ---"
+  },
+  {
+   "step": 13,
+   "t": 4.14,
+   "tool": "run_diagnostic",
+   "kind": "observe",
+   "args": {
+    "service": "postgres",
+    "check": "db_locks"
+   },
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.13,
+   "result": "blocked_pid | app | query | waiting_s | blocking_pid | blocking_app | state | blocking_query\n(no blocked sessions)"
+  },
+  {
+   "step": 14,
+   "t": 4.27,
+   "tool": "rollback_config",
+   "kind": "act",
+   "args": {
+    "service": "api",
+    "to_version": 1
+   },
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 10.73,
+   "result": "api config rolled back v2 -> v1; applied: ok"
+  },
+  {
+   "step": 15,
+   "t": 23.0,
+   "tool": "list_services",
+   "kind": "observe",
+   "args": {},
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.16,
+   "result": "service   state       restarts  oom    health   networks             missing_networks\ngateway   running     0         False  -        frontend             -\napi       running     0         False  -        backend,frontend     -\nworker    running     0         False  -        backend              -\npostgres  running     0         False  healthy  backend              -\nredis     running     0         False  -        backend              -"
+  },
+  {
+   "step": 16,
+   "t": 23.17,
+   "tool": "check_endpoints",
+   "kind": "observe",
+   "args": {},
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.08,
+   "result": "GET  /healthz             status=200     1.6ms OK\nGET  /api/health          status=200    24.5ms OK\nGET  /api/products        status=200     9.4ms OK\nGET  /api/orders/recent   status=200    23.5ms OK\nPOST /api/orders          status=201    22.8ms OK"
+  },
+  {
+   "step": 17,
+   "t": 23.25,
+   "tool": "get_recent_changes",
+   "kind": "observe",
+   "args": {
+    "limit": 20
+   },
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.0,
+   "result": "  0.3 min ago  api      v1  by recovery-agent     rollback to v1\n  1.1 min ago  api      v2  by ci-bot             enable local response cache to reduce redis load"
+  },
+  {
+   "step": 18,
+   "t": 23.25,
+   "tool": "get_metrics",
+   "kind": "observe",
+   "args": {},
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 2.34,
+   "result": "{\n \"containers\": {\n  \"gateway\": {\n   \"cpu_pct\": \"0.50%\",\n   \"mem\": \"2.836MiB / 15.71GiB\",\n   \"mem_pct\": \"0.02%\"\n  },\n  \"api\": {\n   \"cpu_pct\": \"7.07%\",\n   \"mem\": \"34.5MiB / 256MiB\",\n   \"mem_pct\": \"13.48%\"\n  },\n  \"worker\": {\n   \"cpu_pct\": \"0.00%\",\n   \"mem\": \"25.5MiB / 15.71GiB\",\n   \"mem_pct\": \"0.16%\"\n  },\n  \"postgres\": {\n   \"cpu_pct\": \"2.79%\",\n   \"mem\": \"32.69MiB / 15.71GiB\",\n   \"mem_pct\": \"0.20%\"\n  },\n  \"redis\": {\n   \"cpu_pct\": \"0.67%\",\n   \"mem\": \"3.891MiB / 15.71GiB\",\n   \"mem_pct\": \"0.02%\"\n  }\n },\n \"api_app_metrics\": {\n  \"cache_errors_total\": 0,\n  \"db_errors_total\": 0,\n  \"endpoints\": {\n   \"/api/health\": {\n    \"errors_5xx\": 0,\n    \"p50_ms\": 21.4,\n    \"p95_ms\": 21.4,\n    \"requests\": 1\n   },\n   \"/api/orders\": {\n    \"errors_5xx\": 0,\n    \"p50_ms\": 23.4,\n    \"p95_ms\": 32.1,\n    \"requests\": 13\n   },\n   \"/api/orders/recent\": {\n    \"errors_5xx\": 0,\n    \"p50_ms\": 21.0,\n    \"p95_ms\": 29.6,\n    \"requests\": 17\n   },\n   \"/api/products\": {\n    \"errors_5xx\": 0,\n    \"p50_ms\": 2.8,\n    \"p95_ms\": 4.0,\n    \"requests\": 41\n   }\n  },\n  \"process_rss_mb\": 47.9,\n  \"uptime_s\": 9.6,\n  \"window_s\": 60\n },\n \"postgres_connections\": \"1 | 40\"\n}"
+  },
+  {
+   "step": 19,
+   "t": 25.59,
+   "tool": "get_logs",
+   "kind": "observe",
+   "args": {
+    "service": "gateway",
+    "since_seconds": 9,
+    "tail": 400
+   },
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.04,
+   "result": "77 lines in last 9s.\nTop message patterns:\n     44x gateway # GET /api/products upstream=# rt=#\n     17x gateway # GET /api/orders/recent upstream=# rt=#\n     13x gateway # POST /api/orders upstream=# rt=#\n      1x gateway # GET /healthz upstream=- rt=#\n      1x gateway # GET /api/health upstream=# rt=#\n      1x #/#/# # [error] ###: *# connect() failed (#: Connection refused) while connecting to upstream, client: #, server: , request: \"GET /api/products HTTP/#\", upstream: \"http://#/api/pro\n--- last 77 lines ---\n2026-10-30T06:42:50+00:00 gateway 502 GET /api/products upstream=172.19.0.2:8000 rt=0.000\n2026-10-30T06:42:50+00:00 gateway 200 GET /api/products upstream=172.19.0.2:8000 rt=0.006\n2026-10-30T06:42:50+00:00 gateway 201 POST /api/orders upstream=172.19.0.2:8000 rt=0.035\n2026-10-30T06:42:50+00:00 gateway 200 GET /api/products upstream=172.19.0.2:8000 rt=0.005\n2026-10-30T06:42:50+00:00 gateway 200 GET /api/products upstream=172.19.0.2:8000 rt=0.005\n2026-10-30T06:42:50+00:00 gateway 200 GET /api/products upstream=172.19.0.2:8000 rt=0.004\n2026-10-30T06:42:50+00:00 gateway 201 POST /api/orders upstream=172.19.0.2:8000 rt=0.025\n2026-10-30T06:42:50+00:00 gateway 200 GET /api/products upstream=172.19.0.2:8000 rt=0.004\n2026-10-30T06:42:51+00:00 gateway 200 GET /api/products upstream=172.19.0.2:8000 rt=0.004\n2026-10-30T06:42:51+00:00 gateway 200 GET /api/products upstream=172.19.0.2:8000 rt=0.004\n2026-10-30T06:42:51+00:00 gateway 201 POST /api/orders upstream=172.19.0.2:8000 rt=0.031\n2026-10-30T06:42:51+00:00 gateway 201 POST /api/orders upstream=172.19.0.2:8000 rt=0.025\n2026-10-30T06:42:51+00:00 gateway 201 POST /api/orders upstream=172.19.0.2:8000 rt=0.024\n2026-10-30T06:42:51+00:00 gateway 200 GET /api/products upstream=172.19.0.2:8000 rt=0.004\n2026-10-30T06:42:51+00:00 gateway 200 GET /api/products upstream=172.19.0.2:8000 rt=0.004\n2026-10-30T06:42:52+00:00 gateway 200 GET /api/orders/recent upstream=172.19.0.2:8000 rt=0.026\n2026-10-30T06:42:52+00:00 gateway 201 POST /api/orders upstream=172.19.0.2:8000 rt=0.031\n2026-10-30T06:42:52+00:00 gateway 200 GET /api/products upstream=172.19.0.2:8000 rt=0.003\n2026-10-30T06:42:52+00:00 gateway 200 GET /api/orders/recent upstream=172.19.0.2:8000 rt=0.020\n2026-10-30T06:42:52+00:00 gateway 200 GET /api/products upstream=172.19.0.2:8000 rt=0.006\n2026-10-30T06:42:52+00:00 gateway 201 POST /api/orders upstream=172.19.0.2:8000 rt=0.022\n2026-10-30T06:42:52+00:00 gateway 200 GET /api/products upstream=172.19.0.2:8000 rt=0.005\n2026-10-30T06:42:53+00:00 gateway 200 GET /api/products upstream=172.19.0.2:8000 rt=0.004\n2026-10-30T06:42:53+00:00 gateway 201 POST /api/orders upstream=172.19.0.2:8000 rt=0.026\n2026-10-30T06:42:53+00:00 gateway 200 GET /api/orders/recent upstream=172.19.0.2:8000 rt=0.020\n2026-10-30T06:42:53+00:00 gateway 200 GET /api/products upstream=172.19.0.2:8000 rt=0.005\n2026-10-30T06:42:53+00:00 gateway 200 GET /api/orders/recent upstream=172.19.0.2:8000 rt=0.019\n2026-10-30T06:42:53+00:00 gateway 200 GET\n... [1654 chars truncated] ...\nam=172.19.0.2:8000 rt=0.005\n2026-10-30T06:42:56+00:00 gateway 200 GET /api/products upstream=172.19.0.2:8000 rt=0.006\n2026-10-30T06:42:56+00:00 gateway 200 GET /api/orders/recent upstream=172.19.0.2:8000 rt=0.027\n2026-10-30T06:42:56+00:00 gateway 200 GET /api/products upstream=172.19.0.2:8000 rt=0.004\n2026-10-30T06:42:56+00:00 gateway 200 GET /api/orders/recent upstream=172.19.0.2:8000 rt=0.022\n2026-10-30T06:42:56+00:00 gateway 200 GET /api/orders/recent upstream=172.19.0.2:8000 rt=0.022\n2026-10-30T06:42:57+00:00 gateway 200 GET /api/products upstream=172.19.0.2:8000 rt=0.004\n2026-10-30T06:42:57+00:00 gateway 200 GET /api/products upstream=172.19.0.2:8000 rt=0.004\n2026-10-30T06:42:57+00:00 gateway 200 GET /healthz upstream=- rt=0.000\n2026-10-30T06:42:57+00:00 gateway 200 GET /api/health upstream=172.19.0.2:8000 rt=0.023\n2026-10-30T06:42:57+00:00 gateway 200 GET /api/products upstream=172.19.0.2:8000 rt=0.004\n2026-10-30T06:42:57+00:00 gateway 200 GET /api/products upstream=172.19.0.2:8000 rt=0.008\n2026-10-30T06:42:57+00:00 gateway 200 GET /api/orders/recent upstream=172.19.0.2:8000 rt=0.022\n2026-10-30T06:42:57+00:00 gateway 201 POST /api/orders upstream=172.19.0.2:8000 rt=0.023\n2026-10-30T06:42:57+00:00 gateway 201 POST /api/orders upstream=172.19.0.2:8000 rt=0.023\n2026-10-30T06:42:57+00:00 gateway 200 GET /api/orders/recent upstream=172.19.0.2:8000 rt=0.029\n2026-10-30T06:42:57+00:00 gateway 200 GET /api/products upstream=172.19.0.2:8000 rt=0.004\n2026-10-30T06:42:57+00:00 gateway 200 GET /api/products upstream=172.19.0.2:8000 rt=0.005\n2026-10-30T06:42:58+00:00 gateway 200 GET /api/orders/recent upstream=172.19.0.2:8000 rt=0.025\n2026-10-30T06:42:58+00:00 gateway 200 GET /api/orders/recent upstream=172.19.0.2:8000 rt=0.021\n2026-10-30T06:42:58+00:00 gateway 200 GET /api/orders/recent upstream=172.19.0.2:8000 rt=0.022\n2026-10-30T06:42:58+00:00 gateway 200 GET /api/products upstream=172.19.0.2:8000 rt=0.003\n2026-10-30T06:42:58+00:00 gateway 200 GET /api/products upstream=172.19.0.2:8000 rt=0.003\n2026-10-30T06:42:58+00:00 gateway 200 GET /api/orders/recent upstream=172.19.0.2:8000 rt=0.031\n2026-10-30T06:42:58+00:00 gateway 201 POST /api/orders upstream=172.19.0.2:8000 rt=0.025\n2026-10-30T06:42:59+00:00 gateway 200 GET /api/products upstream=172.19.0.2:8000 rt=0.004\n2026-10-30T06:42:59+00:00 gateway 200 GET /api/products upstream=172.19.0.2:8000 rt=0.005\n2026-10-30T06:42:59+00:00 gateway 200 GET /api/orders/recent upstream=172.19.0.2:8000 rt=0.023\n2026-10-30T06:42:59+00:00 gateway 200 GET /api/products upstream=172.19.0.2:8000 rt=0.003\n2026-10-30T06:42:59+00:00 gateway 200 GET /api/products upstream=172.19.0.2:8000 rt=0.005\n2026-10-30T06:42:59+00:00 gateway 200 GET /api/products upstream=172.19.0.2:8000 rt=0.005\n2026/10/30 06:42:50 [error] 20#20: *933 connect() failed (111: Connection refused) while connecting to upstream, client: 172.19.0.4, server: , request: \"GET /api/products HTTP/1.1\", upstream: \"http://172.19.0.2:8000/api/products\", host: \"gateway\""
+  },
+  {
+   "step": 20,
+   "t": 25.63,
+   "tool": "get_logs",
+   "kind": "observe",
+   "args": {
+    "service": "api",
+    "since_seconds": 9,
+    "tail": 400
+   },
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.04,
+   "result": "2 lines in last 9s.\nTop message patterns:\n      1x INFO api starting shop-api on :# (db=postgres:# cache=redis:#)\n      1x INFO api Serving on http://#\n--- last 2 lines ---\n2026-10-30T06:42:50 INFO api starting shop-api on :8000 (db=postgres:5432 cache=redis:6379)\n2026-10-30T06:42:50 INFO api Serving on http://0.0.0.0:8000"
+  },
+  {
+   "step": 21,
+   "t": 25.67,
+   "tool": "get_logs",
+   "kind": "observe",
+   "args": {
+    "service": "worker",
+    "since_seconds": 9,
+    "tail": 400
+   },
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.03,
+   "result": "1 lines in last 9s.\nTop message patterns:\n      1x INFO worker sales summary refreshed: orders=# revenue=#\n--- last 1 lines ---\n2026-10-30T06:42:55 INFO worker sales summary refreshed: orders=1087 revenue=272213.35"
+  },
+  {
+   "step": 22,
+   "t": 25.71,
+   "tool": "get_logs",
+   "kind": "observe",
+   "args": {
+    "service": "postgres",
+    "since_seconds": 9,
+    "tail": 400
+   },
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.03,
+   "result": "0 lines in last 9s.\nTop message patterns:\n\n--- last 0 lines ---\n"
+  },
+  {
+   "step": 23,
+   "t": 25.74,
+   "tool": "get_logs",
+   "kind": "observe",
+   "args": {
+    "service": "redis",
+    "since_seconds": 9,
+    "tail": 400
+   },
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.03,
+   "result": "0 lines in last 9s.\nTop message patterns:\n\n--- last 0 lines ---\n"
+  },
+  {
+   "step": 24,
+   "t": 25.77,
+   "tool": "run_diagnostic",
+   "kind": "observe",
+   "args": {
+    "service": "api",
+    "check": "disk"
+   },
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.09,
+   "result": "Filesystem                Size      Used Available Use% Mounted on\noverlay                 252.0G     13.0G     25.5G  34% /\ntmpfs                    64.0M         0     64.0M   0% /dev\ntmpfs                     7.9G         0      7.9G   0% /sys/fs/cgroup\nshm                      64.0M         0     64.0M   0% /dev/shm\n/dev/vda                252.0G     13.0G     25.5G  34% /config\ntmpfs                    48.0M      4.0K     48.0M   0% /data\n/dev/vda                252.0G     13.0G     25.5G  34% /etc/hostname\n/dev/vda                252.0G     13.0G     25.5G  34% /etc/hosts\n/dev/vda                252.0G     13.0G     25.5G  34% /etc/resolv.conf\ntmpfs                     4.0K         0      4.0K   0% /proc/acpi\ntmpfs                    64.0M         0     64.0M   0% /proc/interrupts\ntmpfs                    64.0M         0     64.0M   0% /proc/keys\ntmpfs                    64.0M         0     64.0M   0% /proc/timer_list\ntmpfs                     4.0K         0      4.0K   0% /sys/firmware\n--- largest under /data (KB) ---\n4\t/data/audit/audit.log\n4\t/data/audit\n4\t/data"
+  },
+  {
+   "step": 25,
+   "t": 25.87,
+   "tool": "run_diagnostic",
+   "kind": "observe",
+   "args": {
+    "service": "worker",
+    "check": "disk"
+   },
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.11,
+   "result": "Filesystem                Size      Used Available Use% Mounted on\noverlay                 252.0G     13.0G     25.5G  34% /\ntmpfs                    64.0M         0     64.0M   0% /dev\ntmpfs                     7.9G         0      7.9G   0% /sys/fs/cgroup\nshm                      64.0M         0     64.0M   0% /dev/shm\n/dev/vda                252.0G     13.0G     25.5G  34% /config\n/dev/vda                252.0G     13.0G     25.5G  34% /etc/hostname\n/dev/vda                252.0G     13.0G     25.5G  34% /etc/hosts\n/dev/vda                252.0G     13.0G     25.5G  34% /etc/resolv.conf\ntmpfs                     4.0K         0      4.0K   0% /proc/acpi\ntmpfs                    64.0M         0     64.0M   0% /proc/interrupts\ntmpfs                    64.0M         0     64.0M   0% /proc/keys\ntmpfs                    64.0M         0     64.0M   0% /proc/timer_list\ntmpfs                     4.0K         0      4.0K   0% /sys/firmware\n--- largest under /data (KB) ---"
+  },
+  {
+   "step": 26,
+   "t": 25.98,
+   "tool": "run_diagnostic",
+   "kind": "observe",
+   "args": {
+    "service": "postgres",
+    "check": "db_locks"
+   },
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.13,
+   "result": "blocked_pid | app | query | waiting_s | blocking_pid | blocking_app | state | blocking_query\n(no blocked sessions)"
+  },
+  {
+   "step": 27,
+   "t": 26.11,
+   "tool": "verify_recovery",
+   "kind": "observe",
+   "args": {},
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 9.2,
+   "result": "{\n \"healthy\": true,\n \"probe_success_rate\": 1.0,\n \"probe_p95_ms\": 82.9,\n \"problems\": [],\n \"probes\": {\n  \"GET /healthz\": {\n   \"ok\": 8,\n   \"fail\": 0,\n   \"statuses\": [\n    200\n   ],\n   \"last_error\": \"\"\n  },\n  \"GET /api/health\": {\n   \"ok\": 8,\n   \"fail\": 0,\n   \"statuses\": [\n    200\n   ],\n   \"last_error\": \"\"\n  },\n  \"GET /api/products\": {\n   \"ok\": 8,\n   \"fail\": 0,\n   \"statuses\": [\n    200\n   ],\n   \"last_error\": \"\"\n  },\n  \"GET /api/orders/recent\": {\n   \"ok\": 8,\n   \"fail\": 0,\n   \"statuses\": [\n    200\n   ],\n   \"last_error\": \"\"\n  },\n  \"POST /api/orders\": {\n   \"ok\": 8,\n   \"fail\": 0,\n   \"statuses\": [\n    201\n   ],\n   \"last_error\": \"\"\n  }\n }\n}"
+  },
+  {
+   "step": 28,
+   "t": 35.3,
+   "tool": "submit_report",
+   "kind": "final",
+   "args": {
+    "root_causes": [
+     {
+      "component": "api",
+      "category": "bad_config_deploy",
+      "evidence": "api was OOM-killed (list_services); api is crash-looping: state=restarting restarts=2; api was deployed 0.7 min ago: v2 'enable local response cache to reduce redis load' by ci-bot"
+     },
+     {
+      "component": "api",
+      "category": "memory_exhaustion",
+      "evidence": "api was OOM-killed (list_services); api is crash-looping: state=restarting restarts=2; api was deployed 0.7 min ago: v2 'enable local response cache to reduce redis load' by ci-bot"
+     }
+    ],
+    "recovered": true,
+    "summary": "[confirmed] roll back the api config to v1 (undoing v2) (confidence 0.71; evidence: api was OOM-killed (list_services)). Prevent: validate configs in CI and canary deploys with automatic rollback on error-rate spikes."
+   },
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.0,
+   "result": "report submitted"
+  }
+ ],
+ "episode_seconds": 130.8
+}
