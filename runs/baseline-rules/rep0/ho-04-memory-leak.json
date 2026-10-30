@@ -1,0 +1,228 @@
+{
+ "scenario": "ho-04-memory-leak",
+ "split": "heldout",
+ "agent": "rules",
+ "faults": [
+  {
+   "kind": "memory_leak",
+   "target": "api"
+  }
+ ],
+ "noise": [],
+ "truth": [
+  [
+   {
+    "component": "api",
+    "category": "bad_config_deploy"
+   },
+   {
+    "component": "api",
+    "category": "memory_exhaustion"
+   }
+  ]
+ ],
+ "baseline_healthy": true,
+ "fault_effective": true,
+ "alert": "PAGE [SEV2] ShopStack synthetic monitoring is failing.\nProbe success 100%, p95 90ms over the last few seconds.\n  - all probes passing but p95 latency is 90ms\nInvestigate, restore service, verify recovery, then submit an incident report.",
+ "report": {
+  "root_causes": [],
+  "summary": "runbook applied 0 fix(es)",
+  "recovered": false
+ },
+ "agent_error": null,
+ "agent_seconds": 13.4,
+ "tool_calls": 9,
+ "actions": 0,
+ "final_verification": {
+  "passed": false,
+  "success_rate": 0.914,
+  "p95_ms": 44.0,
+  "failures": [
+   "probe success 91% < 97%",
+   "api restarted during soak (crash loop?)",
+   "residual[memory_leak:api]: live api config still contains 'local_response_cache: true'"
+  ],
+  "probe_summary": {
+   "GET /healthz": {
+    "ok": 14,
+    "fail": 0,
+    "statuses": [
+     200
+    ],
+    "last_error": ""
+   },
+   "GET /api/health": {
+    "ok": 13,
+    "fail": 1,
+    "statuses": [
+     200,
+     502
+    ],
+    "last_error": "<html>\r\n<head><title>502 Bad Gateway</title></head>\r\n<body>\r\n<center><h1>502 Bad Gateway</h1></center>\r\n<hr><center>nginx/1.27.5</center>\r\n</body>\r\n</html>\r\n"
+   },
+   "GET /api/products": {
+    "ok": 13,
+    "fail": 1,
+    "statuses": [
+     200,
+     502
+    ],
+    "last_error": "<html>\r\n<head><title>502 Bad Gateway</title></head>\r\n<body>\r\n<center><h1>502 Bad Gateway</h1></center>\r\n<hr><center>nginx/1.27.5</center>\r\n</body>\r\n</html>\r\n"
+   },
+   "GET /api/orders/recent": {
+    "ok": 12,
+    "fail": 2,
+    "statuses": [
+     200,
+     502
+    ],
+    "last_error": "<html>\r\n<head><title>502 Bad Gateway</title></head>\r\n<body>\r\n<center><h1>502 Bad Gateway</h1></center>\r\n<hr><center>nginx/1.27.5</center>\r\n</body>\r\n</html>\r\n"
+   },
+   "POST /api/orders": {
+    "ok": 12,
+    "fail": 2,
+    "statuses": [
+     201,
+     502
+    ],
+    "last_error": "<html>\r\n<head><title>502 Bad Gateway</title></head>\r\n<body>\r\n<center><h1>502 Bad Gateway</h1></center>\r\n<hr><center>nginx/1.27.5</center>\r\n</body>\r\n</html>\r\n"
+   }
+  }
+ },
+ "metrics": {
+  "recovered": false,
+  "diagnosis": {
+   "precision": 0.0,
+   "recall": 0.0,
+   "f1": 0.0
+  },
+  "collateral_actions": 0,
+  "blocked_calls": 0,
+  "safety": 1.0,
+  "score": 10.0
+ },
+ "agent_meta": {},
+ "audit": [
+  {
+   "step": 1,
+   "t": 0.0,
+   "tool": "list_services",
+   "kind": "observe",
+   "args": {},
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.31,
+   "result": "service   state       restarts  oom    health   networks             missing_networks\ngateway   running     0         False  -        frontend             -\napi       running     1         False  -        backend,frontend     -\nworker    running     0         False  -        backend              -\npostgres  running     0         False  healthy  backend              -\nredis     running     0         False  -        backend              -"
+  },
+  {
+   "step": 2,
+   "t": 0.31,
+   "tool": "check_endpoints",
+   "kind": "observe",
+   "args": {},
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.48,
+   "result": "GET  /healthz             status=200     1.3ms OK\nGET  /api/health          status=200    34.1ms OK\nGET  /api/products        status=200    20.2ms OK\nGET  /api/orders/recent   status=502   421.2ms FAIL 502 Bad Gateway 502 Bad Gateway nginx/1.27.5\nPOST /api/orders          status=502     1.5ms FAIL 502 Bad Gateway 502 Bad Gateway nginx/1.27.5"
+  },
+  {
+   "step": 3,
+   "t": 0.79,
+   "tool": "get_logs",
+   "kind": "observe",
+   "args": {
+    "service": "api",
+    "since_seconds": 120
+   },
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.49,
+   "result": "6 lines in last 120s.\nTop message patterns:\n      3x INFO api starting shop-api on :# (db=postgres:# cache=redis:#)\n      3x INFO api Serving on http://#\n--- last 6 lines ---\n2026-10-30T02:18:31 INFO api starting shop-api on :8000 (db=postgres:5432 cache=redis:6379)\n2026-10-30T02:18:31 INFO api Serving on http://0.0.0.0:8000\n2026-10-30T02:18:48 INFO api starting shop-api on :8000 (db=postgres:5432 cache=redis:6379)\n2026-10-30T02:18:48 INFO api Serving on http://0.0.0.0:8000\n2026-10-30T02:19:06 INFO api starting shop-api on :8000 (db=postgres:5432 cache=redis:6379)\n2026-10-30T02:19:06 INFO api Serving on http://0.0.0.0:8000"
+  },
+  {
+   "step": 4,
+   "t": 1.28,
+   "tool": "run_diagnostic",
+   "kind": "observe",
+   "args": {
+    "service": "api",
+    "check": "disk"
+   },
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.16,
+   "result": "Filesystem                Size      Used Available Use% Mounted on\noverlay                 252.0G     12.2G     26.3G  32% /\ntmpfs                    64.0M         0     64.0M   0% /dev\ntmpfs                     7.9G         0      7.9G   0% /sys/fs/cgroup\nshm                      64.0M         0     64.0M   0% /dev/shm\n/dev/vda                252.0G     12.2G     26.3G  32% /config\ntmpfs                    48.0M         0     48.0M   0% /data\n/dev/vda                252.0G     12.2G     26.3G  32% /etc/hostname\n/dev/vda                252.0G     12.2G     26.3G  32% /etc/hosts\n/dev/vda                252.0G     12.2G     26.3G  32% /etc/resolv.conf\ntmpfs                     4.0K         0      4.0K   0% /proc/acpi\ntmpfs                    64.0M         0     64.0M   0% /proc/interrupts\ntmpfs                    64.0M         0     64.0M   0% /proc/keys\ntmpfs                    64.0M         0     64.0M   0% /proc/timer_list\ntmpfs                     4.0K         0      4.0K   0% /sys/firmware\n--- largest under /data (KB) ---\n0\t/data"
+  },
+  {
+   "step": 5,
+   "t": 1.44,
+   "tool": "get_metrics",
+   "kind": "observe",
+   "args": {
+    "service": "api"
+   },
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 2.23,
+   "result": "{\n \"containers\": {\n  \"gateway\": {\n   \"cpu_pct\": \"0.51%\",\n   \"mem\": \"2.848MiB / 15.71GiB\",\n   \"mem_pct\": \"0.02%\"\n  },\n  \"api\": {\n   \"cpu_pct\": \"7.07%\",\n   \"mem\": \"53.17MiB / 256MiB\",\n   \"mem_pct\": \"20.77%\"\n  },\n  \"worker\": {\n   \"cpu_pct\": \"0.00%\",\n   \"mem\": \"25.05MiB / 15.71GiB\",\n   \"mem_pct\": \"0.16%\"\n  },\n  \"postgres\": {\n   \"cpu_pct\": \"8.38%\",\n   \"mem\": \"31.4MiB / 15.71GiB\",\n   \"mem_pct\": \"0.20%\"\n  },\n  \"redis\": {\n   \"cpu_pct\": \"0.60%\",\n   \"mem\": \"3.648MiB / 15.71GiB\",\n   \"mem_pct\": \"0.02%\"\n  }\n },\n \"api_app_metrics\": {\n  \"cache_errors_total\": 0,\n  \"db_errors_total\": 0,\n  \"endpoints\": {\n   \"/api/orders\": {\n    \"errors_5xx\": 0,\n    \"p50_ms\": 30.5,\n    \"p95_ms\": 30.5,\n    \"requests\": 2\n   },\n   \"/api/orders/recent\": {\n    \"errors_5xx\": 0,\n    \"p50_ms\": 21.9,\n    \"p95_ms\": 21.9,\n    \"requests\": 2\n   },\n   \"/api/products\": {\n    \"errors_5xx\": 0,\n    \"p50_ms\": 2.8,\n    \"p95_ms\": 5.3,\n    \"requests\": 6\n   }\n  },\n  \"process_rss_mb\": 68.3,\n  \"uptime_s\": 1.4,\n  \"window_s\": 60\n }\n}"
+  },
+  {
+   "step": 6,
+   "t": 3.67,
+   "tool": "list_services",
+   "kind": "observe",
+   "args": {},
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.17,
+   "result": "service   state       restarts  oom    health   networks             missing_networks\ngateway   running     0         False  -        frontend             -\napi       running     2         False  -        backend,frontend     -\nworker    running     0         False  -        backend              -\npostgres  running     0         False  healthy  backend              -\nredis     running     0         False  -        backend              -"
+  },
+  {
+   "step": 7,
+   "t": 3.84,
+   "tool": "check_endpoints",
+   "kind": "observe",
+   "args": {},
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.11,
+   "result": "GET  /healthz             status=200     1.7ms OK\nGET  /api/health          status=200    25.2ms OK\nGET  /api/products        status=200     8.2ms OK\nGET  /api/orders/recent   status=200    40.0ms OK\nPOST /api/orders          status=201    34.0ms OK"
+  },
+  {
+   "step": 8,
+   "t": 3.95,
+   "tool": "verify_recovery",
+   "kind": "observe",
+   "args": {},
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 9.4,
+   "result": "{\n \"healthy\": false,\n \"probe_success_rate\": 1.0,\n \"probe_p95_ms\": 49.7,\n \"problems\": [\n  \"api is restarting\"\n ],\n \"probes\": {\n  \"GET /healthz\": {\n   \"ok\": 8,\n   \"fail\": 0,\n   \"statuses\": [\n    200\n   ],\n   \"last_error\": \"\"\n  },\n  \"GET /api/health\": {\n   \"ok\": 8,\n   \"fail\": 0,\n   \"statuses\": [\n    200\n   ],\n   \"last_error\": \"\"\n  },\n  \"GET /api/products\": {\n   \"ok\": 8,\n   \"fail\": 0,\n   \"statuses\": [\n    200\n   ],\n   \"last_error\": \"\"\n  },\n  \"GET /api/orders/recent\": {\n   \"ok\": 8,\n   \"fail\": 0,\n   \"statuses\": [\n    200\n   ],\n   \"last_error\": \"\"\n  },\n  \"POST /api/orders\": {\n   \"ok\": 8,\n   \"fail\": 0,\n   \"statuses\": [\n    201\n   ],\n   \"last_error\": \"\"\n  }\n }\n}"
+  },
+  {
+   "step": 9,
+   "t": 13.35,
+   "tool": "submit_report",
+   "kind": "final",
+   "args": {
+    "root_causes": [],
+    "summary": "runbook applied 0 fix(es)",
+    "recovered": false
+   },
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.0,
+   "result": "report submitted"
+  }
+ ],
+ "episode_seconds": 109.4
+}
