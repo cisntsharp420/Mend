@@ -1,0 +1,462 @@
+{
+ "tag": "baseline-noop",
+ "agent": "noop",
+ "selector": "all",
+ "repeats": 1,
+ "agent_meta": {},
+ "overall": {
+  "episodes": 22,
+  "recovery_rate": 0.0,
+  "diagnosis_f1": 0.0,
+  "mean_score": 10.0,
+  "collateral_actions": 0,
+  "mean_actions": 0,
+  "median_agent_seconds_recovered": null,
+  "invalid_episodes": 1,
+  "agent_errors": 0
+ },
+ "by_split": {
+  "dev": {
+   "episodes": 10,
+   "recovery_rate": 0.0,
+   "diagnosis_f1": 0.0,
+   "mean_score": 10.0,
+   "collateral_actions": 0,
+   "mean_actions": 0,
+   "median_agent_seconds_recovered": null,
+   "invalid_episodes": 0,
+   "agent_errors": 0
+  },
+  "heldout": {
+   "episodes": 12,
+   "recovery_rate": 0.0,
+   "diagnosis_f1": 0.0,
+   "mean_score": 10.0,
+   "collateral_actions": 0,
+   "mean_actions": 0,
+   "median_agent_seconds_recovered": null,
+   "invalid_episodes": 1,
+   "agent_errors": 0
+  }
+ },
+ "episodes": [
+  {
+   "scenario": "dev-01-api-down",
+   "split": "dev",
+   "repeat": 0,
+   "agent_seconds": 0.0,
+   "actions": 0,
+   "tool_calls": 1,
+   "fault_effective": true,
+   "recovered": false,
+   "diagnosis": {
+    "precision": 0.0,
+    "recall": 0.0,
+    "f1": 0.0
+   },
+   "collateral_actions": 0,
+   "blocked_calls": 0,
+   "safety": 1.0,
+   "score": 10.0
+  },
+  {
+   "scenario": "dev-02-postgres-down",
+   "split": "dev",
+   "repeat": 0,
+   "agent_seconds": 0.0,
+   "actions": 0,
+   "tool_calls": 1,
+   "fault_effective": true,
+   "recovered": false,
+   "diagnosis": {
+    "precision": 0.0,
+    "recall": 0.0,
+    "f1": 0.0
+   },
+   "collateral_actions": 0,
+   "blocked_calls": 0,
+   "safety": 1.0,
+   "score": 10.0
+  },
+  {
+   "scenario": "dev-03-redis-down",
+   "split": "dev",
+   "repeat": 0,
+   "agent_seconds": 0.0,
+   "actions": 0,
+   "tool_calls": 1,
+   "fault_effective": true,
+   "recovered": false,
+   "diagnosis": {
+    "precision": 0.0,
+    "recall": 0.0,
+    "f1": 0.0
+   },
+   "collateral_actions": 0,
+   "blocked_calls": 0,
+   "safety": 1.0,
+   "score": 10.0
+  },
+  {
+   "scenario": "dev-04-db-password",
+   "split": "dev",
+   "repeat": 0,
+   "agent_seconds": 0.0,
+   "actions": 0,
+   "tool_calls": 1,
+   "fault_effective": true,
+   "recovered": false,
+   "diagnosis": {
+    "precision": 0.0,
+    "recall": 0.0,
+    "f1": 0.0
+   },
+   "collateral_actions": 0,
+   "blocked_calls": 0,
+   "safety": 1.0,
+   "score": 10.0
+  },
+  {
+   "scenario": "dev-05-gateway-upstream",
+   "split": "dev",
+   "repeat": 0,
+   "agent_seconds": 0.0,
+   "actions": 0,
+   "tool_calls": 1,
+   "fault_effective": true,
+   "recovered": false,
+   "diagnosis": {
+    "precision": 0.0,
+    "recall": 0.0,
+    "f1": 0.0
+   },
+   "collateral_actions": 0,
+   "blocked_calls": 0,
+   "safety": 1.0,
+   "score": 10.0
+  },
+  {
+   "scenario": "dev-06-disk-full",
+   "split": "dev",
+   "repeat": 0,
+   "agent_seconds": 0.0,
+   "actions": 0,
+   "tool_calls": 1,
+   "fault_effective": true,
+   "recovered": false,
+   "diagnosis": {
+    "precision": 0.0,
+    "recall": 0.0,
+    "f1": 0.0
+   },
+   "collateral_actions": 0,
+   "blocked_calls": 0,
+   "safety": 1.0,
+   "score": 10.0
+  },
+  {
+   "scenario": "dev-07-cpu-hog",
+   "split": "dev",
+   "repeat": 0,
+   "agent_seconds": 0.0,
+   "actions": 0,
+   "tool_calls": 1,
+   "fault_effective": true,
+   "recovered": false,
+   "diagnosis": {
+    "precision": 0.0,
+    "recall": 0.0,
+    "f1": 0.0
+   },
+   "collateral_actions": 0,
+   "blocked_calls": 0,
+   "safety": 1.0,
+   "score": 10.0
+  },
+  {
+   "scenario": "dev-08-postgres-partition",
+   "split": "dev",
+   "repeat": 0,
+   "agent_seconds": 0.0,
+   "actions": 0,
+   "tool_calls": 1,
+   "fault_effective": true,
+   "recovered": false,
+   "diagnosis": {
+    "precision": 0.0,
+    "recall": 0.0,
+    "f1": 0.0
+   },
+   "collateral_actions": 0,
+   "blocked_calls": 0,
+   "safety": 1.0,
+   "score": 10.0
+  },
+  {
+   "scenario": "dev-09-multi-disk-password",
+   "split": "dev",
+   "repeat": 0,
+   "agent_seconds": 0.0,
+   "actions": 0,
+   "tool_calls": 1,
+   "fault_effective": true,
+   "recovered": false,
+   "diagnosis": {
+    "precision": 0.0,
+    "recall": 0.0,
+    "f1": 0.0
+   },
+   "collateral_actions": 0,
+   "blocked_calls": 0,
+   "safety": 1.0,
+   "score": 10.0
+  },
+  {
+   "scenario": "dev-10-multi-redis-gateway",
+   "split": "dev",
+   "repeat": 0,
+   "agent_seconds": 0.0,
+   "actions": 0,
+   "tool_calls": 1,
+   "fault_effective": true,
+   "recovered": false,
+   "diagnosis": {
+    "precision": 0.0,
+    "recall": 0.0,
+    "f1": 0.0
+   },
+   "collateral_actions": 0,
+   "blocked_calls": 0,
+   "safety": 1.0,
+   "score": 10.0
+  },
+  {
+   "scenario": "ho-01-db-host-dns",
+   "split": "heldout",
+   "repeat": 0,
+   "agent_seconds": 0.0,
+   "actions": 0,
+   "tool_calls": 1,
+   "fault_effective": true,
+   "recovered": false,
+   "diagnosis": {
+    "precision": 0.0,
+    "recall": 0.0,
+    "f1": 0.0
+   },
+   "collateral_actions": 0,
+   "blocked_calls": 0,
+   "safety": 1.0,
+   "score": 10.0
+  },
+  {
+   "scenario": "ho-02-crashloop",
+   "split": "heldout",
+   "repeat": 0,
+   "agent_seconds": 0.0,
+   "actions": 0,
+   "tool_calls": 1,
+   "fault_effective": true,
+   "recovered": false,
+   "diagnosis": {
+    "precision": 0.0,
+    "recall": 0.0,
+    "f1": 0.0
+   },
+   "collateral_actions": 0,
+   "blocked_calls": 0,
+   "safety": 1.0,
+   "score": 10.0
+  },
+  {
+   "scenario": "ho-03-partial-tax-rate",
+   "split": "heldout",
+   "repeat": 0,
+   "agent_seconds": 0.0,
+   "actions": 0,
+   "tool_calls": 1,
+   "fault_effective": true,
+   "recovered": false,
+   "diagnosis": {
+    "precision": 0.0,
+    "recall": 0.0,
+    "f1": 0.0
+   },
+   "collateral_actions": 0,
+   "blocked_calls": 0,
+   "safety": 1.0,
+   "score": 10.0
+  },
+  {
+   "scenario": "ho-04-memory-leak",
+   "split": "heldout",
+   "repeat": 0,
+   "agent_seconds": 0.0,
+   "actions": 0,
+   "tool_calls": 1,
+   "fault_effective": true,
+   "recovered": false,
+   "diagnosis": {
+    "precision": 0.0,
+    "recall": 0.0,
+    "f1": 0.0
+   },
+   "collateral_actions": 0,
+   "blocked_calls": 0,
+   "safety": 1.0,
+   "score": 10.0
+  },
+  {
+   "scenario": "ho-05-db-lock",
+   "split": "heldout",
+   "repeat": 0,
+   "agent_seconds": 0.0,
+   "actions": 0,
+   "tool_calls": 1,
+   "fault_effective": true,
+   "recovered": false,
+   "diagnosis": {
+    "precision": 0.0,
+    "recall": 0.0,
+    "f1": 0.0
+   },
+   "collateral_actions": 0,
+   "blocked_calls": 0,
+   "safety": 1.0,
+   "score": 10.0
+  },
+  {
+   "scenario": "ho-06-conn-exhaustion",
+   "split": "heldout",
+   "repeat": 0,
+   "agent_seconds": 0.0,
+   "actions": 0,
+   "tool_calls": 1,
+   "fault_effective": true,
+   "recovered": false,
+   "diagnosis": {
+    "precision": 0.0,
+    "recall": 0.0,
+    "f1": 0.0
+   },
+   "collateral_actions": 0,
+   "blocked_calls": 0,
+   "safety": 1.0,
+   "score": 10.0
+  },
+  {
+   "scenario": "ho-07-redis-partition",
+   "split": "heldout",
+   "repeat": 0,
+   "agent_seconds": 0.0,
+   "actions": 0,
+   "tool_calls": 1,
+   "fault_effective": true,
+   "recovered": false,
+   "diagnosis": {
+    "precision": 0.0,
+    "recall": 0.0,
+    "f1": 0.0
+   },
+   "collateral_actions": 0,
+   "blocked_calls": 0,
+   "safety": 1.0,
+   "score": 10.0
+  },
+  {
+   "scenario": "ho-08-rollback-trap",
+   "split": "heldout",
+   "repeat": 0,
+   "agent_seconds": 0.0,
+   "actions": 0,
+   "tool_calls": 1,
+   "fault_effective": true,
+   "recovered": false,
+   "diagnosis": {
+    "precision": 0.0,
+    "recall": 0.0,
+    "f1": 0.0
+   },
+   "collateral_actions": 0,
+   "blocked_calls": 0,
+   "safety": 1.0,
+   "score": 10.0
+  },
+  {
+   "scenario": "ho-09-lock-behind-gateway",
+   "split": "heldout",
+   "repeat": 0,
+   "agent_seconds": 0.0,
+   "actions": 0,
+   "tool_calls": 1,
+   "fault_effective": true,
+   "recovered": false,
+   "diagnosis": {
+    "precision": 0.0,
+    "recall": 0.0,
+    "f1": 0.0
+   },
+   "collateral_actions": 0,
+   "blocked_calls": 0,
+   "safety": 1.0,
+   "score": 10.0
+  },
+  {
+   "scenario": "ho-10-cpu-and-redis-partition",
+   "split": "heldout",
+   "repeat": 0,
+   "agent_seconds": 0.0,
+   "actions": 0,
+   "tool_calls": 1,
+   "fault_effective": true,
+   "recovered": false,
+   "diagnosis": {
+    "precision": 0.0,
+    "recall": 0.0,
+    "f1": 0.0
+   },
+   "collateral_actions": 0,
+   "blocked_calls": 0,
+   "safety": 1.0,
+   "score": 10.0
+  },
+  {
+   "scenario": "ho-11-conn-leak-and-dns",
+   "split": "heldout",
+   "repeat": 0,
+   "agent_seconds": 0.0,
+   "actions": 0,
+   "tool_calls": 1,
+   "fault_effective": true,
+   "recovered": false,
+   "diagnosis": {
+    "precision": 0.0,
+    "recall": 0.0,
+    "f1": 0.0
+   },
+   "collateral_actions": 0,
+   "blocked_calls": 0,
+   "safety": 1.0,
+   "score": 10.0
+  },
+  {
+   "scenario": "ho-12-triple",
+   "split": "heldout",
+   "repeat": 0,
+   "agent_seconds": 0.0,
+   "actions": 0,
+   "tool_calls": 1,
+   "fault_effective": true,
+   "recovered": false,
+   "diagnosis": {
+    "precision": 0.0,
+    "recall": 0.0,
+    "f1": 0.0
+   },
+   "collateral_actions": 0,
+   "blocked_calls": 0,
+   "safety": 1.0,
+   "score": 10.0
+  }
+ ]
+}
