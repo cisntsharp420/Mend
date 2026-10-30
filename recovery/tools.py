@@ -333,14 +333,16 @@ class Toolbox:
         return f"connected {service} to {network}: {'ok' if r.ok else r.out}"
 
     # ------------------------------------------------------------------ final
-    def submit_report(self, root_causes: list, summary: str, recovered: bool) -> str:
+    def submit_report(self, root_causes: list, summary: str, recovered: bool,
+                      recommendations: list | None = None) -> str:
         clean = []
         for rc in root_causes or []:
             if rc.get("component") not in CORE_SERVICES or rc.get("category") not in CATEGORIES:
                 raise ToolError(f"invalid root cause {rc}; component in {CORE_SERVICES}, category in {CATEGORIES}")
             clean.append({"component": rc["component"], "category": rc["category"],
                           "evidence": str(rc.get("evidence", ""))[:500]})
-        self.report = {"root_causes": clean, "summary": summary, "recovered": bool(recovered)}
+        self.report = {"root_causes": clean, "summary": summary, "recovered": bool(recovered),
+                       "recommendations": [str(r)[:300] for r in (recommendations or [])][:6]}
         return "report submitted"
 
     # ------------------------------------------------------------------ registry
@@ -399,13 +401,15 @@ class Toolbox:
                  "(restores its DNS alias).",
                  {"service": SERVICE, "network": {"type": "string", "enum": sorted(NETWORKS)}},
                  ["service", "network"], self.reconnect_network),
-            Tool("submit_report", "final", "Finish the incident: report root cause(s), what you did, and "
-                 "whether you believe the system recovered. Call exactly once, at the end.",
+            Tool("submit_report", "final", "Finish the incident: report root cause(s), what you did, "
+                 "whether you believe the system recovered, and short recommendations (what is still needed "
+                 "to fix it, and how to prevent a repeat). Call exactly once, at the end.",
                  {"root_causes": {"type": "array", "items": {"type": "object", "properties": {
                      "component": {"type": "string", "enum": CORE_SERVICES},
                      "category": {"type": "string", "enum": CATEGORIES},
                      "evidence": {"type": "string"}}, "required": ["component", "category", "evidence"]}},
-                  "summary": {"type": "string"}, "recovered": {"type": "boolean"}},
+                  "summary": {"type": "string"}, "recovered": {"type": "boolean"},
+                  "recommendations": {"type": "array", "items": {"type": "string"}, "maxItems": 6}},
                  ["root_causes", "summary", "recovered"], self.submit_report),
         ]
 

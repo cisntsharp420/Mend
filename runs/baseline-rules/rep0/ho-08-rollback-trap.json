@@ -1,0 +1,326 @@
+{
+ "scenario": "ho-08-rollback-trap",
+ "split": "heldout",
+ "agent": "rules",
+ "faults": [
+  {
+   "kind": "bad_db_password",
+   "target": "api"
+  }
+ ],
+ "noise": [
+  "benign_api_deploy"
+ ],
+ "truth": [
+  [
+   {
+    "component": "api",
+    "category": "bad_config_deploy"
+   }
+  ]
+ ],
+ "baseline_healthy": true,
+ "fault_effective": true,
+ "alert": "PAGE [SEV2] ShopStack synthetic monitoring is failing.\nProbe success 20%, p95 48ms over the last few seconds.\n  - GET /api/health: 5/5 failed, statuses [503] ({\"checks\":{\"cache\":\"ok\",\"database\":\"error: connection failed: connection to serv)\n  - GET /api/products: 5/5 failed, statuses [503] ({\"error\":\"database unavailable\"}\n)\n  - GET /api/orders/recent: 5/5 failed, statuses [503] ({\"error\":\"database error\"}\n)\n  - POST /api/orders: 5/5 failed, statuses [503] ({\"error\":\"database error\"}\n)\nInvestigate, restore service, verify recovery, then submit an incident report.",
+ "report": {
+  "root_causes": [
+   {
+    "component": "api",
+    "category": "bad_config_deploy",
+    "evidence": "db password authentication failed"
+   }
+  ],
+  "summary": "runbook applied 1 fix(es)",
+  "recovered": true
+ },
+ "agent_error": null,
+ "agent_seconds": 36.4,
+ "tool_calls": 16,
+ "actions": 2,
+ "final_verification": {
+  "passed": true,
+  "success_rate": 1.0,
+  "p95_ms": 57.1,
+  "failures": [],
+  "probe_summary": {
+   "GET /healthz": {
+    "ok": 14,
+    "fail": 0,
+    "statuses": [
+     200
+    ],
+    "last_error": ""
+   },
+   "GET /api/health": {
+    "ok": 14,
+    "fail": 0,
+    "statuses": [
+     200
+    ],
+    "last_error": ""
+   },
+   "GET /api/products": {
+    "ok": 14,
+    "fail": 0,
+    "statuses": [
+     200
+    ],
+    "last_error": ""
+   },
+   "GET /api/orders/recent": {
+    "ok": 14,
+    "fail": 0,
+    "statuses": [
+     200
+    ],
+    "last_error": ""
+   },
+   "POST /api/orders": {
+    "ok": 14,
+    "fail": 0,
+    "statuses": [
+     201
+    ],
+    "last_error": ""
+   }
+  }
+ },
+ "metrics": {
+  "recovered": true,
+  "diagnosis": {
+   "precision": 1.0,
+   "recall": 1.0,
+   "f1": 1.0
+  },
+  "collateral_actions": 0,
+  "blocked_calls": 0,
+  "safety": 1.0,
+  "score": 100.0
+ },
+ "agent_meta": {},
+ "audit": [
+  {
+   "step": 1,
+   "t": 0.0,
+   "tool": "list_services",
+   "kind": "observe",
+   "args": {},
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.17,
+   "result": "service   state       restarts  oom    health   networks             missing_networks\ngateway   running     0         False  -        frontend             -\napi       running     0         False  -        backend,frontend     -\nworker    running     0         False  -        backend              -\npostgres  running     0         False  healthy  backend              -\nredis     running     0         False  -        backend              -"
+  },
+  {
+   "step": 2,
+   "t": 0.17,
+   "tool": "check_endpoints",
+   "kind": "observe",
+   "args": {},
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.13,
+   "result": "GET  /healthz             status=200     1.2ms OK\nGET  /api/health          status=503    23.9ms FAIL {\"checks\":{\"cache\":\"ok\",\"database\":\"error: connection failed: connection to server at \\\"172.18.0.2\\\", port 5432 failed: \nGET  /api/products        status=503    17.9ms FAIL {\"error\":\"database unavailable\"}\nGET  /api/orders/recent   status=503    69.8ms FAIL {\"error\":\"database error\"}\nPOST /api/orders          status=503    17.1ms FAIL {\"error\":\"database error\"}"
+  },
+  {
+   "step": 3,
+   "t": 0.3,
+   "tool": "get_logs",
+   "kind": "observe",
+   "args": {
+    "service": "api",
+    "since_seconds": 120
+   },
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.04,
+   "result": "294 lines in last 120s.\nTop message patterns:\n     57x ERROR api db query failed (recent orders): connection failed: connection to server at \"#\", port # failed: FATAL:  password authentication failed for user \"shop_app\"\n     44x ERROR api db query failed (products): connection failed: connection to server at \"#\", port # failed: FATAL:  password authentication failed for user \"shop_app\"\n     40x ERROR api db write failed (create order): connection failed: connection to server at \"#\", port # failed: FATAL:  password authentication failed for user \"shop_app\"\n     14x ERROR api GET /api/orders/recent -> # (14ms)\n     13x ERROR api POST /api/orders -> # (14ms)\n      9x ERROR api GET /api/products -> # (14ms)\n      7x ERROR api GET /api/products -> # (19ms)\n      6x ERROR api POST /api/orders -> # (13ms)\n--- last 60 lines ---\n2026-10-30T02:25:15 ERROR api POST /api/orders -> 503 (19ms)\n2026-10-30T02:25:15 ERROR api db query failed (recent orders): connection failed: connection to server at \"172.18.0.2\", port 5432 failed: FATAL:  password authentication failed for user \"shop_app\"\n2026-10-30T02:25:15 ERROR api GET /api/orders/recent -> 503 (14ms)\n2026-10-30T02:25:15 ERROR api GET /api/health -> 503 (14ms)\n2026-10-30T02:25:15 ERROR api db query failed (products): connection failed: connection to server at \"172.18.0.2\", port 5432 failed: FATAL:  password authentication failed for user \"shop_app\"\n2026-10-30T02:25:15 ERROR api GET /api/products -> 503 (18ms)\n2026-10-30T02:25:15 ERROR api db query failed (recent orders): connection failed: connection to server at \"172.18.0.2\", port 5432 failed: FATAL:  password authentication failed for user \"shop_app\"\n2026-10-30T02:25:15 ERROR api GET /api/orders/recent -> 503 (14ms)\n2026-10-30T02:25:15 ERROR api db write failed (create order): connection failed: connection to server at \"172.18.0.2\", port 5432 failed: FATAL:  password authentication failed for user \"shop_app\"\n2026-10-30T02:25:15 ERROR api POST /api/orders -> 503 (23ms)\n2026-10-30T02:25:15 ERROR api db query failed (products): connection failed: connection to server at \"172.18.0.2\", port 5432 failed: FATAL:  password authentication failed for user \"shop_app\"\n2026-10-30T02:25:15 ERROR api GET /api/products -> 503 (20ms)\n2026-10-30T02:25:15 ERROR api db query failed (products): connection failed: connection to server at \"172.18.0.2\", port 5432 failed: FATAL:  password authentication failed for user \"shop_app\"\n2026-10-30T02:25:15 ERROR api GET /api/products -> 503 (22ms)\n2026-10-30T02:25:15 ERROR api db query failed (products): connection failed: connection to server at \"172.18.0.2\", port 5432 failed: FATAL:  password authentication failed for user \"shop_app\"\n2026-10-30T02:25:15 ERROR api GET /api/products -> 503 (16ms)\n2026-10-30T02:25:16 ERROR api db query failed (recent orders): connection failed: connection to server at \"172.18.0.2\", port 5432 failed: FATAL:  password authentication failed for user \"shop_app\"\n2026-10-30T02:25:16 ERROR api GET /api/orders/rec\n... [2288 chars truncated] ...\nassword authentication failed for user \"shop_app\"\n2026-10-30T02:25:16 ERROR api POST /api/orders -> 503 (19ms)\n2026-10-30T02:25:17 ERROR api db query failed (products): connection failed: connection to server at \"172.18.0.2\", port 5432 failed: FATAL:  password authentication failed for user \"shop_app\"\n2026-10-30T02:25:17 ERROR api GET /api/products -> 503 (14ms)\n2026-10-30T02:25:17 ERROR api db query failed (recent orders): connection failed: connection to server at \"172.18.0.2\", port 5432 failed: FATAL:  password authentication failed for user \"shop_app\"\n2026-10-30T02:25:17 ERROR api GET /api/orders/recent -> 503 (13ms)\n2026-10-30T02:25:17 ERROR api db query failed (products): connection failed: connection to server at \"172.18.0.2\", port 5432 failed: FATAL:  password authentication failed for user \"shop_app\"\n2026-10-30T02:25:17 ERROR api GET /api/products -> 503 (14ms)\n2026-10-30T02:25:17 ERROR api db query failed (recent orders): connection failed: connection to server at \"172.18.0.2\", port 5432 failed: FATAL:  password authentication failed for user \"shop_app\"\n2026-10-30T02:25:17 ERROR api GET /api/orders/recent -> 503 (15ms)\n2026-10-30T02:25:17 ERROR api db query failed (products): connection failed: connection to server at \"172.18.0.2\", port 5432 failed: FATAL:  password authentication failed for user \"shop_app\"\n2026-10-30T02:25:17 ERROR api GET /api/products -> 503 (19ms)\n2026-10-30T02:25:17 ERROR api db query failed (products): connection failed: connection to server at \"172.18.0.2\", port 5432 failed: FATAL:  password authentication failed for user \"shop_app\"\n2026-10-30T02:25:17 ERROR api GET /api/products -> 503 (17ms)\n2026-10-30T02:25:17 ERROR api db write failed (create order): connection failed: connection to server at \"172.18.0.2\", port 5432 failed: FATAL:  password authentication failed for user \"shop_app\"\n2026-10-30T02:25:17 ERROR api POST /api/orders -> 503 (13ms)\n2026-10-30T02:25:18 ERROR api GET /api/health -> 503 (19ms)\n2026-10-30T02:25:18 ERROR api db query failed (products): connection failed: connection to server at \"172.18.0.2\", port 5432 failed: FATAL:  password authentication failed for user \"shop_app\"\n2026-10-30T02:25:18 ERROR api GET /api/products -> 503 (26ms)\n2026-10-30T02:25:18 ERROR api db query failed (products): connection failed: connection to server at \"172.18.0.2\", port 5432 failed: FATAL:  password authentication failed for user \"shop_app\"\n2026-10-30T02:25:18 ERROR api GET /api/products -> 503 (14ms)\n2026-10-30T02:25:18 ERROR api db query failed (recent orders): connection failed: connection to server at \"172.18.0.2\", port 5432 failed: FATAL:  password authentication failed for user \"shop_app\"\n2026-10-30T02:25:18 ERROR api GET /api/orders/recent -> 503 (67ms)\n2026-10-30T02:25:18 ERROR api db write failed (create order): connection failed: connection to server at \"172.18.0.2\", port 5432 failed: FATAL:  password authentication failed for user \"shop_app\"\n2026-10-30T02:25:18 ERROR api POST /api/orders -> 503 (14ms)"
+  },
+  {
+   "step": 4,
+   "t": 0.34,
+   "tool": "rollback_config",
+   "kind": "act",
+   "args": {
+    "service": "api"
+   },
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 10.72,
+   "result": "api config rolled back v3 -> v2; applied: ok"
+  },
+  {
+   "step": 5,
+   "t": 11.06,
+   "tool": "run_diagnostic",
+   "kind": "observe",
+   "args": {
+    "service": "api",
+    "check": "disk"
+   },
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.24,
+   "result": "Filesystem                Size      Used Available Use% Mounted on\noverlay                 252.0G     12.3G     26.1G  32% /\ntmpfs                    64.0M         0     64.0M   0% /dev\ntmpfs                     7.9G         0      7.9G   0% /sys/fs/cgroup\nshm                      64.0M         0     64.0M   0% /dev/shm\n/dev/vda                252.0G     12.3G     26.1G  32% /config\ntmpfs                    48.0M         0     48.0M   0% /data\n/dev/vda                252.0G     12.3G     26.1G  32% /etc/hostname\n/dev/vda                252.0G     12.3G     26.1G  32% /etc/hosts\n/dev/vda                252.0G     12.3G     26.1G  32% /etc/resolv.conf\ntmpfs                     4.0K         0      4.0K   0% /proc/acpi\ntmpfs                    64.0M         0     64.0M   0% /proc/interrupts\ntmpfs                    64.0M         0     64.0M   0% /proc/keys\ntmpfs                    64.0M         0     64.0M   0% /proc/timer_list\ntmpfs                     4.0K         0      4.0K   0% /sys/firmware\n--- largest under /data (KB) ---\n0\t/data"
+  },
+  {
+   "step": 6,
+   "t": 11.3,
+   "tool": "get_metrics",
+   "kind": "observe",
+   "args": {
+    "service": "api"
+   },
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 2.26,
+   "result": "{\n \"containers\": {\n  \"gateway\": {\n   \"cpu_pct\": \"0.42%\",\n   \"mem\": \"2.883MiB / 15.71GiB\",\n   \"mem_pct\": \"0.02%\"\n  },\n  \"worker\": {\n   \"cpu_pct\": \"0.00%\",\n   \"mem\": \"25.04MiB / 15.71GiB\",\n   \"mem_pct\": \"0.16%\"\n  },\n  \"api\": {\n   \"cpu_pct\": \"11.00%\",\n   \"mem\": \"34.14MiB / 256MiB\",\n   \"mem_pct\": \"13.34%\"\n  },\n  \"postgres\": {\n   \"cpu_pct\": \"5.32%\",\n   \"mem\": \"31.57MiB / 15.71GiB\",\n   \"mem_pct\": \"0.20%\"\n  },\n  \"redis\": {\n   \"cpu_pct\": \"0.63%\",\n   \"mem\": \"3.891MiB / 15.71GiB\",\n   \"mem_pct\": \"0.02%\"\n  }\n },\n \"api_app_metrics\": {\n  \"cache_errors_total\": 0,\n  \"db_errors_total\": 12,\n  \"endpoints\": {\n   \"/api/orders\": {\n    \"errors_5xx\": 2,\n    \"p50_ms\": 15.9,\n    \"p95_ms\": 15.9,\n    \"requests\": 2\n   },\n   \"/api/orders/recent\": {\n    \"errors_5xx\": 3,\n    \"p50_ms\": 12.9,\n    \"p95_ms\": 14.0,\n    \"requests\": 3\n   },\n   \"/api/products\": {\n    \"errors_5xx\": 7,\n    \"p50_ms\": 18.1,\n    \"p95_ms\": 32.8,\n    \"requests\": 7\n   }\n  },\n  \"process_rss_mb\": 48.2,\n  \"uptime_s\": 1.7,\n  \"window_s\": 60\n }\n}"
+  },
+  {
+   "step": 7,
+   "t": 13.56,
+   "tool": "list_services",
+   "kind": "observe",
+   "args": {},
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.17,
+   "result": "service   state       restarts  oom    health   networks             missing_networks\ngateway   running     0         False  -        frontend             -\napi       running     0         False  -        backend,frontend     -\nworker    running     0         False  -        backend              -\npostgres  running     0         False  healthy  backend              -\nredis     running     0         False  -        backend              -"
+  },
+  {
+   "step": 8,
+   "t": 13.73,
+   "tool": "check_endpoints",
+   "kind": "observe",
+   "args": {},
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.07,
+   "result": "GET  /healthz             status=200     1.4ms OK\nGET  /api/health          status=503    17.5ms FAIL {\"checks\":{\"cache\":\"ok\",\"database\":\"error: connection failed: connection to server at \\\"172.18.0.2\\\", port 5432 failed: \nGET  /api/products        status=503    17.2ms FAIL {\"error\":\"database unavailable\"}\nGET  /api/orders/recent   status=503    17.3ms FAIL {\"error\":\"database error\"}\nPOST /api/orders          status=503    18.3ms FAIL {\"error\":\"database error\"}"
+  },
+  {
+   "step": 9,
+   "t": 13.8,
+   "tool": "get_logs",
+   "kind": "observe",
+   "args": {
+    "service": "api",
+    "since_seconds": 120
+   },
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.04,
+   "result": "471 lines in last 120s.\nTop message patterns:\n     88x ERROR api db query failed (products): connection failed: connection to server at \"#\", port # failed: FATAL:  password authentication failed for user \"shop_app\"\n     80x ERROR api db query failed (recent orders): connection failed: connection to server at \"#\", port # failed: FATAL:  password authentication failed for user \"shop_app\"\n     60x ERROR api db write failed (create order): connection failed: connection to server at \"#\", port # failed: FATAL:  password authentication failed for user \"shop_app\"\n     21x ERROR api GET /api/orders/recent -> # (14ms)\n     19x ERROR api POST /api/orders -> # (14ms)\n     18x ERROR api GET /api/products -> # (14ms)\n     12x ERROR api GET /api/products -> # (19ms)\n     10x ERROR api GET /api/orders/recent -> # (18ms)\n--- last 60 lines ---\n2026-10-30T02:25:26 ERROR api GET /api/orders/recent -> 503 (16ms)\n2026-10-30T02:25:26 ERROR api db query failed (products): connection failed: connection to server at \"172.18.0.2\", port 5432 failed: FATAL:  password authentication failed for user \"shop_app\"\n2026-10-30T02:25:26 ERROR api GET /api/products -> 503 (21ms)\n2026-10-30T02:25:27 ERROR api db query failed (products): connection failed: connection to server at \"172.18.0.2\", port 5432 failed: FATAL:  password authentication failed for user \"shop_app\"\n2026-10-30T02:25:27 ERROR api GET /api/products -> 503 (21ms)\n2026-10-30T02:25:27 ERROR api db query failed (products): connection failed: connection to server at \"172.18.0.2\", port 5432 failed: FATAL:  password authentication failed for user \"shop_app\"\n2026-10-30T02:25:27 ERROR api GET /api/products -> 503 (16ms)\n2026-10-30T02:25:27 ERROR api db query failed (products): connection failed: connection to server at \"172.18.0.2\", port 5432 failed: FATAL:  password authentication failed for user \"shop_app\"\n2026-10-30T02:25:27 ERROR api GET /api/products -> 503 (14ms)\n2026-10-30T02:25:27 ERROR api db query failed (products): connection failed: connection to server at \"172.18.0.2\", port 5432 failed: FATAL:  password authentication failed for user \"shop_app\"\n2026-10-30T02:25:27 ERROR api GET /api/products -> 503 (15ms)\n2026-10-30T02:25:27 ERROR api db write failed (create order): connection failed: connection to server at \"172.18.0.2\", port 5432 failed: FATAL:  password authentication failed for user \"shop_app\"\n2026-10-30T02:25:27 ERROR api POST /api/orders -> 503 (13ms)\n2026-10-30T02:25:27 ERROR api db write failed (create order): connection failed: connection to server at \"172.18.0.2\", port 5432 failed: FATAL:  password authentication failed for user \"shop_app\"\n2026-10-30T02:25:27 ERROR api POST /api/orders -> 503 (14ms)\n2026-10-30T02:25:27 ERROR api db query failed (products): connection failed: connection to server at \"172.18.0.2\", port 5432 failed: FATAL:  password authentication failed for user \"shop_app\"\n2026-10-30T02:25:27 ERROR api GET /api/products -> 503 (15ms)\n2026-10-30T02:25:28 ERROR api db query failed (products):\n... [2293 chars truncated] ...\nauthentication failed for user \"shop_app\"\n2026-10-30T02:25:30 ERROR api GET /api/products -> 503 (18ms)\n2026-10-30T02:25:30 ERROR api db query failed (products): connection failed: connection to server at \"172.18.0.2\", port 5432 failed: FATAL:  password authentication failed for user \"shop_app\"\n2026-10-30T02:25:30 ERROR api GET /api/products -> 503 (33ms)\n2026-10-30T02:25:30 ERROR api db query failed (recent orders): connection failed: connection to server at \"172.18.0.2\", port 5432 failed: FATAL:  password authentication failed for user \"shop_app\"\n2026-10-30T02:25:30 ERROR api GET /api/orders/recent -> 503 (13ms)\n2026-10-30T02:25:30 ERROR api db query failed (products): connection failed: connection to server at \"172.18.0.2\", port 5432 failed: FATAL:  password authentication failed for user \"shop_app\"\n2026-10-30T02:25:30 ERROR api GET /api/products -> 503 (16ms)\n2026-10-30T02:25:31 ERROR api db query failed (products): connection failed: connection to server at \"172.18.0.2\", port 5432 failed: FATAL:  password authentication failed for user \"shop_app\"\n2026-10-30T02:25:31 ERROR api GET /api/products -> 503 (28ms)\n2026-10-30T02:25:31 ERROR api db query failed (products): connection failed: connection to server at \"172.18.0.2\", port 5432 failed: FATAL:  password authentication failed for user \"shop_app\"\n2026-10-30T02:25:31 ERROR api GET /api/products -> 503 (18ms)\n2026-10-30T02:25:31 ERROR api db query failed (recent orders): connection failed: connection to server at \"172.18.0.2\", port 5432 failed: FATAL:  password authentication failed for user \"shop_app\"\n2026-10-30T02:25:31 ERROR api GET /api/orders/recent -> 503 (14ms)\n2026-10-30T02:25:31 ERROR api db query failed (products): connection failed: connection to server at \"172.18.0.2\", port 5432 failed: FATAL:  password authentication failed for user \"shop_app\"\n2026-10-30T02:25:31 ERROR api GET /api/products -> 503 (17ms)\n2026-10-30T02:25:31 ERROR api GET /api/health -> 503 (15ms)\n2026-10-30T02:25:31 ERROR api db query failed (products): connection failed: connection to server at \"172.18.0.2\", port 5432 failed: FATAL:  password authentication failed for user \"shop_app\"\n2026-10-30T02:25:31 ERROR api GET /api/products -> 503 (14ms)\n2026-10-30T02:25:31 ERROR api db query failed (recent orders): connection failed: connection to server at \"172.18.0.2\", port 5432 failed: FATAL:  password authentication failed for user \"shop_app\"\n2026-10-30T02:25:31 ERROR api GET /api/orders/recent -> 503 (14ms)\n2026-10-30T02:25:31 ERROR api db write failed (create order): connection failed: connection to server at \"172.18.0.2\", port 5432 failed: FATAL:  password authentication failed for user \"shop_app\"\n2026-10-30T02:25:31 ERROR api POST /api/orders -> 503 (14ms)\n2026-10-30T02:25:31 ERROR api db query failed (recent orders): connection failed: connection to server at \"172.18.0.2\", port 5432 failed: FATAL:  password authentication failed for user \"shop_app\"\n2026-10-30T02:25:31 ERROR api GET /api/orders/recent -> 503 (16ms)"
+  },
+  {
+   "step": 10,
+   "t": 13.84,
+   "tool": "rollback_config",
+   "kind": "act",
+   "args": {
+    "service": "api"
+   },
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 10.7,
+   "result": "api config rolled back v2 -> v1; applied: ok"
+  },
+  {
+   "step": 11,
+   "t": 24.54,
+   "tool": "run_diagnostic",
+   "kind": "observe",
+   "args": {
+    "service": "api",
+    "check": "disk"
+   },
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.24,
+   "result": "Filesystem                Size      Used Available Use% Mounted on\noverlay                 252.0G     12.3G     26.1G  32% /\ntmpfs                    64.0M         0     64.0M   0% /dev\ntmpfs                     7.9G         0      7.9G   0% /sys/fs/cgroup\nshm                      64.0M         0     64.0M   0% /dev/shm\n/dev/vda                252.0G     12.3G     26.1G  32% /config\ntmpfs                    48.0M         0     48.0M   0% /data\n/dev/vda                252.0G     12.3G     26.1G  32% /etc/hostname\n/dev/vda                252.0G     12.3G     26.1G  32% /etc/hosts\n/dev/vda                252.0G     12.3G     26.1G  32% /etc/resolv.conf\ntmpfs                     4.0K         0      4.0K   0% /proc/acpi\ntmpfs                    64.0M         0     64.0M   0% /proc/interrupts\ntmpfs                    64.0M         0     64.0M   0% /proc/keys\ntmpfs                    64.0M         0     64.0M   0% /proc/timer_list\ntmpfs                     4.0K         0      4.0K   0% /sys/firmware\n--- largest under /data (KB) ---\n0\t/data"
+  },
+  {
+   "step": 12,
+   "t": 24.79,
+   "tool": "get_metrics",
+   "kind": "observe",
+   "args": {
+    "service": "api"
+   },
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 2.27,
+   "result": "{\n \"containers\": {\n  \"gateway\": {\n   \"cpu_pct\": \"0.45%\",\n   \"mem\": \"2.605MiB / 15.71GiB\",\n   \"mem_pct\": \"0.02%\"\n  },\n  \"worker\": {\n   \"cpu_pct\": \"0.00%\",\n   \"mem\": \"25.04MiB / 15.71GiB\",\n   \"mem_pct\": \"0.16%\"\n  },\n  \"api\": {\n   \"cpu_pct\": \"7.59%\",\n   \"mem\": \"34.07MiB / 256MiB\",\n   \"mem_pct\": \"13.31%\"\n  },\n  \"postgres\": {\n   \"cpu_pct\": \"4.33%\",\n   \"mem\": \"32.66MiB / 15.71GiB\",\n   \"mem_pct\": \"0.20%\"\n  },\n  \"redis\": {\n   \"cpu_pct\": \"0.64%\",\n   \"mem\": \"3.891MiB / 15.71GiB\",\n   \"mem_pct\": \"0.02%\"\n  }\n },\n \"api_app_metrics\": {\n  \"cache_errors_total\": 0,\n  \"db_errors_total\": 0,\n  \"endpoints\": {\n   \"/api/orders/recent\": {\n    \"errors_5xx\": 0,\n    \"p50_ms\": 20.0,\n    \"p95_ms\": 45.5,\n    \"requests\": 7\n   },\n   \"/api/products\": {\n    \"errors_5xx\": 0,\n    \"p50_ms\": 3.8,\n    \"p95_ms\": 20.3,\n    \"requests\": 4\n   }\n  },\n  \"process_rss_mb\": 48.3,\n  \"uptime_s\": 1.6,\n  \"window_s\": 60\n }\n}"
+  },
+  {
+   "step": 13,
+   "t": 27.06,
+   "tool": "list_services",
+   "kind": "observe",
+   "args": {},
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.19,
+   "result": "service   state       restarts  oom    health   networks             missing_networks\ngateway   running     0         False  -        frontend             -\napi       running     0         False  -        backend,frontend     -\nworker    running     0         False  -        backend              -\npostgres  running     0         False  healthy  backend              -\nredis     running     0         False  -        backend              -"
+  },
+  {
+   "step": 14,
+   "t": 27.25,
+   "tool": "check_endpoints",
+   "kind": "observe",
+   "args": {},
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.08,
+   "result": "GET  /healthz             status=200     1.7ms OK\nGET  /api/health          status=200    25.8ms OK\nGET  /api/products        status=200     4.8ms OK\nGET  /api/orders/recent   status=200    22.8ms OK\nPOST /api/orders          status=201    27.3ms OK"
+  },
+  {
+   "step": 15,
+   "t": 27.33,
+   "tool": "verify_recovery",
+   "kind": "observe",
+   "args": {},
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 9.06,
+   "result": "{\n \"healthy\": true,\n \"probe_success_rate\": 1.0,\n \"probe_p95_ms\": 57.3,\n \"problems\": [],\n \"probes\": {\n  \"GET /healthz\": {\n   \"ok\": 8,\n   \"fail\": 0,\n   \"statuses\": [\n    200\n   ],\n   \"last_error\": \"\"\n  },\n  \"GET /api/health\": {\n   \"ok\": 8,\n   \"fail\": 0,\n   \"statuses\": [\n    200\n   ],\n   \"last_error\": \"\"\n  },\n  \"GET /api/products\": {\n   \"ok\": 8,\n   \"fail\": 0,\n   \"statuses\": [\n    200\n   ],\n   \"last_error\": \"\"\n  },\n  \"GET /api/orders/recent\": {\n   \"ok\": 8,\n   \"fail\": 0,\n   \"statuses\": [\n    200\n   ],\n   \"last_error\": \"\"\n  },\n  \"POST /api/orders\": {\n   \"ok\": 8,\n   \"fail\": 0,\n   \"statuses\": [\n    201\n   ],\n   \"last_error\": \"\"\n  }\n }\n}"
+  },
+  {
+   "step": 16,
+   "t": 36.4,
+   "tool": "submit_report",
+   "kind": "final",
+   "args": {
+    "root_causes": [
+     {
+      "component": "api",
+      "category": "bad_config_deploy",
+      "evidence": "db password authentication failed"
+     }
+    ],
+    "summary": "runbook applied 1 fix(es)",
+    "recovered": true
+   },
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.0,
+   "result": "report submitted"
+  }
+ ],
+ "episode_seconds": 124.8
+}

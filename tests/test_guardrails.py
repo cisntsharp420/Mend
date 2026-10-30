@@ -71,3 +71,13 @@ def test_tool_schemas_are_well_formed():
     for s in tb.schemas():
         assert s["input_schema"]["type"] == "object"
         assert set(s["input_schema"]["required"]) <= set(s["input_schema"]["properties"])
+
+
+def test_report_keeps_optional_recommendations():
+    tb, _ = make_tb()
+    tb.call("submit_report", {"root_causes": [], "summary": "s", "recovered": False})
+    assert tb.report["recommendations"] == []
+    tb2, _ = make_tb()
+    tb2.call("submit_report", {"root_causes": [], "summary": "s", "recovered": True,
+                               "recommendations": ["add a disk alert at 80%"]})
+    assert tb2.report["recommendations"] == ["add a disk alert at 80%"]

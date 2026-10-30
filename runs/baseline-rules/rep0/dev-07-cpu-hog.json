@@ -1,0 +1,258 @@
+{
+ "scenario": "dev-07-cpu-hog",
+ "split": "dev",
+ "agent": "rules",
+ "faults": [
+  {
+   "kind": "cpu_hog",
+   "target": "api"
+  }
+ ],
+ "noise": [],
+ "truth": [
+  [
+   {
+    "component": "api",
+    "category": "cpu_exhaustion"
+   }
+  ]
+ ],
+ "baseline_healthy": true,
+ "fault_effective": true,
+ "alert": "PAGE [SEV2] ShopStack synthetic monitoring is failing.\nProbe success 100%, p95 1399ms over the last few seconds.\n  - all probes passing but p95 latency is 1399ms\nInvestigate, restore service, verify recovery, then submit an incident report.",
+ "report": {
+  "root_causes": [
+   {
+    "component": "api",
+    "category": "cpu_exhaustion",
+    "evidence": "python /app/tools/reindex_search.py hogging CPU"
+   }
+  ],
+  "summary": "runbook applied 1 fix(es)",
+  "recovered": true
+ },
+ "agent_error": null,
+ "agent_seconds": 19.0,
+ "tool_calls": 11,
+ "actions": 1,
+ "final_verification": {
+  "passed": true,
+  "success_rate": 1.0,
+  "p95_ms": 54.8,
+  "failures": [],
+  "probe_summary": {
+   "GET /healthz": {
+    "ok": 14,
+    "fail": 0,
+    "statuses": [
+     200
+    ],
+    "last_error": ""
+   },
+   "GET /api/health": {
+    "ok": 14,
+    "fail": 0,
+    "statuses": [
+     200
+    ],
+    "last_error": ""
+   },
+   "GET /api/products": {
+    "ok": 14,
+    "fail": 0,
+    "statuses": [
+     200
+    ],
+    "last_error": ""
+   },
+   "GET /api/orders/recent": {
+    "ok": 14,
+    "fail": 0,
+    "statuses": [
+     200
+    ],
+    "last_error": ""
+   },
+   "POST /api/orders": {
+    "ok": 14,
+    "fail": 0,
+    "statuses": [
+     201
+    ],
+    "last_error": ""
+   }
+  }
+ },
+ "metrics": {
+  "recovered": true,
+  "diagnosis": {
+   "precision": 1.0,
+   "recall": 1.0,
+   "f1": 1.0
+  },
+  "collateral_actions": 0,
+  "blocked_calls": 0,
+  "safety": 1.0,
+  "score": 100.0
+ },
+ "agent_meta": {},
+ "audit": [
+  {
+   "step": 1,
+   "t": 0.0,
+   "tool": "list_services",
+   "kind": "observe",
+   "args": {},
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.18,
+   "result": "service   state       restarts  oom    health   networks             missing_networks\ngateway   running     0         False  -        frontend             -\napi       running     0         False  -        backend,frontend     -\nworker    running     0         False  -        backend              -\npostgres  running     0         False  healthy  backend              -\nredis     running     0         False  -        backend              -"
+  },
+  {
+   "step": 2,
+   "t": 0.18,
+   "tool": "check_endpoints",
+   "kind": "observe",
+   "args": {},
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 1.91,
+   "result": "GET  /healthz             status=200     1.8ms OK\nGET  /api/health          status=200   611.2ms OK\nGET  /api/products        status=200   204.1ms OK\nGET  /api/orders/recent   status=200   495.0ms OK\nPOST /api/orders          status=201   596.5ms OK"
+  },
+  {
+   "step": 3,
+   "t": 2.09,
+   "tool": "get_logs",
+   "kind": "observe",
+   "args": {
+    "service": "api",
+    "since_seconds": 120
+   },
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.04,
+   "result": "2 lines in last 120s.\nTop message patterns:\n      1x INFO api starting shop-api on :# (db=postgres:# cache=redis:#)\n      1x INFO api Serving on http://#\n--- last 2 lines ---\n2026-10-30T02:07:40 INFO api starting shop-api on :8000 (db=postgres:5432 cache=redis:6379)\n2026-10-30T02:07:40 INFO api Serving on http://0.0.0.0:8000"
+  },
+  {
+   "step": 4,
+   "t": 2.12,
+   "tool": "run_diagnostic",
+   "kind": "observe",
+   "args": {
+    "service": "api",
+    "check": "disk"
+   },
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 1.57,
+   "result": "Filesystem                Size      Used Available Use% Mounted on\noverlay                 252.0G     11.8G     26.6G  31% /\ntmpfs                    64.0M         0     64.0M   0% /dev\ntmpfs                     7.9G         0      7.9G   0% /sys/fs/cgroup\nshm                      64.0M         0     64.0M   0% /dev/shm\n/dev/vda                252.0G     11.8G     26.6G  31% /config\ntmpfs                    48.0M      4.0K     48.0M   0% /data\n/dev/vda                252.0G     11.8G     26.6G  31% /etc/hostname\n/dev/vda                252.0G     11.8G     26.6G  31% /etc/hosts\n/dev/vda                252.0G     11.8G     26.6G  31% /etc/resolv.conf\ntmpfs                     4.0K         0      4.0K   0% /proc/acpi\ntmpfs                    64.0M         0     64.0M   0% /proc/interrupts\ntmpfs                    64.0M         0     64.0M   0% /proc/keys\ntmpfs                    64.0M         0     64.0M   0% /proc/timer_list\ntmpfs                     4.0K         0      4.0K   0% /sys/firmware\n--- largest under /data (KB) ---\n4\t/data/audit/audit.log\n4\t/data/audit\n4\t/data"
+  },
+  {
+   "step": 5,
+   "t": 3.69,
+   "tool": "get_metrics",
+   "kind": "observe",
+   "args": {
+    "service": "api"
+   },
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 3.51,
+   "result": "{\n \"containers\": {\n  \"gateway\": {\n   \"cpu_pct\": \"0.07%\",\n   \"mem\": \"2.859MiB / 15.71GiB\",\n   \"mem_pct\": \"0.02%\"\n  },\n  \"api\": {\n   \"cpu_pct\": \"49.14%\",\n   \"mem\": \"51.03MiB / 256MiB\",\n   \"mem_pct\": \"19.93%\"\n  },\n  \"worker\": {\n   \"cpu_pct\": \"0.00%\",\n   \"mem\": \"25.05MiB / 15.71GiB\",\n   \"mem_pct\": \"0.16%\"\n  },\n  \"postgres\": {\n   \"cpu_pct\": \"5.40%\",\n   \"mem\": \"32.83MiB / 15.71GiB\",\n   \"mem_pct\": \"0.20%\"\n  },\n  \"redis\": {\n   \"cpu_pct\": \"0.51%\",\n   \"mem\": \"3.867MiB / 15.71GiB\",\n   \"mem_pct\": \"0.02%\"\n  }\n },\n \"api_app_metrics\": {\n  \"cache_errors_total\": 0,\n  \"db_errors_total\": 0,\n  \"endpoints\": {\n   \"/api/health\": {\n    \"errors_5xx\": 0,\n    \"p50_ms\": 17.9,\n    \"p95_ms\": 600.3,\n    \"requests\": 8\n   },\n   \"/api/orders\": {\n    \"errors_5xx\": 0,\n    \"p50_ms\": 400.3,\n    \"p95_ms\": 1096.5,\n    \"requests\": 19\n   },\n   \"/api/orders/recent\": {\n    \"errors_5xx\": 0,\n    \"p50_ms\": 30.8,\n    \"p95_ms\": 791.2,\n    \"requests\": 40\n   },\n   \"/api/products\": {\n    \"errors_5xx\": 0,\n    \"p50_ms\": 4.4,\n    \"p95_ms\": 107.4,\n    \"requests\": 46\n   },\n   \"unmatched\": {\n    \"errors_5xx\": 0,\n    \"p50_ms\": 0.6,\n    \"p95_ms\": 0.6,\n    \"requests\": 1\n   }\n  },\n  \"process_rss_mb\": 48.7,\n  \"uptime_s\": 32.8,\n  \"window_s\": 60\n }\n}"
+  },
+  {
+   "step": 6,
+   "t": 7.2,
+   "tool": "run_diagnostic",
+   "kind": "observe",
+   "args": {
+    "service": "api",
+    "check": "processes"
+   },
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 1.7,
+   "result": "Mem: 5057844K used, 11419508K free, 28728K shrd, 82296K buff, 4121448K cached\nCPU:  17% usr   0% sys   0% nic  82% idle   0% io   0% irq   0% sirq\nLoad average: 0.08 0.36 0.42 10/276 65\n  PID  PPID USER     STAT   VSZ %VSZ CPU %CPU COMMAND\n   32    23 root     R    14772   0%   1   2% python /app/tools/reindex_search.py\n   31    23 root     R    14772   0%   3   2% python /app/tools/reindex_search.py\n   33    23 root     R    14772   0%   0   2% python /app/tools/reindex_search.py\n   34    23 root     R    14772   0%   2   2% python /app/tools/reindex_search.py\n    1     0 root     S    74720   0%   0   0% python app.py\n   30    23 root     R    14772   0%   0   0% python /app/tools/reindex_search.py\n   35    23 root     R    14772   0%   3   0% python /app/tools/reindex_search.py\n   29    23 root     R    14772   0%   2   0% python /app/tools/reindex_search.py\n   36    23 root     R    14772   0%   2   0% python /app/tools/reindex_search.py\n   23     0 root     S    14772   0%   1   0% python /app/tools/reindex_search.py\n   58     0 root     S     1652   0%   1   0% sh -c top -b -n 1 | head -25\n   64    58 root     R     1648   0%   1   0% top -b -n 1\n   65    58 root     S     1636   0%   1   0% head -25"
+  },
+  {
+   "step": 7,
+   "t": 8.9,
+   "tool": "kill_process",
+   "kind": "act",
+   "args": {
+    "service": "api",
+    "pid": 23
+   },
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.7,
+   "result": "killed 23 and children: 29 30 31 32 33 34 35 36"
+  },
+  {
+   "step": 8,
+   "t": 9.6,
+   "tool": "list_services",
+   "kind": "observe",
+   "args": {},
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.19,
+   "result": "service   state       restarts  oom    health   networks             missing_networks\ngateway   running     0         False  -        frontend             -\napi       running     0         False  -        backend,frontend     -\nworker    running     0         False  -        backend              -\npostgres  running     0         False  healthy  backend              -\nredis     running     0         False  -        backend              -"
+  },
+  {
+   "step": 9,
+   "t": 9.78,
+   "tool": "check_endpoints",
+   "kind": "observe",
+   "args": {},
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.12,
+   "result": "GET  /healthz             status=200     1.5ms OK\nGET  /api/health          status=200    18.5ms OK\nGET  /api/products        status=200     5.2ms OK\nGET  /api/orders/recent   status=200    22.2ms OK\nPOST /api/orders          status=201    69.6ms OK"
+  },
+  {
+   "step": 10,
+   "t": 9.9,
+   "tool": "verify_recovery",
+   "kind": "observe",
+   "args": {},
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 9.08,
+   "result": "{\n \"healthy\": true,\n \"probe_success_rate\": 1.0,\n \"probe_p95_ms\": 33.4,\n \"problems\": [],\n \"probes\": {\n  \"GET /healthz\": {\n   \"ok\": 8,\n   \"fail\": 0,\n   \"statuses\": [\n    200\n   ],\n   \"last_error\": \"\"\n  },\n  \"GET /api/health\": {\n   \"ok\": 8,\n   \"fail\": 0,\n   \"statuses\": [\n    200\n   ],\n   \"last_error\": \"\"\n  },\n  \"GET /api/products\": {\n   \"ok\": 8,\n   \"fail\": 0,\n   \"statuses\": [\n    200\n   ],\n   \"last_error\": \"\"\n  },\n  \"GET /api/orders/recent\": {\n   \"ok\": 8,\n   \"fail\": 0,\n   \"statuses\": [\n    200\n   ],\n   \"last_error\": \"\"\n  },\n  \"POST /api/orders\": {\n   \"ok\": 8,\n   \"fail\": 0,\n   \"statuses\": [\n    201\n   ],\n   \"last_error\": \"\"\n  }\n }\n}"
+  },
+  {
+   "step": 11,
+   "t": 18.98,
+   "tool": "submit_report",
+   "kind": "final",
+   "args": {
+    "root_causes": [
+     {
+      "component": "api",
+      "category": "cpu_exhaustion",
+      "evidence": "python /app/tools/reindex_search.py hogging CPU"
+     }
+    ],
+    "summary": "runbook applied 1 fix(es)",
+    "recovered": true
+   },
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.0,
+   "result": "report submitted"
+  }
+ ],
+ "episode_seconds": 91.7
+}

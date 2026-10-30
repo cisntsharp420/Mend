@@ -22,7 +22,14 @@ regression, ablations), technical judgment, engineering quality, communication.
 
 ## Status / next steps
 1. Done: sandbox, faults (all 12 validated break->fix), verifier, toolbox, scenarios, baselines, LLM agent code, 18 unit tests.
-2. Next: smoke-test LLM agent on 2-3 dev scenarios (needs ANTHROPIC_API_KEY), iterate the prompt on DEV ONLY.
-3. Then: baselines on all (`make baselines`, ~1h), LLM dev + held-out x2, ablations, model comparison (sonnet/haiku 5.5).
-4. Then: docs/results.md via `python -m recovery report ...`, README, architecture diagram, trace viewer, pitch.
+2. Done: baselines on all 22 (`make baselines`, ~2h, 66 valid episodes): rules 99.0 dev / 35.4 held-out,
+   restart_all 30.0 / 10.3, noop 10.0 / 10.0. docs/results.md, README with architecture diagram.
+3. Owner decision: submit WITHOUT an API key. LLM agent is implemented + unit-tested but not evaluated;
+   README says so. Do not spend API credit or claim LLM results unless the owner changes this.
+4. Done: Mend web app (`webapp/build.py` -> docs/mend.html, published as a claude.ai artifact with the
+   `downloads` capability): replay, scoreboard, PDF/CSV downloads, per-incident PDF. `python -m recovery export`
+   (CSV + Mend-styled PDF, `--per-incident`), remediation playbook (`recovery/playbook.py`), friendly agent names
+   (`recovery/agents/__init__.py` DISPLAY_NAMES), docs/pitch.md. 25 unit tests.
+5. After changing runs or report code: `python -m recovery export <tags>` and `python webapp/build.py`,
+   then republish the artifact from the raw build (`--raw PATH`).
 Commit runs/ results as evidence. Never commit .env.

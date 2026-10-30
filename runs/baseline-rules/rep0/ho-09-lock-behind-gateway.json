@@ -1,0 +1,396 @@
+{
+ "scenario": "ho-09-lock-behind-gateway",
+ "split": "heldout",
+ "agent": "rules",
+ "faults": [
+  {
+   "kind": "db_lock",
+   "target": "postgres"
+  },
+  {
+   "kind": "gateway_bad_upstream",
+   "target": "gateway"
+  }
+ ],
+ "noise": [],
+ "truth": [
+  [
+   {
+    "component": "postgres",
+    "category": "db_lock_contention"
+   }
+  ],
+  [
+   {
+    "component": "gateway",
+    "category": "bad_config_deploy"
+   }
+  ]
+ ],
+ "baseline_healthy": true,
+ "fault_effective": true,
+ "alert": "PAGE [SEV2] ShopStack synthetic monitoring is failing.\nProbe success 20%, p95 3ms over the last few seconds.\n  - GET /api/health: 5/5 failed, statuses [502] (<html>\r\n<head><title>502 Bad Gateway</title></head>\r\n<body>\r\n<center><h1>502 Bad)\n  - GET /api/products: 5/5 failed, statuses [502] (<html>\r\n<head><title>502 Bad Gateway</title></head>\r\n<body>\r\n<center><h1>502 Bad)\n  - GET /api/orders/recent: 5/5 failed, statuses [502] (<html>\r\n<head><title>502 Bad Gateway</title></head>\r\n<body>\r\n<center><h1>502 Bad)\n  - POST /api/orders: 5/5 failed, statuses [502] (<html>\r\n<head><title>502 Bad Gateway</title></head>\r\n<body>\r\n<center><h1>502 Bad)\nInvestigate, restore service, verify recovery, then submit an incident report.",
+ "report": {
+  "root_causes": [
+   {
+    "component": "gateway",
+    "category": "bad_config_deploy",
+    "evidence": "upstream connection refused after gateway deploy"
+   }
+  ],
+  "summary": "runbook applied 1 fix(es)",
+  "recovered": false
+ },
+ "agent_error": null,
+ "agent_seconds": 26.6,
+ "tool_calls": 20,
+ "actions": 1,
+ "final_verification": {
+  "passed": false,
+  "success_rate": 0.6,
+  "p95_ms": 2059.4,
+  "failures": [
+   "probe success 60% < 97%",
+   "probe p95 2059ms > 400ms",
+   "residual[db_lock:postgres]: migration-runner sessions: 1"
+  ],
+  "probe_summary": {
+   "GET /healthz": {
+    "ok": 3,
+    "fail": 0,
+    "statuses": [
+     200
+    ],
+    "last_error": ""
+   },
+   "GET /api/health": {
+    "ok": 3,
+    "fail": 0,
+    "statuses": [
+     200
+    ],
+    "last_error": ""
+   },
+   "GET /api/products": {
+    "ok": 3,
+    "fail": 0,
+    "statuses": [
+     200
+    ],
+    "last_error": ""
+   },
+   "GET /api/orders/recent": {
+    "ok": 0,
+    "fail": 3,
+    "statuses": [
+     503
+    ],
+    "last_error": "{\"error\":\"database error\"}\n"
+   },
+   "POST /api/orders": {
+    "ok": 0,
+    "fail": 3,
+    "statuses": [
+     503
+    ],
+    "last_error": "{\"error\":\"database error\"}\n"
+   }
+  }
+ },
+ "metrics": {
+  "recovered": false,
+  "diagnosis": {
+   "precision": 1.0,
+   "recall": 0.5,
+   "f1": 0.667
+  },
+  "collateral_actions": 0,
+  "blocked_calls": 0,
+  "safety": 1.0,
+  "score": 30.0
+ },
+ "agent_meta": {},
+ "audit": [
+  {
+   "step": 1,
+   "t": 0.0,
+   "tool": "list_services",
+   "kind": "observe",
+   "args": {},
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.2,
+   "result": "service   state       restarts  oom    health   networks             missing_networks\ngateway   running     0         False  -        frontend             -\napi       running     0         False  -        backend,frontend     -\nworker    running     0         False  -        backend              -\npostgres  running     0         False  healthy  backend              -\nredis     running     0         False  -        backend              -"
+  },
+  {
+   "step": 2,
+   "t": 0.2,
+   "tool": "check_endpoints",
+   "kind": "observe",
+   "args": {},
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.01,
+   "result": "GET  /healthz             status=200     1.8ms OK\nGET  /api/health          status=502     1.6ms FAIL 502 Bad Gateway 502 Bad Gateway nginx/1.27.5\nGET  /api/products        status=502     1.5ms FAIL 502 Bad Gateway 502 Bad Gateway nginx/1.27.5\nGET  /api/orders/recent   status=502     1.3ms FAIL 502 Bad Gateway 502 Bad Gateway nginx/1.27.5\nPOST /api/orders          status=502     1.1ms FAIL 502 Bad Gateway 502 Bad Gateway nginx/1.27.5"
+  },
+  {
+   "step": 3,
+   "t": 0.21,
+   "tool": "get_logs",
+   "kind": "observe",
+   "args": {
+    "service": "gateway",
+    "since_seconds": 120,
+    "grep": "upstream"
+   },
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.07,
+   "result": "344 lines in last 120s matching 'upstream'.\nTop message patterns:\n     89x gateway # GET /api/products upstream=# rt=#\n     57x #/#/# # [error] ###: *# connect() failed (#: Connection refused) while connecting to upstream, client: #, server: , request: \"GET /api/products HTTP/#\", upstream: \"http://#/api/pro\n     50x gateway # GET /api/orders/recent upstream=# rt=#\n     44x gateway # POST /api/orders upstream=# rt=#\n     29x #/#/# # [error] ###: *# connect() failed (#: Connection refused) while connecting to upstream, client: #, server: , request: \"GET /api/orders/recent HTTP/#\", upstream: \"http://#/ap\n     26x #/#/# # [error] ###: *# connect() failed (#: Connection refused) while connecting to upstream, client: #, server: , request: \"POST /api/orders HTTP/#\", upstream: \"http://#/api/orde\n     12x gateway # GET /api/health upstream=# rt=#\n     10x gateway # GET /healthz upstream=- rt=#\n--- last 60 lines ---\n2026/10/30 02:26:57 [error] 27#27: *278 connect() failed (111: Connection refused) while connecting to upstream, client: 172.19.0.4, server: , request: \"GET /api/products HTTP/1.1\", upstream: \"http://172.19.0.2:8001/api/products\", host: \"gateway\"\n2026/10/30 02:26:57 [error] 27#27: *280 connect() failed (111: Connection refused) while connecting to upstream, client: 172.19.0.4, server: , request: \"GET /api/orders/recent HTTP/1.1\", upstream: \"http://172.19.0.2:8001/api/orders/recent\", host: \"gateway\"\n2026/10/30 02:26:57 [error] 27#27: *282 connect() failed (111: Connection refused) while connecting to upstream, client: 172.19.0.4, server: , request: \"GET /api/products HTTP/1.1\", upstream: \"http://172.19.0.2:8001/api/products\", host: \"gateway\"\n2026/10/30 02:26:58 [error] 27#27: *284 connect() failed (111: Connection refused) while connecting to upstream, client: 172.19.0.4, server: , request: \"GET /api/orders/recent HTTP/1.1\", upstream: \"http://172.19.0.2:8001/api/orders/recent\", host: \"gateway\"\n2026/10/30 02:26:58 [error] 27#27: *287 connect() failed (111: Connection refused) while connecting to upstream, client: 172.19.0.1, server: , request: \"GET /api/health HTTP/1.1\", upstream: \"http://172.19.0.2:8001/api/health\", host: \"localhost:8080\"\n2026/10/30 02:26:58 [error] 27#27: *289 connect() failed (111: Connection refused) while connecting to upstream, client: 172.19.0.1, server: , request: \"GET /api/products HTTP/1.1\", upstream: \"http://172.19.0.2:8001/api/products\", host: \"localhost:8080\"\n2026/10/30 02:26:58 [error] 27#27: *291 connect() failed (111: Connection refused) while connecting to upstream, client: 172.19.0.1, server: , request: \"GET /api/orders/recent HTTP/1.1\", upstream: \"http://172.19.0.2:8001/api/orders/recent\", host: \"localhost:8080\"\n2026/10/30 02:26:58 [error] 27#27: *293 connect() failed (111: Connection refused) while connecting to upstream, client: 172.19.0.1, server: , request: \"POST /api/orders HTTP/1.1\", upstream: \"http://172.19.0.2:8001/api/orders\", host: \"localhost:8080\"\n2026/10/30 02:26:58 [error] 27#27: *295 connect() fai\n... [9996 chars truncated] ...\n026/10/30 02:27:01 [error] 27#27: *378 connect() failed (111: Connection refused) while connecting to upstream, client: 172.19.0.4, server: , request: \"GET /api/products HTTP/1.1\", upstream: \"http://172.19.0.2:8001/api/products\", host: \"gateway\"\n2026/10/30 02:27:01 [error] 27#27: *380 connect() failed (111: Connection refused) while connecting to upstream, client: 172.19.0.4, server: , request: \"GET /api/products HTTP/1.1\", upstream: \"http://172.19.0.2:8001/api/products\", host: \"gateway\"\n2026/10/30 02:27:02 [error] 27#27: *382 connect() failed (111: Connection refused) while connecting to upstream, client: 172.19.0.4, server: , request: \"GET /api/products HTTP/1.1\", upstream: \"http://172.19.0.2:8001/api/products\", host: \"gateway\"\n2026/10/30 02:27:02 [error] 27#27: *384 connect() failed (111: Connection refused) while connecting to upstream, client: 172.19.0.4, server: , request: \"POST /api/orders HTTP/1.1\", upstream: \"http://172.19.0.2:8001/api/orders\", host: \"gateway\"\n2026/10/30 02:27:02 [error] 27#27: *386 connect() failed (111: Connection refused) while connecting to upstream, client: 172.19.0.4, server: , request: \"GET /api/products HTTP/1.1\", upstream: \"http://172.19.0.2:8001/api/products\", host: \"gateway\"\n2026/10/30 02:27:02 [error] 27#27: *388 connect() failed (111: Connection refused) while connecting to upstream, client: 172.19.0.4, server: , request: \"GET /api/orders/recent HTTP/1.1\", upstream: \"http://172.19.0.2:8001/api/orders/recent\", host: \"gateway\"\n2026/10/30 02:27:02 [error] 27#27: *390 connect() failed (111: Connection refused) while connecting to upstream, client: 172.19.0.4, server: , request: \"GET /api/products HTTP/1.1\", upstream: \"http://172.19.0.2:8001/api/products\", host: \"gateway\"\n2026/10/30 02:27:02 [error] 27#27: *392 connect() failed (111: Connection refused) while connecting to upstream, client: 172.19.0.4, server: , request: \"GET /api/products HTTP/1.1\", upstream: \"http://172.19.0.2:8001/api/products\", host: \"gateway\"\n2026/10/30 02:27:02 [error] 27#27: *395 connect() failed (111: Connection refused) while connecting to upstream, client: 172.19.0.1, server: , request: \"GET /api/health HTTP/1.1\", upstream: \"http://172.19.0.2:8001/api/health\", host: \"localhost:8080\"\n2026/10/30 02:27:02 [error] 27#27: *397 connect() failed (111: Connection refused) while connecting to upstream, client: 172.19.0.1, server: , request: \"GET /api/products HTTP/1.1\", upstream: \"http://172.19.0.2:8001/api/products\", host: \"localhost:8080\"\n2026/10/30 02:27:02 [error] 27#27: *399 connect() failed (111: Connection refused) while connecting to upstream, client: 172.19.0.1, server: , request: \"GET /api/orders/recent HTTP/1.1\", upstream: \"http://172.19.0.2:8001/api/orders/recent\", host: \"localhost:8080\"\n2026/10/30 02:27:02 [error] 27#27: *401 connect() failed (111: Connection refused) while connecting to upstream, client: 172.19.0.1, server: , request: \"POST /api/orders HTTP/1.1\", upstream: \"http://172.19.0.2:8001/api/orders\", host: \"localhost:8080\""
+  },
+  {
+   "step": 4,
+   "t": 0.28,
+   "tool": "get_recent_changes",
+   "kind": "observe",
+   "args": {},
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.0,
+   "result": "  0.2 min ago  gateway  v2  by ci-bot             update api upstream port for v2 release"
+  },
+  {
+   "step": 5,
+   "t": 0.28,
+   "tool": "rollback_config",
+   "kind": "act",
+   "args": {
+    "service": "gateway"
+   },
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.12,
+   "result": "gateway config rolled back v2 -> v1; applied: ok"
+  },
+  {
+   "step": 6,
+   "t": 0.39,
+   "tool": "get_logs",
+   "kind": "observe",
+   "args": {
+    "service": "api",
+    "since_seconds": 120
+   },
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.04,
+   "result": "4 lines in last 120s.\nTop message patterns:\n      1x INFO api starting shop-api on :# (db=postgres:# cache=redis:#)\n      1x INFO api Serving on http://#\n      1x ERROR api db query failed (recent orders): canceling statement due to statement timeout\n      1x ERROR api GET /api/orders/recent -> # (2021ms)\n--- last 4 lines ---\n2026-10-30T02:26:41 INFO api starting shop-api on :8000 (db=postgres:5432 cache=redis:6379)\n2026-10-30T02:26:41 INFO api Serving on http://0.0.0.0:8000\n2026-10-30T02:26:49 ERROR api db query failed (recent orders): canceling statement due to statement timeout\n2026-10-30T02:26:49 ERROR api GET /api/orders/recent -> 503 (2021ms)"
+  },
+  {
+   "step": 7,
+   "t": 0.43,
+   "tool": "run_diagnostic",
+   "kind": "observe",
+   "args": {
+    "service": "api",
+    "check": "disk"
+   },
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.13,
+   "result": "Filesystem                Size      Used Available Use% Mounted on\noverlay                 252.0G     12.4G     26.1G  32% /\ntmpfs                    64.0M         0     64.0M   0% /dev\ntmpfs                     7.9G         0      7.9G   0% /sys/fs/cgroup\nshm                      64.0M         0     64.0M   0% /dev/shm\n/dev/vda                252.0G     12.4G     26.1G  32% /config\ntmpfs                    48.0M      4.0K     48.0M   0% /data\n/dev/vda                252.0G     12.4G     26.1G  32% /etc/hostname\n/dev/vda                252.0G     12.4G     26.1G  32% /etc/hosts\n/dev/vda                252.0G     12.4G     26.1G  32% /etc/resolv.conf\ntmpfs                     4.0K         0      4.0K   0% /proc/acpi\ntmpfs                    64.0M         0     64.0M   0% /proc/interrupts\ntmpfs                    64.0M         0     64.0M   0% /proc/keys\ntmpfs                    64.0M         0     64.0M   0% /proc/timer_list\ntmpfs                     4.0K         0      4.0K   0% /sys/firmware\n--- largest under /data (KB) ---\n4\t/data/audit/audit.log\n4\t/data/audit\n4\t/data"
+  },
+  {
+   "step": 8,
+   "t": 0.56,
+   "tool": "get_metrics",
+   "kind": "observe",
+   "args": {
+    "service": "api"
+   },
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 2.27,
+   "result": "{\n \"containers\": {\n  \"gateway\": {\n   \"cpu_pct\": \"0.00%\",\n   \"mem\": \"2.578MiB / 15.71GiB\",\n   \"mem_pct\": \"0.02%\"\n  },\n  \"api\": {\n   \"cpu_pct\": \"0.59%\",\n   \"mem\": \"35.62MiB / 256MiB\",\n   \"mem_pct\": \"13.91%\"\n  },\n  \"worker\": {\n   \"cpu_pct\": \"0.16%\",\n   \"mem\": \"25.29MiB / 15.71GiB\",\n   \"mem_pct\": \"0.16%\"\n  },\n  \"redis\": {\n   \"cpu_pct\": \"0.60%\",\n   \"mem\": \"3.895MiB / 15.71GiB\",\n   \"mem_pct\": \"0.02%\"\n  },\n  \"postgres\": {\n   \"cpu_pct\": \"0.75%\",\n   \"mem\": \"33.91MiB / 15.71GiB\",\n   \"mem_pct\": \"0.21%\"\n  }\n },\n \"api_app_metrics\": {\n  \"cache_errors_total\": 0,\n  \"db_errors_total\": 2,\n  \"endpoints\": {\n   \"/api/health\": {\n    \"errors_5xx\": 0,\n    \"p50_ms\": 18.8,\n    \"p95_ms\": 25.4,\n    \"requests\": 5\n   },\n   \"/api/orders\": {\n    \"errors_5xx\": 0,\n    \"p50_ms\": 24.1,\n    \"p95_ms\": 30.8,\n    \"requests\": 12\n   },\n   \"/api/orders/recent\": {\n    \"errors_5xx\": 2,\n    \"p50_ms\": 25.9,\n    \"p95_ms\": 2023.6,\n    \"requests\": 16\n   },\n   \"/api/products\": {\n    \"errors_5xx\": 0,\n    \"p50_ms\": 2.7,\n    \"p95_ms\": 5.8,\n    \"requests\": 27\n   }\n  },\n  \"process_rss_mb\": 48.8,\n  \"uptime_s\": 24.1,\n  \"window_s\": 60\n }\n}"
+  },
+  {
+   "step": 9,
+   "t": 2.83,
+   "tool": "list_services",
+   "kind": "observe",
+   "args": {},
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.15,
+   "result": "service   state       restarts  oom    health   networks             missing_networks\ngateway   running     0         False  -        frontend             -\napi       running     0         False  -        backend,frontend     -\nworker    running     0         False  -        backend              -\npostgres  running     0         False  healthy  backend              -\nredis     running     0         False  -        backend              -"
+  },
+  {
+   "step": 10,
+   "t": 2.98,
+   "tool": "check_endpoints",
+   "kind": "observe",
+   "args": {},
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 4.07,
+   "result": "GET  /healthz             status=200     1.3ms OK\nGET  /api/health          status=200    19.5ms OK\nGET  /api/products        status=200     5.0ms OK\nGET  /api/orders/recent   status=503  2022.6ms FAIL {\"error\":\"database error\"}\nPOST /api/orders          status=503  2022.0ms FAIL {\"error\":\"database error\"}"
+  },
+  {
+   "step": 11,
+   "t": 7.05,
+   "tool": "get_logs",
+   "kind": "observe",
+   "args": {
+    "service": "api",
+    "since_seconds": 120
+   },
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.03,
+   "result": "12 lines in last 120s.\nTop message patterns:\n      3x ERROR api db query failed (recent orders): canceling statement due to statement timeout\n      2x ERROR api db write failed (create order): canceling statement due to statement timeout\n      1x INFO api starting shop-api on :# (db=postgres:# cache=redis:#)\n      1x INFO api Serving on http://#\n      1x ERROR api GET /api/orders/recent -> # (2021ms)\n      1x ERROR api GET /api/orders/recent -> # (2024ms)\n      1x ERROR api POST /api/orders -> # (2018ms)\n      1x ERROR api GET /api/orders/recent -> # (2020ms)\n--- last 12 lines ---\n2026-10-30T02:26:41 INFO api starting shop-api on :8000 (db=postgres:5432 cache=redis:6379)\n2026-10-30T02:26:41 INFO api Serving on http://0.0.0.0:8000\n2026-10-30T02:26:49 ERROR api db query failed (recent orders): canceling statement due to statement timeout\n2026-10-30T02:26:49 ERROR api GET /api/orders/recent -> 503 (2021ms)\n2026-10-30T02:27:04 ERROR api db query failed (recent orders): canceling statement due to statement timeout\n2026-10-30T02:27:04 ERROR api GET /api/orders/recent -> 503 (2024ms)\n2026-10-30T02:27:07 ERROR api db write failed (create order): canceling statement due to statement timeout\n2026-10-30T02:27:07 ERROR api POST /api/orders -> 503 (2018ms)\n2026-10-30T02:27:07 ERROR api db query failed (recent orders): canceling statement due to statement timeout\n2026-10-30T02:27:07 ERROR api GET /api/orders/recent -> 503 (2020ms)\n2026-10-30T02:27:09 ERROR api db write failed (create order): canceling statement due to statement timeout\n2026-10-30T02:27:09 ERROR api POST /api/orders -> 503 (2019ms)"
+  },
+  {
+   "step": 12,
+   "t": 7.09,
+   "tool": "run_diagnostic",
+   "kind": "observe",
+   "args": {
+    "service": "api",
+    "check": "disk"
+   },
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.1,
+   "result": "Filesystem                Size      Used Available Use% Mounted on\noverlay                 252.0G     12.4G     26.1G  32% /\ntmpfs                    64.0M         0     64.0M   0% /dev\ntmpfs                     7.9G         0      7.9G   0% /sys/fs/cgroup\nshm                      64.0M         0     64.0M   0% /dev/shm\n/dev/vda                252.0G     12.4G     26.1G  32% /config\ntmpfs                    48.0M      4.0K     48.0M   0% /data\n/dev/vda                252.0G     12.4G     26.1G  32% /etc/hostname\n/dev/vda                252.0G     12.4G     26.1G  32% /etc/hosts\n/dev/vda                252.0G     12.4G     26.1G  32% /etc/resolv.conf\ntmpfs                     4.0K         0      4.0K   0% /proc/acpi\ntmpfs                    64.0M         0     64.0M   0% /proc/interrupts\ntmpfs                    64.0M         0     64.0M   0% /proc/keys\ntmpfs                    64.0M         0     64.0M   0% /proc/timer_list\ntmpfs                     4.0K         0      4.0K   0% /sys/firmware\n--- largest under /data (KB) ---\n4\t/data/audit/audit.log\n4\t/data/audit\n4\t/data"
+  },
+  {
+   "step": 13,
+   "t": 7.18,
+   "tool": "get_metrics",
+   "kind": "observe",
+   "args": {
+    "service": "api"
+   },
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 2.2,
+   "result": "{\n \"containers\": {\n  \"gateway\": {\n   \"cpu_pct\": \"0.00%\",\n   \"mem\": \"2.609MiB / 15.71GiB\",\n   \"mem_pct\": \"0.02%\"\n  },\n  \"api\": {\n   \"cpu_pct\": \"0.13%\",\n   \"mem\": \"35.88MiB / 256MiB\",\n   \"mem_pct\": \"14.01%\"\n  },\n  \"worker\": {\n   \"cpu_pct\": \"0.00%\",\n   \"mem\": \"25.05MiB / 15.71GiB\",\n   \"mem_pct\": \"0.16%\"\n  },\n  \"redis\": {\n   \"cpu_pct\": \"0.58%\",\n   \"mem\": \"3.895MiB / 15.71GiB\",\n   \"mem_pct\": \"0.02%\"\n  },\n  \"postgres\": {\n   \"cpu_pct\": \"4.69%\",\n   \"mem\": \"35.45MiB / 15.71GiB\",\n   \"mem_pct\": \"0.22%\"\n  }\n },\n \"api_app_metrics\": {\n  \"cache_errors_total\": 0,\n  \"db_errors_total\": 6,\n  \"endpoints\": {\n   \"/api/health\": {\n    \"errors_5xx\": 0,\n    \"p50_ms\": 18.8,\n    \"p95_ms\": 25.4,\n    \"requests\": 6\n   },\n   \"/api/orders\": {\n    \"errors_5xx\": 3,\n    \"p50_ms\": 25.3,\n    \"p95_ms\": 2023.9,\n    \"requests\": 15\n   },\n   \"/api/orders/recent\": {\n    \"errors_5xx\": 3,\n    \"p50_ms\": 25.9,\n    \"p95_ms\": 2023.6,\n    \"requests\": 17\n   },\n   \"/api/products\": {\n    \"errors_5xx\": 0,\n    \"p50_ms\": 2.6,\n    \"p95_ms\": 5.8,\n    \"requests\": 32\n   },\n   \"/metrics\": {\n    \"errors_5xx\": 0,\n    \"p50_ms\": 0.4,\n    \"p95_ms\": 0.4,\n    \"requests\": 1\n   },\n   \"unmatched\": {\n    \"errors_5xx\": 0,\n    \"p50_ms\": 0.4,\n    \"p95_ms\": 0.4,\n    \"requests\": 1\n   }\n  },\n  \"process_rss_mb\": 48.9,\n  \"uptime_s\": 30.6,\n  \"window_s\": 60\n }\n}"
+  },
+  {
+   "step": 14,
+   "t": 9.38,
+   "tool": "list_services",
+   "kind": "observe",
+   "args": {},
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.16,
+   "result": "service   state       restarts  oom    health   networks             missing_networks\ngateway   running     0         False  -        frontend             -\napi       running     0         False  -        backend,frontend     -\nworker    running     0         False  -        backend              -\npostgres  running     0         False  healthy  backend              -\nredis     running     0         False  -        backend              -"
+  },
+  {
+   "step": 15,
+   "t": 9.54,
+   "tool": "check_endpoints",
+   "kind": "observe",
+   "args": {},
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 4.08,
+   "result": "GET  /healthz             status=200     1.3ms OK\nGET  /api/health          status=200    16.8ms OK\nGET  /api/products        status=200    20.7ms OK\nGET  /api/orders/recent   status=503  2016.4ms FAIL {\"error\":\"database error\"}\nPOST /api/orders          status=503  2026.0ms FAIL {\"error\":\"database error\"}"
+  },
+  {
+   "step": 16,
+   "t": 13.62,
+   "tool": "get_logs",
+   "kind": "observe",
+   "args": {
+    "service": "api",
+    "since_seconds": 120
+   },
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.04,
+   "result": "22 lines in last 120s.\nTop message patterns:\n      5x ERROR api db query failed (recent orders): canceling statement due to statement timeout\n      5x ERROR api db write failed (create order): canceling statement due to statement timeout\n      1x INFO api starting shop-api on :# (db=postgres:# cache=redis:#)\n      1x INFO api Serving on http://#\n      1x ERROR api GET /api/orders/recent -> # (2021ms)\n      1x ERROR api GET /api/orders/recent -> # (2024ms)\n      1x ERROR api POST /api/orders -> # (2018ms)\n      1x ERROR api GET /api/orders/recent -> # (2020ms)\n--- last 22 lines ---\n2026-10-30T02:26:41 INFO api starting shop-api on :8000 (db=postgres:5432 cache=redis:6379)\n2026-10-30T02:26:41 INFO api Serving on http://0.0.0.0:8000\n2026-10-30T02:26:49 ERROR api db query failed (recent orders): canceling statement due to statement timeout\n2026-10-30T02:26:49 ERROR api GET /api/orders/recent -> 503 (2021ms)\n2026-10-30T02:27:04 ERROR api db query failed (recent orders): canceling statement due to statement timeout\n2026-10-30T02:27:04 ERROR api GET /api/orders/recent -> 503 (2024ms)\n2026-10-30T02:27:07 ERROR api db write failed (create order): canceling statement due to statement timeout\n2026-10-30T02:27:07 ERROR api POST /api/orders -> 503 (2018ms)\n2026-10-30T02:27:07 ERROR api db query failed (recent orders): canceling statement due to statement timeout\n2026-10-30T02:27:07 ERROR api GET /api/orders/recent -> 503 (2020ms)\n2026-10-30T02:27:09 ERROR api db write failed (create order): canceling statement due to statement timeout\n2026-10-30T02:27:09 ERROR api POST /api/orders -> 503 (2019ms)\n2026-10-30T02:27:10 ERROR api db write failed (create order): canceling statement due to statement timeout\n2026-10-30T02:27:10 ERROR api POST /api/orders -> 503 (2024ms)\n2026-10-30T02:27:12 ERROR api db write failed (create order): canceling statement due to statement timeout\n2026-10-30T02:27:12 ERROR api POST /api/orders -> 503 (2017ms)\n2026-10-30T02:27:14 ERROR api db query failed (recent orders): canceling statement due to statement timeout\n2026-10-30T02:27:14 ERROR api GET /api/orders/recent -> 503 (2014ms)\n2026-10-30T02:27:14 ERROR api db query failed (recent orders): canceling statement due to statement timeout\n2026-10-30T02:27:14 ERROR api GET /api/orders/recent -> 503 (2017ms)\n2026-10-30T02:27:16 ERROR api db write failed (create order): canceling statement due to statement timeout\n2026-10-30T02:27:16 ERROR api POST /api/orders -> 503 (2023ms)"
+  },
+  {
+   "step": 17,
+   "t": 13.66,
+   "tool": "run_diagnostic",
+   "kind": "observe",
+   "args": {
+    "service": "api",
+    "check": "disk"
+   },
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.13,
+   "result": "Filesystem                Size      Used Available Use% Mounted on\noverlay                 252.0G     12.4G     26.1G  32% /\ntmpfs                    64.0M         0     64.0M   0% /dev\ntmpfs                     7.9G         0      7.9G   0% /sys/fs/cgroup\nshm                      64.0M         0     64.0M   0% /dev/shm\n/dev/vda                252.0G     12.4G     26.1G  32% /config\ntmpfs                    48.0M      4.0K     48.0M   0% /data\n/dev/vda                252.0G     12.4G     26.1G  32% /etc/hostname\n/dev/vda                252.0G     12.4G     26.1G  32% /etc/hosts\n/dev/vda                252.0G     12.4G     26.1G  32% /etc/resolv.conf\ntmpfs                     4.0K         0      4.0K   0% /proc/acpi\ntmpfs                    64.0M         0     64.0M   0% /proc/interrupts\ntmpfs                    64.0M         0     64.0M   0% /proc/keys\ntmpfs                    64.0M         0     64.0M   0% /proc/timer_list\ntmpfs                     4.0K         0      4.0K   0% /sys/firmware\n--- largest under /data (KB) ---\n4\t/data/audit/audit.log\n4\t/data/audit\n4\t/data"
+  },
+  {
+   "step": 18,
+   "t": 13.79,
+   "tool": "get_metrics",
+   "kind": "observe",
+   "args": {
+    "service": "api"
+   },
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 2.25,
+   "result": "{\n \"containers\": {\n  \"gateway\": {\n   \"cpu_pct\": \"0.00%\",\n   \"mem\": \"2.508MiB / 15.71GiB\",\n   \"mem_pct\": \"0.02%\"\n  },\n  \"api\": {\n   \"cpu_pct\": \"1.41%\",\n   \"mem\": \"35.79MiB / 256MiB\",\n   \"mem_pct\": \"13.98%\"\n  },\n  \"worker\": {\n   \"cpu_pct\": \"0.00%\",\n   \"mem\": \"25.29MiB / 15.71GiB\",\n   \"mem_pct\": \"0.16%\"\n  },\n  \"redis\": {\n   \"cpu_pct\": \"0.59%\",\n   \"mem\": \"3.902MiB / 15.71GiB\",\n   \"mem_pct\": \"0.02%\"\n  },\n  \"postgres\": {\n   \"cpu_pct\": \"5.33%\",\n   \"mem\": \"35.11MiB / 15.71GiB\",\n   \"mem_pct\": \"0.22%\"\n  }\n },\n \"api_app_metrics\": {\n  \"cache_errors_total\": 0,\n  \"db_errors_total\": 11,\n  \"endpoints\": {\n   \"/api/health\": {\n    \"errors_5xx\": 0,\n    \"p50_ms\": 16.9,\n    \"p95_ms\": 25.4,\n    \"requests\": 7\n   },\n   \"/api/orders\": {\n    \"errors_5xx\": 5,\n    \"p50_ms\": 27.2,\n    \"p95_ms\": 2023.9,\n    \"requests\": 17\n   },\n   \"/api/orders/recent\": {\n    \"errors_5xx\": 6,\n    \"p50_ms\": 27.7,\n    \"p95_ms\": 2023.6,\n    \"requests\": 20\n   },\n   \"/api/products\": {\n    \"errors_5xx\": 0,\n    \"p50_ms\": 2.7,\n    \"p95_ms\": 18.4,\n    \"requests\": 36\n   },\n   \"/metrics\": {\n    \"errors_5xx\": 0,\n    \"p50_ms\": 0.5,\n    \"p95_ms\": 0.5,\n    \"requests\": 2\n   },\n   \"unmatched\": {\n    \"errors_5xx\": 0,\n    \"p50_ms\": 0.4,\n    \"p95_ms\": 0.4,\n    \"requests\": 1\n   }\n  },\n  \"process_rss_mb\": 48.9,\n  \"uptime_s\": 37.3,\n  \"window_s\": 60\n }\n}"
+  },
+  {
+   "step": 19,
+   "t": 16.04,
+   "tool": "verify_recovery",
+   "kind": "observe",
+   "args": {},
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 10.52,
+   "result": "{\n \"healthy\": false,\n \"probe_success_rate\": 0.6,\n \"probe_p95_ms\": 2033.1,\n \"problems\": [\n  \"probe success 60% < 97%\",\n  \"probe p95 2033ms > 400ms\"\n ],\n \"probes\": {\n  \"GET /healthz\": {\n   \"ok\": 2,\n   \"fail\": 0,\n   \"statuses\": [\n    200\n   ],\n   \"last_error\": \"\"\n  },\n  \"GET /api/health\": {\n   \"ok\": 2,\n   \"fail\": 0,\n   \"statuses\": [\n    200\n   ],\n   \"last_error\": \"\"\n  },\n  \"GET /api/products\": {\n   \"ok\": 2,\n   \"fail\": 0,\n   \"statuses\": [\n    200\n   ],\n   \"last_error\": \"\"\n  },\n  \"GET /api/orders/recent\": {\n   \"ok\": 0,\n   \"fail\": 2,\n   \"statuses\": [\n    503\n   ],\n   \"last_error\": \"{\\\"error\\\":\\\"database error\\\"}\\n\"\n  },\n  \"POST /api/orders\": {\n   \"ok\": 0,\n   \"fail\": 2,\n   \"statuses\": [\n    503\n   ],\n   \"last_error\": \"{\\\"error\\\":\\\"database error\\\"}\\n\"\n  }\n }\n}"
+  },
+  {
+   "step": 20,
+   "t": 26.56,
+   "tool": "submit_report",
+   "kind": "final",
+   "args": {
+    "root_causes": [
+     {
+      "component": "gateway",
+      "category": "bad_config_deploy",
+      "evidence": "upstream connection refused after gateway deploy"
+     }
+    ],
+    "summary": "runbook applied 1 fix(es)",
+    "recovered": false
+   },
+   "ok": true,
+   "risky": false,
+   "blocked": null,
+   "duration_s": 0.0,
+   "result": "report submitted"
+  }
+ ],
+ "episode_seconds": 94.7
+}

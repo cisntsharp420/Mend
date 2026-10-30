@@ -1,0 +1,513 @@
+<title>Mend</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Unbounded:wght@500;600;700&family=Manrope:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: a deep-teal night canvas with glowing glass slabs in the hero, then a glass console:
+   scoreboard, report downloads, incident queue on the left, the replay on the right. One dark look by choice. */
+:root {
+  --bg: #04110f; --bg-2: #071c1c; --glass: rgba(170, 235, 220, .045); --glass-2: rgba(170, 235, 220, .08);
+  --line: rgba(170, 235, 220, .13); --ink: #e9f3f0; --muted: #8aa6a1; --dim: #5f7c77;
+  --lime: #c6f24e; --lime-ink: #0b1a06; --teal: #3fc1b0; --sky: #7cc7d9;
+  --ok: #86e39a; --ok-soft: rgba(134, 227, 154, .12); --bad: #ff8a78; --bad-soft: rgba(255, 138, 120, .12);
+  --accent: var(--lime); --accent-soft: rgba(198, 242, 78, .10); --panel: var(--glass); --sunk: rgba(0, 0, 0, .28);
+  --f-display: "Unbounded", "Arial Black", system-ui, sans-serif;
+  --f-body: "Manrope", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --f-mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+  --r: 14px; --pill: 999px;
+  color-scheme: dark;
+}
+* { box-sizing: border-box }
+html { background: var(--bg) }
+body { background: radial-gradient(1200px 700px at 8% 18%, #0b3a37 0%, transparent 60%),
+  radial-gradient(900px 600px at 100% 0%, #0a2a2f 0%, transparent 55%), var(--bg);
+  background-attachment: fixed; color: var(--ink); font: 15px/1.55 var(--f-body) }
+body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 10; background: var(--bg) }
+.gutter { padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)) }
+.inner { max-width: 1240px; margin: 0 auto }
+h1, h2, h3 { margin: 0; text-wrap: balance }
+h3 { font: 600 .72rem var(--f-display); text-transform: uppercase; letter-spacing: .14em; color: var(--muted) }
+.mono { font-family: var(--f-mono); font-size: .86em }
+.num { font-variant-numeric: tabular-nums }
+button { font: inherit; color: inherit; cursor: pointer }
+a { color: inherit }
+button:focus-visible, a:focus-visible, summary:focus-visible { outline: 2px solid var(--lime); outline-offset: 3px }
+
+/* nav */
+.nav { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5; backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+  background: rgba(4, 17, 15, .62); border-bottom: 1px solid var(--line) }
+.nav .inner { display: flex; align-items: center; gap: 28px; padding-block: 14px }
+.wordmark { font: 700 1.25rem var(--f-display); letter-spacing: .16em; text-decoration: none }
+.nav .links { display: flex; gap: 24px; font-size: .9rem; font-weight: 600; margin-right: auto }
+.nav .links a { text-decoration: none; color: var(--ink); opacity: .85 }
+.nav .links a:hover { opacity: 1 }
+@media (max-width: 720px) { .nav .links { display: none } .nav .inner { justify-content: space-between } }
+.pill { border: 0; border-radius: var(--pill); padding: 9px 20px; font-weight: 700; font-size: .9rem; display: inline-flex; gap: 8px; align-items: center; text-decoration: none }
+.pill.lime { background: var(--lime); color: var(--lime-ink) }
+.pill.lime:hover { filter: brightness(1.06) }
+.pill.ghost { background: rgba(255, 255, 255, .92); color: #0b1714 }
+.pill.line { background: transparent; color: var(--ink); box-shadow: inset 0 0 0 1px var(--line) }
+.pill:disabled { opacity: .55; cursor: progress }
+
+/* hero */
+.hero { position: relative; overflow: hidden }
+.hero .inner { position: relative; z-index: 1; padding-block: 88px 96px; display: grid; gap: 22px; max-width: 1240px }
+.hero .copy { max-width: 560px; display: grid; gap: 20px }
+.eyebrow { font: 600 .72rem var(--f-display); letter-spacing: .18em; text-transform: uppercase; color: var(--teal) }
+.hero h1 { font: 700 clamp(3.4rem, 9vw, 6.4rem)/.95 var(--f-display); letter-spacing: .04em;
+  background: linear-gradient(100deg, #f2fbf8 0%, #bff3e6 38%, var(--lime) 100%); -webkit-background-clip: text; background-clip: text; color: transparent }
+.hero h2 { font: 600 clamp(1.05rem, 2.2vw, 1.45rem)/1.3 var(--f-display); text-transform: uppercase; letter-spacing: .06em }
+.hero p { margin: 0; color: #b9cdc9; max-width: 50ch }
+.hero .actions { display: flex; gap: 12px; flex-wrap: wrap }
+.stats { display: flex; gap: 14px 36px; flex-wrap: wrap; margin-top: 10px }
+.stats div { display: grid }
+.stats b { font: 600 1.6rem var(--f-display); font-variant-numeric: tabular-nums }
+.stats span { font-size: .8rem; color: var(--muted) }
+.art { position: absolute; inset: 0 0 0 auto; width: min(62vw, 820px); pointer-events: none;
+  -webkit-mask-image: linear-gradient(to bottom, #000 62%, transparent 100%); mask-image: linear-gradient(to bottom, #000 62%, transparent 100%) }
+.slab { position: absolute; width: 300px; height: 300px; border-radius: 34px; right: 0; top: 0;
+  background: linear-gradient(145deg, var(--c1), var(--c2)); box-shadow: 0 30px 80px rgba(0, 0, 0, .45), inset 0 1px 0 rgba(255, 255, 255, .25);
+  transform: translate(var(--x), var(--y)) rotate(-38deg) skewX(8deg); opacity: var(--o); filter: blur(var(--b));
+  animation: drift 9s ease-in-out infinite alternate; animation-delay: var(--d) }
+@keyframes drift { to { transform: translate(calc(var(--x) - 10px), calc(var(--y) + 14px)) rotate(-38deg) skewX(8deg) } }
+@media (prefers-reduced-motion: reduce) { .slab { animation: none } * { scroll-behavior: auto !important } }
+@media (max-width: 860px) { .art { width: 100%; opacity: .35 } .hero .inner { padding-block: 56px 64px } }
+
+/* sections */
+main.page { display: grid; gap: 28px; padding-block: 8px 64px }
+.section-title { display: flex; flex-wrap: wrap; gap: 8px 20px; align-items: baseline; justify-content: space-between }
+.section-title h2 { font: 600 clamp(1.2rem, 2.4vw, 1.6rem) var(--f-display); text-transform: uppercase; letter-spacing: .05em }
+.section-title p { margin: 0; color: var(--muted); max-width: 62ch }
+.glass { background: var(--glass); border: 1px solid var(--line); border-radius: var(--r); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px) }
+
+/* scoreboard */
+.board { overflow-x: auto }
+.board table { border-collapse: collapse; width: 100%; min-width: 600px }
+.board th, .board td { padding: 12px 16px; text-align: right; border-bottom: 1px solid var(--line); white-space: nowrap }
+.board tr:last-child td { border-bottom: 0 }
+.board th { font: 600 .66rem var(--f-display); text-transform: uppercase; letter-spacing: .12em; color: var(--muted) }
+.board th:first-child, .board td:first-child { text-align: left }
+.board td.agent { font-weight: 700; font-size: .92rem }
+.board .split { color: var(--muted); font-size: .85rem }
+.board td b { color: var(--lime); font-weight: 600 }
+.board .hl td { background: var(--accent-soft) }
+
+/* report downloads */
+.reports { padding: 18px 20px; display: flex; flex-wrap: wrap; gap: 14px 24px; align-items: center; justify-content: space-between;
+  background: linear-gradient(110deg, rgba(63, 193, 176, .14), rgba(198, 242, 78, .08)); }
+.reports .what { display: grid; gap: 4px; min-width: 0 }
+.reports .what p { margin: 0; color: var(--muted); font-size: .88rem; max-width: 60ch }
+.reports .ctrl { display: flex; gap: 10px; flex-wrap: wrap }
+.reports .ext { font: 700 .62rem var(--f-display); letter-spacing: .1em }
+#dl-msg { flex-basis: 100%; margin: 0; font-size: .86rem; color: var(--muted) }
+#dl-msg:empty { display: none }
+#dl-msg.err { color: var(--bad) }
+
+/* console */
+.console { display: grid; grid-template-columns: 300px minmax(0, 1fr); gap: 20px; align-items: start }
+@media (max-width: 880px) { .console { grid-template-columns: minmax(0, 1fr) } }
+.queue { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 76px) }
+@media (max-width: 880px) { .queue { position: static } .queue ol { max-height: 300px } }
+.queue header { padding: 14px; border-bottom: 1px solid var(--line); display: grid; gap: 10px }
+.seg { display: inline-flex; background: var(--sunk); border-radius: var(--pill); padding: 3px; flex-wrap: wrap; justify-self: start }
+.seg button { background: transparent; border: 0; padding: 5px 13px; font-size: .82rem; font-weight: 600; color: var(--muted); border-radius: var(--pill) }
+.seg button[aria-pressed="true"] { background: var(--lime); color: var(--lime-ink) }
+.queue ol { list-style: none; margin: 0; padding: 6px; max-height: 70vh; overflow: auto }
+.queue li button { width: 100%; text-align: left; background: transparent; border: 0; border-radius: 8px;
+  padding: 8px 10px; display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; align-items: center }
+.queue li button:hover { background: var(--glass-2) }
+.queue li button[aria-current="true"] { background: var(--accent-soft); box-shadow: inset 2px 0 0 var(--lime) }
+.queue .sid { font-family: var(--f-mono); font-size: .8rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap }
+.queue .grp { font: 600 .62rem var(--f-display); text-transform: uppercase; letter-spacing: .14em; color: var(--dim); padding: 12px 10px 4px }
+.dots { display: inline-flex; gap: 4px }
+.dot { width: 9px; height: 9px; border-radius: 50%; border: 1.5px solid var(--bad); background: transparent; display: inline-block }
+.dot.ok { background: var(--ok); border-color: var(--ok); box-shadow: 0 0 8px rgba(134, 227, 154, .55) }
+.legend { font-size: .74rem; color: var(--muted); display: flex; gap: 10px; flex-wrap: wrap; align-items: center }
+.legend span { display: inline-flex; gap: 5px; align-items: center }
+
+.incident { display: grid; gap: 16px; min-width: 0 }
+.ihead { display: flex; flex-wrap: wrap; gap: 12px 20px; align-items: end; justify-content: space-between }
+.ihead .id { font-family: var(--f-mono); font-size: 1.15rem; font-weight: 500; word-break: break-all; margin-top: 6px }
+.chip { display: inline-block; font: 600 .6rem var(--f-display); letter-spacing: .12em; text-transform: uppercase;
+  padding: 4px 9px; border-radius: var(--pill); background: var(--glass-2); color: var(--muted) }
+.chip.heldout { background: var(--accent-soft); color: var(--lime) }
+.agents { display: flex; gap: 8px; flex-wrap: wrap }
+.agents button { background: var(--glass); border: 1px solid var(--line); border-radius: 12px; padding: 8px 14px;
+  display: grid; gap: 1px; text-align: left; min-width: 118px }
+.agents button[aria-pressed="true"] { border-color: var(--lime); box-shadow: 0 0 0 1px var(--lime), 0 0 22px rgba(198, 242, 78, .15) }
+.agents .an { font-weight: 700; font-size: .86rem }
+.agents .as { font-size: .78rem; color: var(--muted) }
+.agents .as b { font-weight: 700 }
+.agents .as .y { color: var(--ok) } .agents .as .n { color: var(--bad) }
+
+.grid2 { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 16px }
+@media (max-width: 1000px) { .grid2 { grid-template-columns: minmax(0, 1fr) } }
+.card { background: var(--glass); border: 1px solid var(--line); border-radius: var(--r); padding: 16px 18px; display: grid; gap: 10px; min-width: 0; align-content: start }
+.pager { box-shadow: inset 3px 0 0 var(--bad) }
+.pager pre { margin: 0; white-space: pre-wrap; word-break: break-word; font: .78rem/1.55 var(--f-mono); color: #d5e4e0 }
+.truth ul { margin: 0; padding-left: 18px; display: grid; gap: 6px }
+.truth .k { font-family: var(--f-mono); font-size: .85rem; color: var(--sky) }
+.truth .note { color: var(--muted); font-size: .85rem }
+.rc { font-family: var(--f-mono); font-size: .78rem; background: var(--sunk); border: 1px solid var(--line); border-radius: var(--pill); padding: 2px 9px; display: inline-block; margin: 2px 4px 2px 0 }
+.rc.hit { border-color: var(--ok); color: var(--ok) } .rc.miss { border-color: var(--bad); color: var(--bad) }
+
+.tl-head { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; justify-content: space-between }
+.ctrl { display: flex; gap: 8px; flex-wrap: wrap }
+.ctrl button { background: transparent; border: 0; box-shadow: inset 0 0 0 1px var(--line); border-radius: var(--pill); padding: 6px 15px; font-size: .84rem; font-weight: 600 }
+.ctrl button.primary { background: var(--lime); box-shadow: none; color: var(--lime-ink) }
+.steps { list-style: none; margin: 0; padding: 0; display: grid }
+.step { display: grid; grid-template-columns: 56px 70px minmax(0, 1fr); gap: 10px; padding: 9px 6px; border-top: 1px solid var(--line); align-items: baseline; border-radius: 6px }
+.step:first-child { border-top: 0 }
+.step .t { font: .76rem var(--f-mono); color: var(--dim); text-align: right }
+.kind { font: 600 .56rem var(--f-display); letter-spacing: .1em; text-transform: uppercase; padding: 4px 6px; border-radius: var(--pill); text-align: center; color: var(--muted); background: var(--glass-2) }
+.step.act { background: linear-gradient(90deg, rgba(198, 242, 78, .09), transparent 70%) }
+.step.act .kind { color: var(--lime-ink); background: var(--lime) }
+.step.final .kind { color: #06201c; background: var(--teal) }
+.step.blocked .kind { color: #2a0c08; background: var(--bad) }
+.step details summary { cursor: pointer; list-style: none; display: flex; flex-wrap: wrap; gap: 4px 10px; align-items: baseline }
+.step details summary::-webkit-details-marker { display: none }
+.step .tool { font: 500 .88rem var(--f-mono) }
+.step .args { font: .76rem var(--f-mono); color: var(--muted); word-break: break-all }
+.step .res { margin: 8px 0 2px; padding: 10px 12px; background: var(--sunk); border: 1px solid var(--line); border-radius: 8px;
+  font: .75rem/1.5 var(--f-mono); color: #cfe0dc; white-space: pre-wrap; word-break: break-word; max-height: 260px; overflow: auto }
+.step .flag { font-size: .74rem; color: var(--bad); font-weight: 700 }
+.step.hidden { display: none }
+.empty { color: var(--muted); font-size: .88rem; padding: 6px 4px; margin: 0 }
+@media (max-width: 520px) { .step { grid-template-columns: 44px minmax(0, 1fr) } .step .kind { grid-column: 2; justify-self: start } .step details { grid-column: 1 / -1 } }
+
+.verdict { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 22px; align-items: center }
+@media (max-width: 520px) { .verdict { grid-template-columns: minmax(0, 1fr) } }
+.big { font: 700 3rem/1 var(--f-display); font-variant-numeric: tabular-nums }
+.big small { font-size: .85rem; color: var(--muted); font-weight: 500 }
+.badge { display: inline-block; font: 600 .62rem var(--f-display); letter-spacing: .1em; text-transform: uppercase; padding: 5px 11px; border-radius: var(--pill); margin-top: 8px }
+.badge.ok { background: var(--ok-soft); color: var(--ok) } .badge.bad { background: var(--bad-soft); color: var(--bad) }
+.bars { display: grid; gap: 9px }
+.bar { display: grid; grid-template-columns: 96px minmax(0, 1fr) 54px; gap: 10px; align-items: center; font-size: .84rem }
+.bar .track { height: 8px; background: var(--sunk); border-radius: var(--pill); overflow: hidden }
+.bar .fill { display: block; height: 100%; border-radius: var(--pill); background: linear-gradient(90deg, var(--teal), var(--lime)) }
+.bar .v { font-family: var(--f-mono); font-size: .78rem; text-align: right; color: var(--muted) }
+.facts { display: flex; flex-wrap: wrap; gap: 6px 20px; font-size: .84rem; color: var(--muted) }
+.facts b { color: var(--ink); font-weight: 600 }
+
+.advice ul { margin: 0; padding-left: 18px; display: grid; gap: 5px; color: #d5e4e0 }
+.advice .adv-row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap }
+.advice .adv-label { font-weight: 700; font-size: .92rem }
+.advice .badge { margin-top: 0 }
+
+.one-dl { display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: center; font-size: .84rem; color: var(--muted) }
+.one-dl .ext { font: 700 .62rem var(--f-display); letter-spacing: .1em }
+
+footer.site { border-top: 1px solid var(--line); color: var(--muted); font-size: .84rem }
+footer.site .inner { padding-block: 24px 36px; display: flex; flex-wrap: wrap; gap: 10px 32px; justify-content: space-between }
+footer.site p { margin: 0; max-width: 78ch }
+section[id] { scroll-margin-top: calc(env(safe-area-inset-top, 0px) + 76px) }
+footer.site .wordmark { font-size: .95rem; color: var(--ink) }
+</style>
+
+<header class="nav gutter">
+  <div class="inner">
+    <a class="wordmark" href="#top" id="top-link">MEND</a>
+    <nav class="links" aria-label="Sections"><a href="#results">Results</a><a href="#replay">Replay</a><a href="#reports">Reports</a></nav>
+    <button type="button" class="pill lime" id="nav-report">Get the report</button>
+  </div>
+</header>
+
+<section class="hero gutter" id="top">
+  <div class="art" aria-hidden="true">
+    <div class="slab" style="--x:-520px;--y:-150px;--c1:#0e4a4a;--c2:#0a2f33;--o:.55;--b:6px;--d:0s"></div>
+    <div class="slab" style="--x:-460px;--y:-80px;--c1:#13605b;--c2:#0c3b3d;--o:.7;--b:3px;--d:-1s"></div>
+    <div class="slab" style="--x:-400px;--y:-10px;--c1:#1b7a6f;--c2:#0f4a49;--o:.8;--b:1px;--d:-2s"></div>
+    <div class="slab" style="--x:-340px;--y:60px;--c1:#2b9a82;--c2:#165c55;--o:.88;--b:0px;--d:-3s"></div>
+    <div class="slab" style="--x:-280px;--y:130px;--c1:#5fbf6e;--c2:#1f7a5d;--o:.92;--b:0px;--d:-4s"></div>
+    <div class="slab" style="--x:-220px;--y:200px;--c1:#a6e05a;--c2:#3d9a5a;--o:.95;--b:0px;--d:-5s"></div>
+    <div class="slab" style="--x:-160px;--y:270px;--c1:#c6f24e;--c2:#6cbf5a;--o:.9;--b:1px;--d:-6s"></div>
+    <div class="slab" style="--x:-100px;--y:340px;--c1:#bfe9d8;--c2:#6fb7b0;--o:.75;--b:2px;--d:-7s"></div>
+    <div class="slab" style="--x:-40px;--y:410px;--c1:#8fd0dc;--c2:#3d8fa3;--o:.6;--b:5px;--d:-8s"></div>
+  </div>
+  <div class="inner">
+    <div class="copy">
+      <span class="eyebrow">Agentic incident recovery</span>
+      <h1>MEND</h1>
+      <h2>Agents that bring failing systems back</h2>
+      <p>A live five-service shop is broken on purpose. An agent investigates and repairs it through a guarded toolbox, and an independent verifier decides whether it really recovered. Every run on this page actually happened.</p>
+      <div class="actions">
+        <button type="button" class="pill ghost" id="hero-play">▶&nbsp; Watch a recovery</button>
+        <a class="pill line" href="#results">See the results</a>
+      </div>
+      <div class="stats" id="stats"></div>
+    </div>
+  </div>
+</section>
+
+<main class="page gutter">
+  <div class="inner" style="display:grid;gap:28px">
+    <section id="results" style="display:grid;gap:14px">
+      <div class="section-title"><h2>Results</h2><p>22 incidents. Dev incidents were used to build the agents; held-out incidents were never seen.</p></div>
+      <div class="board glass" aria-label="Scoreboard"><table id="board"></table></div>
+    </section>
+
+    <section class="reports glass" id="reports" aria-label="Download reports">
+      <div class="what"><h3>Incident reports</h3>
+        <p>Summary plus one page per incident: alert, ground truth, the agent's report, every step, and the verdict.</p></div>
+      <div class="ctrl">
+        <button type="button" class="pill lime" id="dl-pdf"><span class="ext">PDF</span><span class="lbl">Report</span></button>
+        <button type="button" class="pill line" id="dl-csv"><span class="ext">CSV</span><span class="lbl">Spreadsheet</span></button>
+        <button type="button" class="pill line" id="dl-all"><span class="ext">CSV</span>All agents</button>
+      </div>
+      <p id="dl-msg" role="status" aria-live="polite"></p>
+    </section>
+
+    <section id="replay" style="display:grid;gap:14px">
+      <div class="section-title"><h2>Replay</h2><p>Pick an incident, pick an agent, and press Play.</p></div>
+      <div class="console">
+        <nav class="queue glass" aria-label="Incidents">
+          <header>
+            <div class="seg" role="group" aria-label="Show incidents">
+              <button type="button" data-split="all" aria-pressed="true">All 22</button>
+              <button type="button" data-split="dev" aria-pressed="false">Dev</button>
+              <button type="button" data-split="heldout" aria-pressed="false">Held-out</button>
+            </div>
+            <div class="legend" id="legend"></div>
+          </header>
+          <ol id="queue"></ol>
+        </nav>
+        <div class="incident" id="incident"></div>
+      </div>
+    </section>
+  </div>
+</main>
+
+<footer class="site gutter">
+  <div class="inner">
+    <span class="wordmark">MEND</span>
+    <p>Scoring: 60 points if the verifier confirms recovery, 30 for naming the right root cause, 10 for touching nothing that wasn't broken. The verifier sends real user traffic over a soak window and checks each root cause is gone, so a restart that only hides the problem does not count.</p>
+    <p>Built for the HUMAIN hackathon, Challenge 1: Agentic Recovery of a Failing System.</p>
+  </div>
+</footer>
+
+<script>
+const DATA = /*__DATA__*/null;
+const AGENT_NOTE = DATA.notes || {};
+const NAME = a => (DATA.names || {})[a] || a;
+const SLUG = a => NAME(a).toLowerCase().replace(/[^a-z0-9]+/g, "-");
+const $ = (s, el = document) => el.querySelector(s);
+const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const state = { split: "all", id: null, agent: null, timer: null };
+const byId = Object.fromEntries(DATA.scenarios.map(s => [s.id, s]));
+
+function summary(agent, split) {
+  const eps = DATA.scenarios.filter(s => s.split === split && s.runs[agent]).map(s => s.runs[agent]);
+  const n = eps.length || 1;
+  return {
+    n: eps.length,
+    rec: eps.filter(e => e.metrics.recovered).length / n,
+    f1: eps.reduce((a, e) => a + e.metrics.diagnosis.f1, 0) / n,
+    score: eps.reduce((a, e) => a + e.metrics.score, 0) / n,
+    coll: eps.reduce((a, e) => a + e.metrics.collateral_actions, 0),
+  };
+}
+
+function renderBoard() {
+  let h = `<thead><tr><th>Agent</th><th>Split</th><th>Incidents</th><th>Recovered</th><th>Diagnosis F1</th><th>Mean score</th><th>Collateral actions</th></tr></thead><tbody>`;
+  for (const a of DATA.agents) for (const sp of ["dev", "heldout"]) {
+    const m = summary(a, sp);
+    h += `<tr class="${a === state.agent ? "hl" : ""}"><td class="agent">${esc(NAME(a))}</td><td class="split">${sp === "dev" ? "dev" : "held-out"}</td>
+      <td class="num">${m.n}</td><td class="num">${Math.round(m.rec * 100)}%</td><td class="num">${m.f1.toFixed(2)}</td>
+      <td class="num"><b>${m.score.toFixed(1)}</b></td><td class="num">${m.coll}</td></tr>`;
+  }
+  $("#board").innerHTML = h + "</tbody>";
+}
+
+function renderQueue() {
+  $("#legend").innerHTML = `<span>Squares, left to right: ${DATA.agents.map(a => esc(NAME(a))).join(", ")}</span>
+    <span><i class="dot ok"></i>recovered</span><span><i class="dot"></i>not recovered</span>`;
+  let h = "", last = null;
+  for (const s of DATA.scenarios) {
+    if (state.split !== "all" && s.split !== state.split) continue;
+    if (s.split !== last) { h += `<li class="grp">${s.split === "dev" ? "Dev (used to build agents)" : "Held-out (never seen)"}</li>`; last = s.split; }
+    const dots = DATA.agents.map(a => `<i class="dot ${s.runs[a]?.metrics.recovered ? "ok" : ""}" title="${esc(NAME(a))}"></i>`).join("");
+    h += `<li><button type="button" data-id="${esc(s.id)}" aria-current="${s.id === state.id}"><span class="sid">${esc(s.id)}</span><span class="dots">${dots}</span></button></li>`;
+  }
+  $("#queue").innerHTML = h;
+}
+
+function renderIncident() {
+  stopPlay();
+  const s = byId[state.id], run = s.runs[state.agent];
+  const m = run.metrics, w = DATA.weights;
+  const truthKeys = s.truth.map(alts => alts.map(c => `${c.component}/${c.category}`));
+  const reported = (run.report?.root_causes || []).map(r => `${r.component}/${r.category}`);
+  const hit = k => truthKeys.some(alts => alts.includes(k));
+  const found = alts => alts.some(k => reported.includes(k));
+
+  const agentBtns = DATA.agents.filter(a => s.runs[a]).map(a => {
+    const r = s.runs[a].metrics;
+    return `<button type="button" data-agent="${esc(a)}" aria-pressed="${a === state.agent}">
+      <span class="an">${esc(NAME(a))}</span>
+      <span class="as"><b class="${r.recovered ? "y" : "n"}">${r.recovered ? "Recovered" : "Not recovered"}</b> · ${r.score.toFixed(0)} pts</span></button>`;
+  }).join("");
+
+  const steps = run.steps.map(st => {
+    const cls = [st.kind, st.blocked ? "blocked" : ""].join(" ");
+    const args = Object.keys(st.args || {}).length ? JSON.stringify(st.args) : "";
+    return `<li class="step ${cls}" data-n="${st.n}">
+      <span class="t num">${st.t.toFixed(1)}s</span>
+      <span class="kind">${st.blocked ? "blocked" : st.kind}</span>
+      <details><summary><span class="tool">${esc(st.tool)}</span><span class="args">${esc(args)}</span>${st.blocked ? `<span class="flag">${esc(st.blocked)}</span>` : ""}</summary>
+      <div class="res">${esc(st.result) || "(no output)"}</div></details></li>`;
+  }).join("");
+
+  const recPts = m.recovered ? w.recovered : 0, diagPts = w.diagnosis * m.diagnosis.f1, safePts = w.safety * m.safety;
+  const bar = (label, v, max) => `<div class="bar"><span>${label}</span><span class="track"><span class="fill" style="width:${max ? (v / max) * 100 : 0}%"></span></span><span class="v num">${v.toFixed(0)}/${max}</span></div>`;
+
+  $("#incident").innerHTML = `
+    <div class="ihead">
+      <div><span class="chip ${s.split}">${s.split === "dev" ? "dev" : "held-out"}</span><div class="id">${esc(s.id)}</div></div>
+      <div class="agents" role="group" aria-label="Agent">${agentBtns}</div>
+    </div>
+    ${DATA.reports?.runs?.[state.agent]?.incidents?.[s.id] ? `<div class="one-dl">
+      <button type="button" class="pill lime" id="dl-one"><span class="ext">PDF</span>Download this incident</button>
+      <span id="one-msg" role="status" aria-live="polite">${esc(s.id)} · ${esc(NAME(state.agent))}</span></div>` : ""}
+    <div class="grid2">
+      <section class="card pager"><h3>Pager alert the agent received</h3><pre>${esc(run.alert)}</pre></section>
+      <section class="card truth"><h3>What was actually broken (hidden from the agent)</h3>
+        <ul>${s.faults.map(f => `<li><span class="k">${esc(f.kind)}</span> on <span class="k">${esc(f.target || "")}</span><br><span class="note">${esc(f.about)}</span></li>`).join("")}</ul>
+        ${s.noise.length ? `<p class="note" style="margin:0">Red herrings planted: ${s.noise.map(n => `<span class="k">${esc(n)}</span>`).join(", ")}</p>` : ""}
+        <div><span class="note">Root causes to name: </span>${truthKeys.map(alts => `<span class="rc ${found(alts) ? "hit" : "miss"}">${esc(alts.join(" or "))}</span>`).join("")}</div>
+      </section>
+    </div>
+    <section class="card">
+      <div class="tl-head"><h3>What the ${esc(NAME(state.agent))} did, step by step <span style="text-transform:none;letter-spacing:0;font-weight:400">(${esc(AGENT_NOTE[state.agent] || "")})</span></h3>
+        <div class="ctrl"><button type="button" class="primary" id="play">▶ Play</button><button type="button" id="next">Next step</button><button type="button" id="all">Show all</button></div></div>
+      ${run.error ? `<p class="empty">Agent error: ${esc(run.error)}</p>` : ""}
+      ${steps ? `<ol class="steps" id="steps">${steps}</ol>` : `<p class="empty">No tool calls.</p>`}
+      <p class="empty" style="padding:0">Click any step to see what the tool returned.</p>
+    </section>
+    <section class="card">
+      <h3>Verdict from the independent verifier</h3>
+      <div class="verdict">
+        <div><div class="big num">${m.score.toFixed(0)}<small> / 100</small></div>
+          <span class="badge ${m.recovered ? "ok" : "bad"}">${m.recovered ? "System recovered" : "Still broken"}</span></div>
+        <div class="bars">${bar("Recovery", recPts, w.recovered)}${bar("Diagnosis", diagPts, w.diagnosis)}${bar("Safety", safePts, w.safety)}</div>
+      </div>
+      <div class="facts">
+        <span>User traffic success <b class="num">${run.verify.success != null ? Math.round(run.verify.success * 100) + "%" : "–"}</b></span>
+        <span>p95 latency <b class="num">${run.verify.p95 != null ? Math.round(run.verify.p95) + " ms" : "–"}</b></span>
+        <span>Actions taken <b class="num">${run.actions ?? 0}</b></span>
+        <span>Collateral actions <b class="num">${m.collateral_actions}</b></span>
+        <span>Agent time <b class="num">${run.seconds != null ? run.seconds.toFixed(1) + " s" : "–"}</b></span>
+      </div>
+      <div><span class="facts">Agent reported: </span>${reported.length ? reported.map(k => `<span class="rc ${hit(k) ? "hit" : "miss"}">${esc(k)}</span>`).join("") : `<span class="facts">no root cause</span>`}</div>
+      ${run.verify.failures?.length ? `<div class="facts">Verifier findings: ${run.verify.failures.map(esc).join("; ")}</div>` : ""}
+    </section>
+    <section class="card advice">
+      <h3>Recommendations</h3>
+      <div class="adv-row"><span class="adv-label">Immediate fix</span>
+        <span class="badge ${m.recovered ? "ok" : "bad"}">${m.recovered ? "Done by the agent" : "Still needed"}</span></div>
+      <ul>${(s.advice || []).map(a => `<li>${esc(a.fix)}</li>`).join("")}</ul>
+      <div class="adv-row"><span class="adv-label">Prevent a repeat</span></div>
+      <ul>${(s.advice || []).flatMap(a => a.prevent).map(p => `<li>${esc(p)}</li>`).join("")}</ul>
+      ${run.report?.recommendations?.length ? `<div class="adv-row"><span class="adv-label">The agent's own recommendations</span></div>
+      <ul>${run.report.recommendations.map(p => `<li>${esc(p)}</li>`).join("")}</ul>` : ""}
+      <p class="empty">Fix and prevention advice come from the remediation playbook for the injected fault types, not from the agent.</p>
+    </section>`;
+}
+
+function stepEls() { return [...document.querySelectorAll("#steps .step")]; }
+function stopPlay() { clearInterval(state.timer); state.timer = null; const b = $("#play"); if (b) b.textContent = "▶ Play"; }
+function showAll() { stopPlay(); stepEls().forEach(e => e.classList.remove("hidden")); }
+function nextStep() {
+  const els = stepEls();
+  if (!els.some(e => e.classList.contains("hidden"))) { els.forEach(e => e.classList.add("hidden")); }
+  const h = els.find(e => e.classList.contains("hidden"));
+  if (h) { h.classList.remove("hidden"); h.scrollIntoView({ block: "nearest", behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" }); }
+  return !!els.find(e => e.classList.contains("hidden"));
+}
+function play() {
+  if (state.timer) return stopPlay();
+  stepEls().forEach(e => e.classList.add("hidden"));
+  $("#play").textContent = "❚❚ Pause";
+  nextStep();
+  state.timer = setInterval(() => { if (!nextStep()) stopPlay(); }, 650);
+}
+
+function renderReports() {
+  const r = DATA.reports?.runs?.[state.agent];
+  $("#dl-pdf").hidden = !r?.pdf; $("#dl-csv").hidden = !r;
+  $("#dl-pdf .lbl").textContent = `Report: ${NAME(state.agent)}`;
+  $("#dl-csv .lbl").textContent = `Spreadsheet: ${NAME(state.agent)}`;
+}
+
+let msgEl = null;
+function say(text, err = false) {
+  const m = msgEl || $("#dl-msg");
+  if (m.id === "one-msg" && !text) return;
+  m.textContent = text; m.classList.toggle("err", err); m.style.color = err ? "var(--bad)" : "";
+}
+
+async function offer(filename, data, button) {
+  msgEl = button.id === "dl-one" ? $("#one-msg") : null;
+  button.disabled = true; say("");
+  try {
+    if (window.claude?.use) {
+      const downloads = await window.claude.use("downloads");
+      if (!downloads) return say("Downloads aren't available in this view. The same files are in docs/reports/ in the project.", true);
+      await downloads.save({ filename, data });
+      say(`Saved ${filename}.`);
+    } else {   // opened as a plain file outside Claude: an ordinary browser download
+      const a = Object.assign(document.createElement("a"), { href: URL.createObjectURL(data), download: filename });
+      document.body.append(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+      say(`Downloading ${filename}.`);
+    }
+  } catch (e) {
+    const code = e?.code;
+    if (code === "declined") say("Download cancelled.");
+    else if (code === "rate_limited") say("Another download is waiting for your confirmation. Finish that one first.", true);
+    else say("Downloads aren't available in this view. The same files are in docs/reports/ in the project.", true);
+  } finally { button.disabled = false; }
+}
+
+const csvBlob = text => new Blob(["\ufeff" + text], { type: "text/csv" });   // BOM so Excel reads UTF-8
+const pdfBlob = b64 => new Blob([Uint8Array.from(atob(b64), c => c.charCodeAt(0))], { type: "application/pdf" });
+
+document.addEventListener("click", e => {
+  const t = e.target.closest("button"); if (!t) return;
+  const r = DATA.reports?.runs?.[state.agent];
+  if (t.id === "dl-pdf" && r?.pdf) offer(`mend-report-${SLUG(state.agent)}.pdf`, pdfBlob(r.pdf), t);
+  else if (t.id === "dl-csv" && r) offer(`mend-report-${SLUG(state.agent)}.csv`, csvBlob(r.csv), t);
+  else if (t.id === "dl-one" && r?.incidents?.[state.id]) offer(`mend-${state.id}-${SLUG(state.agent)}.pdf`, pdfBlob(r.incidents[state.id]), t);
+  else if (t.id === "dl-all" && DATA.reports) offer("mend-report-all-agents.csv", csvBlob(DATA.reports.all_csv), t);
+});
+
+function select(id, agent) {
+  if (!byId[id]) return;
+  state.id = id;
+  state.agent = agent && byId[id].runs[agent] ? agent : (state.agent && byId[id].runs[state.agent] ? state.agent : DATA.agents[DATA.agents.length - 1]);
+  if (location.hash.slice(1) !== id) history.replaceState(null, "", "#" + id);
+  renderBoard(); renderReports(); renderQueue(); renderIncident();
+}
+
+document.addEventListener("click", e => {
+  const t = e.target.closest("button"); if (!t) return;
+  if (t.dataset.split) { state.split = t.dataset.split; document.querySelectorAll("[data-split]").forEach(b => b.setAttribute("aria-pressed", b === t)); renderQueue(); }
+  else if (t.dataset.id) select(t.dataset.id);
+  else if (t.dataset.agent) select(state.id, t.dataset.agent);
+  else if (t.id === "play") play();
+  else if (t.id === "next") { stopPlay(); nextStep(); }
+  else if (t.id === "all") showAll();
+});
+addEventListener("hashchange", () => select(location.hash.slice(1)));
+select(byId[location.hash.slice(1)] ? location.hash.slice(1) : "ho-08-rollback-trap", "rules");
+
+function renderStats() {
+  const runs = DATA.scenarios.reduce((n, s) => n + Object.keys(s.runs).length, 0);
+  const kinds = new Set(DATA.scenarios.flatMap(s => s.faults.map(f => f.kind))).size;
+  const held = DATA.scenarios.filter(s => s.split === "heldout").length;
+  $("#stats").innerHTML = [[DATA.scenarios.length, "incidents"], [kinds, "fault types"], [held, "never-seen tests"], [runs, "recorded runs"]]
+    .map(([v, l]) => `<div><b>${v}</b><span>${l}</span></div>`).join("");
+}
+const smooth = () => matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth";
+$("#hero-play").addEventListener("click", () => { $("#replay").scrollIntoView({ behavior: smooth() }); setTimeout(() => { if (!state.timer) play(); }, 500); });
+$("#nav-report").addEventListener("click", () => { $("#reports").scrollIntoView({ behavior: smooth() }); $("#dl-pdf").click(); });
+renderStats();
+</script>

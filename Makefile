@@ -1,12 +1,14 @@
 PY ?= python3
+# Runs that reports and the web app are built from (override: make webapp TAGS="baseline-rules llm-heldout").
+TAGS ?= baseline-noop baseline-restart_all baseline-rules
 # Load .env if present (for ANTHROPIC_API_KEY).
 -include .env
 export
 
-.PHONY: install wheels up down status test baselines llm-dev llm-heldout ablations report clean
+.PHONY: install wheels up down status test baselines llm-dev llm-heldout ablations report reports webapp clean
 
 install:            ## install python dependencies
-	$(PY) -m pip install -e '.[dev]'
+	$(PY) -m pip install -e '.[dev,export]'
 
 wheels:             ## pre-download Alpine wheels for offline / proxied docker builds
 	$(PY) -m pip download -q --dest sandbox/api/wheels --only-binary=:all: --platform musllinux_1_2_x86_64 \
@@ -39,6 +41,12 @@ ablations:          ## LLM ablations on the held-out split
 
 report:             ## regenerate docs/results.md from the runs in runs/
 	$(PY) -m recovery report $(TAGS) --out docs/results.md
+
+reports:            ## CSV + PDF incident reports for the baseline runs (docs/reports/)
+	$(PY) -m recovery export $(TAGS)
+
+webapp:             ## rebuild the Mend web app (docs/mend.html) from the runs in runs/
+	$(PY) webapp/build.py $(TAGS)
 
 clean:
 	rm -rf sandbox/.runtime
