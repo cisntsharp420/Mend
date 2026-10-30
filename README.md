@@ -152,6 +152,9 @@ Everything on the page really happened. Here is how to read it:
 <p align="center"><img src="docs/images/app-replay.jpg" alt="Replaying an incident step by step" width="100%"></p>
 
 **A two-minute tour**
+- `ho-11-conn-leak-and-dns` with **Mend AI** (where the app opens): two faults at once. It stops the
+  job leaking database connections, rolls back the deploy that broke name resolution, and scores
+  100. Every other agent fails this one.
 - `ho-08-rollback-trap` with **Mend AI**: a bad deploy hidden under a harmless one. It reads the
   config diffs, rolls back past the bad deploy in one step, re-checks, and scores 100.
 - Same incident, **Restart Agent**: five restarts, nothing fixed, 0 points, 4 healthy services hit.
