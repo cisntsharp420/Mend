@@ -1,4 +1,4 @@
-"""LLM incident-response agent (Claude, manual tool-use loop).
+"""LLM incident-response agent (manual tool-use loop; Claude or OpenAI models).
 
 Design choices:
 - The model only acts through the shared Toolbox, so guardrails/budgets/audit match the baselines.
@@ -8,6 +8,8 @@ Design choices:
   diagnostics, the methodology prompt) to measure what each component contributes.
 - Record/replay: every model response is saved in the episode record; `replay=<episode.json>`
   re-runs that episode from the recording without an API key (tool calls still execute live).
+- Provider-neutral loop: messages and recordings use Anthropic-style content blocks; the OpenAI
+  backend (Chat Completions with function tools) translates to and from that format at the edge.
 """
 from __future__ import annotations
 
@@ -20,13 +22,79 @@ from ..faults import CATEGORIES
 from ..sandbox import CONFIG_FILES, CORE_SERVICES
 from .base import Agent
 
-DEFAULT_MODEL = os.environ.get("RECOVERY_MODEL", "claude-opus-5-5")
-# USD per million tokens: input, output, cache read. Cache writes bill at 1.25x input.
+# Use Claude when an Anthropic key is configured, otherwise fall back to OpenAI.
+DEFAULT_MODEL = os.environ.get("RECOVERY_MODEL") or (
+    "claude-opus-5-5" if os.environ.get("ANTHROPIC_API_KEY") or not os.environ.get("OPENAI_API_KEY")
+    else "gpt-5")
+# USD per million tokens: input, output, cache read. Cache writes bill at 1.25x input (Anthropic only).
 PRICES = {
     "claude-opus-5-5": (4.00, 20.00, 0.20),
     "claude-sonnet-5-5": (2.00, 10.00, 0.20),
     "claude-haiku-5-5": (0.10, 0.50, 0.01),
+    "gpt-5": (1.25, 10.00, 0.125),
+    "gpt-5-mini": (0.25, 2.00, 0.025),
 }
+
+
+def provider_for(model: str) -> str:
+    return "anthropic" if model.startswith("claude") else "openai"
+
+
+def to_openai_messages(system: str, messages: list) -> list:
+    """Translate Anthropic-style messages (content blocks) into Chat Completions messages."""
+    out = [{"role": "system", "content": system}]
+    for m in messages:
+        content = m["content"]
+        if isinstance(content, str):
+            out.append({"role": m["role"], "content": content})
+            continue
+        if m["role"] == "assistant":
+            text = "".join(b["text"] for b in content if b["type"] == "text")
+            calls = [{"id": b["id"], "type": "function",
+                      "function": {"name": b["name"], "arguments": json.dumps(b.get("input") or {})}}
+                     for b in content if b["type"] == "tool_use"]
+            out.append({"role": "assistant", "content": text or None, **({"tool_calls": calls} if calls else {})})
+            continue
+        # user turn: tool results become tool messages, any remaining text follows as a user message
+        texts = []
+        for b in content:
+            if b["type"] == "tool_result":
+                body = b["content"] if isinstance(b["content"], str) else json.dumps(b["content"])
+                out.append({"role": "tool", "tool_call_id": b["tool_use_id"], "content": body})
+            elif b["type"] == "text":
+                texts.append(b["text"])
+        if texts:
+            out.append({"role": "user", "content": "\n".join(texts)})
+    return out
+
+
+def to_openai_tools(tools: list) -> list:
+    return [{"type": "function", "function": {"name": t["name"], "description": t.get("description", ""),
+                                              "parameters": t["input_schema"]}} for t in tools]
+
+
+def from_openai_response(r) -> dict:
+    """Normalize a Chat Completions response into the recorded (Anthropic-style) format."""
+    choice = r.choices[0]
+    msg = choice.message
+    content = []
+    if msg.content:
+        content.append({"type": "text", "text": msg.content})
+    for tc in msg.tool_calls or []:
+        try:
+            args = json.loads(tc.function.arguments or "{}")
+        except json.JSONDecodeError:
+            args = {"_unparsed_arguments": tc.function.arguments}
+        content.append({"type": "tool_use", "id": tc.id, "name": tc.function.name, "input": args})
+    if getattr(msg, "refusal", None):
+        stop = "refusal"
+    elif msg.tool_calls:
+        stop = "tool_use"
+    elif choice.finish_reason == "length":
+        stop = "max_tokens"
+    else:
+        stop = "end_turn"
+    return {"stop_reason": stop, "model": r.model, "content": content}
 MAX_MODEL_CALLS = 40
 
 SYSTEM_PROMPT = f"""You are the on-call SRE agent for ShopStack, a small e-commerce system. You were \
@@ -88,9 +156,14 @@ class LLMAgent(Agent):
         self.transcript: list[dict] = []   # reasoning + text per model turn (for the trace viewer)
         self.recording: list[dict] = []    # raw responses (for replay)
         self.stop = None
+        self.provider = provider_for(self.model)
         if not self.replay:
-            import anthropic
-            self.client = anthropic.Anthropic(max_retries=4)
+            if self.provider == "anthropic":
+                import anthropic
+                self.client = anthropic.Anthropic(max_retries=4)
+            else:
+                import openai
+                self.client = openai.OpenAI(max_retries=4)
 
     # ------------------------------------------------------------------ model call
     def _call(self, system: str, tools: list, messages: list) -> dict:
@@ -98,6 +171,20 @@ class LLMAgent(Agent):
             if self.usage["calls"] >= len(self.replay):
                 raise RuntimeError("replay exhausted: the live run diverged from the recording")
             resp = self.replay[self.usage["calls"]]
+        elif self.provider == "openai":
+            r = self.client.chat.completions.create(
+                model=self.model,
+                messages=to_openai_messages(system, messages),
+                tools=to_openai_tools(tools),
+                reasoning_effort={"xhigh": "high", "max": "high"}.get(self.effort, self.effort),
+                max_completion_tokens=16000,
+            )
+            u = r.usage
+            cached = getattr(getattr(u, "prompt_tokens_details", None), "cached_tokens", 0) or 0
+            self.usage["input"] += (u.prompt_tokens or 0) - cached
+            self.usage["output"] += u.completion_tokens or 0
+            self.usage["cache_read"] += cached
+            resp = from_openai_response(r)
         else:
             r = self.client.beta.messages.create(
                 model=self.model,
@@ -191,6 +278,6 @@ class LLMAgent(Agent):
                       + u["cache_write"] * p[0] * 1.25) / 1e6, 4)
 
     def meta(self) -> dict:
-        return {"model": self.model, "variant": self.variant, "effort": self.effort,
+        return {"model": self.model, "provider": self.provider, "variant": self.variant, "effort": self.effort,
                 "replayed": self.replay is not None, "stop": self.stop, "usage": self.usage,
                 "cost_usd": self.cost_usd(), "transcript": self.transcript, "recording": self.recording}

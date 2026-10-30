@@ -3,7 +3,7 @@ name = "agentic-recovery"
 version = "0.1.0"
 description = "An AI agent that identifies, diagnoses and recovers a failing system, with a reproducible benchmark."
 requires-python = ">=3.10"
-dependencies = ["pyyaml>=6", "anthropic>=2.3"]
+dependencies = ["pyyaml>=6", "anthropic>=2.3", "openai>=1.40"]
 
 [project.optional-dependencies]
 dev = ["pytest>=8"]

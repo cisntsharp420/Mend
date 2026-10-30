@@ -58,3 +58,46 @@ def test_ablation_hides_tools(tmp_path):
     agent, tb = LLMAgent(replay=rec), make_tb()
     agent.run(tb, "PAGE")
     assert "verify_recovery" not in [e.tool for e in tb.audit]  # hidden tool is never executed
+
+
+# ---------------------------------------------------------------- OpenAI backend (fake client)
+def oa_response(*calls, text=None, finish="tool_calls"):
+    tcs = [MagicMock(id=f"c{i}", function=MagicMock(arguments=json.dumps(a))) for i, (n, a) in enumerate(calls)]
+    for tc, (n, _) in zip(tcs, calls):
+        tc.function.name = n   # `name` is reserved by MagicMock's constructor
+    msg = MagicMock(content=text, tool_calls=tcs or None, refusal=None)
+    usage = MagicMock(prompt_tokens=100, completion_tokens=20, prompt_tokens_details=MagicMock(cached_tokens=40))
+    return MagicMock(choices=[MagicMock(message=msg, finish_reason=finish)], model="gpt-5", usage=usage)
+
+
+def test_openai_backend_translates_loop(monkeypatch):
+    monkeypatch.setenv("OPENAI_API_KEY", "test-key")   # client is constructed, then replaced by a fake
+    agent = LLMAgent(model="gpt-5", effort="max")
+    agent.client = MagicMock()
+    agent.client.chat.completions.create.side_effect = [
+        oa_response(("get_recent_changes", {}), text="Looking."),
+        oa_response(("submit_report", {"root_causes": [], "summary": "ok", "recovered": True})),
+    ]
+    tb = make_tb()
+    agent.run(tb, "PAGE")
+    assert tb.finished and agent.meta()["stop"] == "submitted" and agent.provider == "openai"
+    second = agent.client.chat.completions.create.call_args_list[1].kwargs
+    roles = [m["role"] for m in second["messages"]]
+    assert roles == ["system", "user", "assistant", "tool", "user"]   # budget note follows tool result
+    assert second["messages"][2]["tool_calls"][0]["function"]["name"] == "get_recent_changes"
+    assert second["messages"][3]["tool_call_id"] == "c0"
+    assert second["reasoning_effort"] == "high"
+    assert second["tools"][0]["type"] == "function"
+    assert agent.usage == {"input": 120, "output": 40, "cache_read": 80, "cache_write": 0, "calls": 2}
+    assert agent.recording[0]["content"][1]["type"] == "tool_use"   # recorded in provider-neutral form
+
+
+def test_openai_recording_replays(tmp_path):
+    rec = tmp_path / "episode.json"
+    rec.write_text(json.dumps({"agent_meta": {"model": "gpt-5", "variant": "full", "recording": [
+        {"stop_reason": "tool_use", "model": "gpt-5", "content": [
+            {"type": "tool_use", "id": "c0", "name": "submit_report",
+             "input": {"root_causes": [], "summary": "x", "recovered": False}}]}]}}))
+    agent, tb = LLMAgent(replay=rec), make_tb()
+    agent.run(tb, "PAGE")
+    assert tb.finished and agent.provider == "openai" and agent.cost_usd() is None
